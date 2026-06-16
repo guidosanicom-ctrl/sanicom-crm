@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { SEED_CLIENTS } from '../data/seedData';
 import { generateId } from '../utils/formatters';
+import { useAuthStore } from './authStore';
+import { useActividadStore } from './actividadStore';
 
 const KEY = 'sanicom_clientes';
 
@@ -19,23 +21,30 @@ export const useClientesStore = create((set, get) => ({
   clientes: load(),
 
   addCliente: (data) => {
+    const user = useAuthStore.getState().user;
     const cliente = { ...data, id: generateId(), fechaAlta: new Date().toISOString().split('T')[0], contactos: data.contactos || [] };
     const clientes = [...get().clientes, cliente];
     save(clientes);
     set({ clientes });
+    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'cliente', accion: 'creó un nuevo cliente', registroId: cliente.id, registroLabel: cliente.nombre, modulo: 'clientes' });
     return cliente;
   },
 
   updateCliente: (id, data) => {
+    const user = useAuthStore.getState().user;
     const clientes = get().clientes.map(c => c.id === id ? { ...c, ...data } : c);
     save(clientes);
     set({ clientes });
+    if (user) { const c = clientes.find(c => c.id === id); useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'cliente', accion: 'actualizó el cliente', registroId: id, registroLabel: c?.nombre || id, modulo: 'clientes' }); }
   },
 
   deleteCliente: (id) => {
+    const user = useAuthStore.getState().user;
+    const target = get().clientes.find(c => c.id === id);
     const clientes = get().clientes.filter(c => c.id !== id);
     save(clientes);
     set({ clientes });
+    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'cliente', accion: 'eliminó el cliente', registroId: id, registroLabel: target?.nombre || id, modulo: 'clientes' });
   },
 
   addContacto: (clienteId, contacto) => {

@@ -3,6 +3,7 @@ import { SEED_OPORTUNIDADES } from '../data/seedData';
 import { generateId } from '../utils/formatters';
 import { buildAuditEntries, createEntry } from '../utils/auditLog';
 import { useAuthStore } from './authStore';
+import { useActividadStore } from './actividadStore';
 
 const KEY = 'sanicom_oportunidades';
 
@@ -28,12 +29,14 @@ export const useOportunidadesStore = create((set, get) => ({
     const oportunidades = [...get().oportunidades, item];
     save(oportunidades);
     set({ oportunidades });
+    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'oportunidad', accion: 'creó una oportunidad', registroId: item.id, registroLabel: item.nombre, modulo: 'pipeline' });
     return item;
   },
 
   updateOportunidad: (id, data) => {
     const user = useAuthStore.getState().user;
     const now = new Date().toISOString().split('T')[0];
+    const prev = get().oportunidades.find(o => o.id === id);
     const oportunidades = get().oportunidades.map(o => {
       if (o.id !== id) return o;
       const entries = user ? buildAuditEntries(o, { ...o, ...data }, user) : [];
@@ -42,12 +45,21 @@ export const useOportunidadesStore = create((set, get) => ({
     });
     save(oportunidades);
     set({ oportunidades });
+    if (user) {
+      const accion = data.etapa && prev?.etapa !== data.etapa
+        ? `movió la oportunidad a "${data.etapa}"`
+        : 'actualizó la oportunidad';
+      useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'oportunidad', accion, registroId: id, registroLabel: prev?.nombre || id, modulo: 'pipeline' });
+    }
   },
 
   deleteOportunidad: (id) => {
+    const user = useAuthStore.getState().user;
+    const target = get().oportunidades.find(o => o.id === id);
     const oportunidades = get().oportunidades.filter(o => o.id !== id);
     save(oportunidades);
     set({ oportunidades });
+    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'oportunidad', accion: 'eliminó la oportunidad', registroId: id, registroLabel: target?.nombre || id, modulo: 'pipeline' });
   },
 
   getOportunidad: (id) => get().oportunidades.find(o => o.id === id),

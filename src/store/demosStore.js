@@ -3,6 +3,7 @@ import { SEED_DEMOS } from '../data/seedData';
 import { generateId, generateNumero } from '../utils/formatters';
 import { buildAuditEntries, createEntry } from '../utils/auditLog';
 import { useAuthStore } from './authStore';
+import { useActividadStore } from './actividadStore';
 
 const KEY = 'sanicom_demos';
 
@@ -29,11 +30,13 @@ export const useDemosStore = create((set, get) => ({
     const updated = [...demos, item];
     save(updated);
     set({ demos: updated });
+    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion: 'creó una demostración', registroId: item.id, registroLabel: numero, modulo: 'demostraciones' });
     return item;
   },
 
   updateDemo: (id, data) => {
     const user = useAuthStore.getState().user;
+    const prev = get().demos.find(d => d.id === id);
     const demos = get().demos.map(d => {
       if (d.id !== id) return d;
       const entries = user ? buildAuditEntries(d, { ...d, ...data }, user) : [];
@@ -42,12 +45,21 @@ export const useDemosStore = create((set, get) => ({
     });
     save(demos);
     set({ demos });
+    if (user) {
+      const accion = data.estado && prev?.estado !== data.estado
+        ? `cambió la demo ${prev?.numero} a "${data.estado}"`
+        : `actualizó la demo ${prev?.numero}`;
+      useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion, registroId: id, registroLabel: prev?.numero || id, modulo: 'demostraciones' });
+    }
   },
 
   deleteDemo: (id) => {
+    const user = useAuthStore.getState().user;
+    const target = get().demos.find(d => d.id === id);
     const demos = get().demos.filter(d => d.id !== id);
     save(demos);
     set({ demos });
+    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion: 'eliminó la demostración', registroId: id, registroLabel: target?.numero || id, modulo: 'demostraciones' });
   },
 
   getDemo: (id) => get().demos.find(d => d.id === id),

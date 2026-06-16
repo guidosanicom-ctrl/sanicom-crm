@@ -1,15 +1,41 @@
 import { useMemo } from 'react';
-import { Users, TrendingUp, Wrench, Calendar, Target } from 'lucide-react';
+import { Users, TrendingUp, Wrench, Calendar, Target, PlaySquare, Briefcase, Clock } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, parseISO, startOfMonth, isValid } from 'date-fns';
+import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../../components/ui/Card';
 import { useClientesStore } from '../../store/clientesStore';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useServicioStore } from '../../store/servicioStore';
 import { useAgendaStore } from '../../store/agendaStore';
+import { useActividadStore } from '../../store/actividadStore';
+import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/formatters';
 import { ETAPAS_PIPELINE } from '../../utils/constants';
+
+const TIPO_ICON = { cliente: Users, oportunidad: TrendingUp, demo: PlaySquare, servicio: Wrench, agenda: Calendar };
+const TIPO_COLOR = {
+  cliente: 'bg-blue-100 text-blue-600',
+  oportunidad: 'bg-cyan-100 text-cyan-600',
+  demo: 'bg-purple-100 text-purple-600',
+  servicio: 'bg-amber-100 text-amber-600',
+  agenda: 'bg-green-100 text-green-600',
+};
+
+function Avatar({ name }) {
+  const initials = name ? name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : '?';
+  return (
+    <div className="w-8 h-8 rounded-full bg-[#1B4F8A] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+      {initials}
+    </div>
+  );
+}
+
+function TimeAgo({ dateStr }) {
+  try {
+    return <span className="text-xs text-gray-400">{formatDistanceToNow(parseISO(dateStr), { addSuffix: true, locale: es })}</span>;
+  } catch { return null; }
+}
 
 function KpiCard({ icon: Icon, label, value, sub, color = '#1B4F8A' }) {
   return (
@@ -31,6 +57,9 @@ export default function DashboardPage() {
   const { oportunidades } = useOportunidadesStore();
   const { servicios } = useServicioStore();
   const { eventos } = useAgendaStore();
+  const { actividad } = useActividadStore();
+  const { isCarlos } = useAuthStore();
+  const carlos = isCarlos();
 
   const stats = useMemo(() => {
     const activeClients = clientes.filter(c => c.estado === 'Activo').length;
@@ -67,6 +96,11 @@ export default function DashboardPage() {
 
     return { activeClients, openOpps: openOpps.length, totalPipeline, pendingServices, upcomingEvents, closeRate, byStage, months };
   }, [clientes, oportunidades, servicios, eventos]);
+
+  const feed = useMemo(() => {
+    const items = carlos ? actividad.filter(a => a.modulo !== 'servicio-tecnico') : actividad;
+    return items.slice(0, 20);
+  }, [actividad, carlos]);
 
   return (
     <div className="space-y-6">
@@ -107,24 +141,49 @@ export default function DashboardPage() {
       </div>
 
       <Card>
-        <h3 className="text-base font-semibold text-gray-800 mb-4">Actividad reciente</h3>
-        <div className="space-y-3">
-          {[...oportunidades, ...clientes].sort((a, b) => {
-            const da = a.fechaUltimaActualizacion || a.fechaAlta || '';
-            const db = b.fechaUltimaActualizacion || b.fechaAlta || '';
-            return db.localeCompare(da);
-          }).slice(0, 5).map((item, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                {item.etapa ? <TrendingUp className="w-4 h-4 text-blue-600" /> : <Users className="w-4 h-4 text-blue-600" />}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-800">{item.nombre}</p>
-                <p className="text-xs text-gray-400">{item.etapa ? `Oportunidad · ${item.etapa}` : `Cliente · ${item.tipo || ''}`}</p>
-              </div>
-            </div>
-          ))}
+        <div className="flex items-center gap-2 mb-5">
+          <Clock className="w-4 h-4 text-[#3ABDD5]" />
+          <h3 className="text-base font-semibold text-gray-800">Actividad reciente</h3>
+          {feed.length > 0 && <span className="ml-auto text-xs text-gray-400">{feed.length} acciones</span>}
         </div>
+
+        {feed.length === 0 ? (
+          <div className="text-center py-10 text-gray-400 text-sm">
+            <Clock className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <p>Aún no hay actividad registrada.</p>
+            <p className="text-xs mt-1">Las acciones del equipo aparecerán aquí.</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {feed.map((item, i) => {
+              const Icon = TIPO_ICON[item.tipo] || Briefcase;
+              const colorCls = TIPO_COLOR[item.tipo] || 'bg-gray-100 text-gray-500';
+              return (
+                <div key={item.id || i} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Avatar name={item.userName} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-sm font-semibold text-gray-800">{item.userName}</span>
+                      <span className="text-sm text-gray-600">{item.accion}</span>
+                      {item.registroLabel && (
+                        <span className="text-sm font-medium text-[#1B4F8A] truncate max-w-[200px]">
+                          {item.registroLabel}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${colorCls}`}>
+                        <Icon className="w-2.5 h-2.5" />
+                        {item.tipo}
+                      </span>
+                      <TimeAgo dateStr={item.fechaHora} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
     </div>
   );
