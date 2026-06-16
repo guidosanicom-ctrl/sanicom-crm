@@ -33,7 +33,7 @@ export const useAuthStore = create((set, get) => ({
     if (!user) return false;
     if (user.role === 'Administración') return true;
     if (user.role === 'Comercial Restringido') {
-      const forbidden = ['servicio-tecnico', 'configuracion'];
+      const forbidden = ['configuracion'];
       return !forbidden.includes(module);
     }
     return false;
@@ -43,6 +43,11 @@ export const useAuthStore = create((set, get) => ({
     const { user } = get();
     if (!user) return true;
     if (user.role === 'Comercial Restringido' && module === 'equipos') return true;
+    if (user.email === 'carlosleal@sanicom.es' && module === 'servicio-tecnico') return true;
     return false;
   },
+
+  isCarlos: () => get().user?.email === 'carlosleal@sanicom.es',
+
+  CARLOS_ESPECIALIDADES: ['Fisioterapia', 'Podología', 'Veterinaria'],
 }));

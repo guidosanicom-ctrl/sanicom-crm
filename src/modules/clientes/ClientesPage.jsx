@@ -4,6 +4,7 @@ import { Plus, Upload, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import { useClientesStore } from '../../store/clientesStore';
+import { useAuthStore } from '../../store/authStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import SearchBar from '../../components/shared/SearchBar';
@@ -18,6 +19,7 @@ import { Users } from 'lucide-react';
 export default function ClientesPage() {
   const navigate = useNavigate();
   const { clientes, addCliente, importClientes } = useClientesStore();
+  const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const [search, setSearch] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
@@ -27,8 +29,12 @@ export default function ClientesPage() {
   const [importOpen, setImportOpen] = useState(false);
   const PER_PAGE = 10;
 
+  const carlos = isCarlos();
+  const espOptions = carlos ? CARLOS_ESPECIALIDADES : ESPECIALIDADES;
+
   const filtered = useMemo(() => {
     return clientes.filter(c => {
+      if (carlos && !CARLOS_ESPECIALIDADES.includes(c.especialidad)) return false;
       const q = search.toLowerCase();
       const matchSearch = !q || c.nombre?.toLowerCase().includes(q) || c.ciudad?.toLowerCase().includes(q) || c.tipo?.toLowerCase().includes(q);
       const matchTipo = !filterTipo || c.tipo === filterTipo;
@@ -36,7 +42,7 @@ export default function ClientesPage() {
       const matchEsp = !filterEsp || c.especialidad === filterEsp;
       return matchSearch && matchTipo && matchEstado && matchEsp;
     });
-  }, [clientes, search, filterTipo, filterEstado, filterEsp]);
+  }, [clientes, search, filterTipo, filterEstado, filterEsp, carlos]);
 
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
@@ -64,13 +70,15 @@ export default function ClientesPage() {
           </select>
           <select className={sel} value={filterEsp} onChange={e => { setFilterEsp(e.target.value); setPage(1); }}>
             <option value="">Todas las especialidades</option>
-            {ESPECIALIDADES.map(e => <option key={e}>{e}</option>)}
+            {espOptions.map(e => <option key={e}>{e}</option>)}
           </select>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>
-          <Button size="sm" onClick={() => setFormOpen(true)}><Plus className="w-4 h-4" />Nuevo cliente</Button>
-        </div>
+        {!carlos && (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>
+            <Button size="sm" onClick={() => setFormOpen(true)}><Plus className="w-4 h-4" />Nuevo cliente</Button>
+          </div>
+        )}
       </div>
 
       {/* Table */}

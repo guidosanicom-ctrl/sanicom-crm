@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Phone, Mail, Globe, Edit, Plus, Trash2 } from 'lucide-react';
 import { useClientesStore } from '../../store/clientesStore';
+import { useAuthStore } from '../../store/authStore';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useServicioStore } from '../../store/servicioStore';
 import { useEquiposStore } from '../../store/equiposStore';
@@ -29,8 +30,19 @@ export default function ClienteDetail() {
   const [note, setNote] = useState('');
   const [notes, setNotes] = useState([]);
 
+  const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const carlos = isCarlos();
+
   const cliente = getCliente(id);
   if (!cliente) return <div className="p-8 text-gray-400">Cliente no encontrado.</div>;
+  if (carlos && !CARLOS_ESPECIALIDADES.includes(cliente.especialidad)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <p className="text-gray-400 text-sm">No tienes acceso a este cliente.</p>
+        <button onClick={() => navigate('/clientes')} className="text-[#1B4F8A] text-sm hover:underline cursor-pointer">Volver a clientes</button>
+      </div>
+    );
+  }
 
   const clienteOpps = oportunidades.filter(o => o.clienteId === id);
   const clienteServices = servicios.filter(s => s.clienteId === id);

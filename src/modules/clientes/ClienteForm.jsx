@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import { TIPOS_CLIENTE, ESPECIALIDADES, ESTADOS_CLIENTE } from '../../utils/constants';
+import { useAuthStore } from '../../store/authStore';
 
 const empty = {
   nombre: '', tipo: 'Clínica', especialidad: 'Medicina general', cif: '',
@@ -12,6 +13,8 @@ const empty = {
 export default function ClienteForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
   const [errors, setErrors] = useState({});
+  const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const espOptions = isCarlos() ? CARLOS_ESPECIALIDADES : ESPECIALIDADES;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -59,7 +62,7 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Especialidad médica</label>
-              <select {...sel('especialidad')}>{ESPECIALIDADES.map(e => <option key={e}>{e}</option>)}</select>
+              <select {...sel('especialidad')}>{espOptions.map(e => <option key={e}>{e}</option>)}</select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">CIF / NIF</label>

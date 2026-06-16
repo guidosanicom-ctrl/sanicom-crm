@@ -24,7 +24,8 @@ export default function ServicioTecnicoPage() {
   const { servicios, addServicio, updateServicio, deleteServicio } = useServicioStore();
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
-  const { users } = useAuthStore();
+  const { users, isReadOnly } = useAuthStore();
+  const readOnly = isReadOnly('servicio-tecnico');
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
@@ -78,7 +79,7 @@ export default function ServicioTecnicoPage() {
             {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
         </div>
-        <Button size="sm" onClick={() => { setSelected(null); setFormOpen(true); }}><Plus className="w-4 h-4" />Nueva orden</Button>
+        {!readOnly && <Button size="sm" onClick={() => { setSelected(null); setFormOpen(true); }}><Plus className="w-4 h-4" />Nueva orden</Button>}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -114,15 +115,16 @@ export default function ServicioTecnicoPage() {
                         <td className="px-3 py-3"><Badge color={PRIORIDAD_BADGE[s.prioridad] || 'gray'}>{s.prioridad}</Badge></td>
                         <td className="px-3 py-3">
                           <div className="flex gap-2 items-center">
-                            {s.estado !== 'Completada' && (
+                            {!readOnly && s.estado !== 'Completada' && (
                               <button
                                 onClick={() => { updateServicio(s.id, { estado: 'Completada' }); toast.success('Orden completada.'); }}
                                 className="p-1 text-green-500 hover:bg-green-50 rounded cursor-pointer" title="Marcar completada">
                                 <CheckCircle className="w-4 h-4" />
                               </button>
                             )}
-                            <button onClick={() => openEdit(s)} className="text-blue-600 hover:underline text-xs cursor-pointer">Editar</button>
-                            <button onClick={() => { setSelected(s); setDelOpen(true); }} className="text-red-500 hover:underline text-xs cursor-pointer">Eliminar</button>
+                            {!readOnly && <button onClick={() => openEdit(s)} className="text-blue-600 hover:underline text-xs cursor-pointer">Editar</button>}
+                            {!readOnly && <button onClick={() => { setSelected(s); setDelOpen(true); }} className="text-red-500 hover:underline text-xs cursor-pointer">Eliminar</button>}
+                            {readOnly && <span className="text-xs text-gray-400 italic">Solo lectura</span>}
                           </div>
                         </td>
                       </tr>
@@ -143,8 +145,8 @@ export default function ServicioTecnicoPage() {
         open={detailOpen}
         onClose={() => { setDetailOpen(false); setSelected(null); }}
         orden={selected && servicios.find(s => s.id === selected.id)}
-        onEdit={() => openEdit(selected)}
-        onDelete={() => { setDetailOpen(false); setDelOpen(true); }}
+        onEdit={readOnly ? null : () => openEdit(selected)}
+        onDelete={readOnly ? null : () => { setDetailOpen(false); setDelOpen(true); }}
       />
 
       <ServicioForm
