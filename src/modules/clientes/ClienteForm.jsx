@@ -14,15 +14,16 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
   const [errors, setErrors] = useState({});
 
+  const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const espOptions = isCarlos() ? CARLOS_ESPECIALIDADES : ESPECIALIDADES;
+
   useEffect(() => {
     if (open) {
-      setForm(initial || empty);
+      const base = initial || { ...empty, especialidad: espOptions[0] };
+      setForm(base);
       setErrors({});
     }
   }, [open, initial]);
-
-  const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
-  const espOptions = isCarlos() ? CARLOS_ESPECIALIDADES : ESPECIALIDADES;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 

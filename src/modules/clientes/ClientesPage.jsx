@@ -73,12 +73,10 @@ export default function ClientesPage() {
             {espOptions.map(e => <option key={e}>{e}</option>)}
           </select>
         </div>
-        {!carlos && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>
-            <Button size="sm" onClick={() => setFormOpen(true)}><Plus className="w-4 h-4" />Nuevo cliente</Button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          {!carlos && <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>}
+          <Button size="sm" onClick={() => setFormOpen(true)}><Plus className="w-4 h-4" />Nuevo cliente</Button>
+        </div>
       </div>
 
       {/* Table */}
