@@ -49,5 +49,13 @@ export const useAuthStore = create((set, get) => ({
 
   isCarlos: () => get().user?.email === 'carlosleal@sanicom.es',
 
+  canEditRecord: (record) => {
+    const { user } = get();
+    if (!user) return false;
+    if (user.role === 'Administración') return true;
+    if (user.email === 'carlosleal@sanicom.es') return record?.creadoPorId === user.id;
+    return false;
+  },
+
   CARLOS_ESPECIALIDADES: ['Fisioterapia', 'Podología', 'Veterinaria'],
 }));

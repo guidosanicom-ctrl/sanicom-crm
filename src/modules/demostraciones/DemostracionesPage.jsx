@@ -24,7 +24,7 @@ export default function DemostracionesPage() {
   const { demos, addDemo, updateDemo, deleteDemo } = useDemosStore();
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
-  const { users } = useAuthStore();
+  const { users, canEditRecord } = useAuthStore();
   const { addOportunidad } = useOportunidadesStore();
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
@@ -120,8 +120,8 @@ export default function DemostracionesPage() {
                         <td className="px-4 py-3"><Badge color={BADGE_MAP[d.estado] || 'gray'}>{d.estado}</Badge></td>
                         <td className="px-4 py-3 text-gray-500">{d.resultado || '-'}</td>
                         <td className="px-4 py-3">
-                          <button onClick={() => openEdit(d)} className="text-blue-600 hover:underline text-xs cursor-pointer mr-2">Editar</button>
-                          <button onClick={() => { setSelected(d); setDelOpen(true); }} className="text-red-500 hover:underline text-xs cursor-pointer">Eliminar</button>
+                          {canEditRecord(d) && <button onClick={() => openEdit(d)} className="text-blue-600 hover:underline text-xs cursor-pointer mr-2">Editar</button>}
+                          {canEditRecord(d) && <button onClick={() => { setSelected(d); setDelOpen(true); }} className="text-red-500 hover:underline text-xs cursor-pointer">Eliminar</button>}
                         </td>
                       </tr>
                     );
@@ -141,8 +141,8 @@ export default function DemostracionesPage() {
         open={detailOpen}
         onClose={() => { setDetailOpen(false); setSelected(null); }}
         demo={selected && demos.find(d => d.id === selected.id)}
-        onEdit={() => openEdit(selected)}
-        onDelete={() => { setDetailOpen(false); setDelOpen(true); }}
+        onEdit={canEditRecord(selected) ? () => openEdit(selected) : null}
+        onDelete={canEditRecord(selected) ? () => { setDetailOpen(false); setDelOpen(true); } : null}
       />
 
       <DemoForm

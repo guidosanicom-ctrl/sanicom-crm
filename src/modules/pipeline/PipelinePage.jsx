@@ -98,7 +98,7 @@ function OppCard({ opp, clients, users, onClick }) {
 export default function PipelinePage() {
   const { oportunidades, addOportunidad, updateOportunidad, deleteOportunidad } = useOportunidadesStore();
   const { clientes } = useClientesStore();
-  const { users } = useAuthStore();
+  const { users, canEditRecord } = useAuthStore();
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -220,8 +220,8 @@ export default function PipelinePage() {
                     </td>
                     <td className="px-4 py-3 text-gray-500">{formatDate(o.fechaCierre)}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => openEdit(o)} className="text-blue-600 hover:underline text-xs cursor-pointer mr-2">Editar</button>
-                      <button onClick={() => { setSelected(o); setDelOpen(true); }} className="text-red-500 hover:underline text-xs cursor-pointer">Eliminar</button>
+                      {canEditRecord(o) && <button onClick={() => openEdit(o)} className="text-blue-600 hover:underline text-xs cursor-pointer mr-2">Editar</button>}
+                      {canEditRecord(o) && <button onClick={() => { setSelected(o); setDelOpen(true); }} className="text-red-500 hover:underline text-xs cursor-pointer">Eliminar</button>}
                     </td>
                   </tr>
                 );
@@ -236,8 +236,8 @@ export default function PipelinePage() {
         open={detailOpen}
         onClose={() => { setDetailOpen(false); setSelected(null); }}
         oportunidad={selected && oportunidades.find(o => o.id === selected.id)}
-        onEdit={() => openEdit(selected)}
-        onDelete={() => { setDetailOpen(false); setDelOpen(true); }}
+        onEdit={canEditRecord(selected) ? () => openEdit(selected) : null}
+        onDelete={canEditRecord(selected) ? () => { setDetailOpen(false); setDelOpen(true); } : null}
       />
 
       <OportunidadForm

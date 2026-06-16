@@ -25,7 +25,7 @@ export const useDemosStore = create((set, get) => ({
     const demos = get().demos;
     const numero = generateNumero('DM', demos);
     const historial = user ? [createEntry('creó esta demostración', user)] : [];
-    const item = { ...data, id: generateId(), numero, historial };
+    const item = { ...data, id: generateId(), numero, creadoPorId: user?.id || null, historial };
     const updated = [...demos, item];
     save(updated);
     set({ demos: updated });

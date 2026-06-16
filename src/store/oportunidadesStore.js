@@ -24,7 +24,7 @@ export const useOportunidadesStore = create((set, get) => ({
     const user = useAuthStore.getState().user;
     const now = new Date().toISOString().split('T')[0];
     const historial = user ? [createEntry('creó esta oportunidad', user)] : [];
-    const item = { ...data, id: generateId(), fechaCreacion: now, fechaUltimaActualizacion: now, historial };
+    const item = { ...data, id: generateId(), fechaCreacion: now, fechaUltimaActualizacion: now, creadoPorId: user?.id || null, historial };
     const oportunidades = [...get().oportunidades, item];
     save(oportunidades);
     set({ oportunidades });
