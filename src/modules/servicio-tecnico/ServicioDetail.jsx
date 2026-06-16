@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -6,7 +7,9 @@ import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { formatDate } from '../../utils/formatters';
-import { Edit, Trash2 } from 'lucide-react';
+import { exportOTPdf } from '../../utils/exportOTPdf';
+import { Edit, Trash2, FileDown } from 'lucide-react';
+import logoSrc from '../../assets/sanicom_logo.png';
 
 const ESTADO_COLOR = { 'Pendiente': 'yellow', 'Programada': 'blue', 'En curso': 'orange', 'Completada': 'green', 'Cancelada': 'gray' };
 const PRIORIDAD_COLOR = { 'Baja': 'gray', 'Normal': 'blue', 'Alta': 'orange', 'Urgente': 'red' };
@@ -24,12 +27,22 @@ export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete 
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
   const { users } = useAuthStore();
+  const [exporting, setExporting] = useState(false);
 
   if (!orden) return null;
 
   const cliente = clientes.find(c => c.id === orden.clienteId);
   const equipo = equipos.find(e => e.id === orden.equipoId);
   const tecnico = users.find(u => u.id === orden.tecnico);
+
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      await exportOTPdf(orden, cliente, equipo, tecnico, logoSrc);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <Modal
@@ -40,6 +53,9 @@ export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete 
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Cerrar</Button>
+          <Button variant="outline" onClick={handleExportPdf} loading={exporting}>
+            <FileDown className="w-4 h-4" />{exporting ? 'Generando...' : 'Exportar PDF'}
+          </Button>
           {onDelete && (
             <Button variant="danger" onClick={onDelete}>
               <Trash2 className="w-4 h-4" />Eliminar
