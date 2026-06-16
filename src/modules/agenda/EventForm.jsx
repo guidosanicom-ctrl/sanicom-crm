@@ -12,9 +12,10 @@ export default function EventForm({ open, onClose, onSave, initial, defaultDate 
   const init = initial || { ...empty, inicio: defaultDate ? `${defaultDate}T09:00` : '', fin: defaultDate ? `${defaultDate}T10:00` : '' };
   const [form, setForm] = useState(init);
   const [errors, setErrors] = useState({});
-  const { clientes } = useClientesStore();
+  const { clientes: todosClientes } = useClientesStore();
   const { equipos } = useEquiposStore();
-  const { users } = useAuthStore();
+  const { users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const clientes = isCarlos() ? todosClientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : todosClientes;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 

@@ -23,9 +23,10 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
     }
   }, [open, initial]);
 
-  const { clientes } = useClientesStore();
+  const { clientes: todosClientes } = useClientesStore();
   const { equipos } = useEquiposStore();
-  const { users } = useAuthStore();
+  const { users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const clientes = isCarlos() ? todosClientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : todosClientes;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
