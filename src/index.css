@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+* {
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: #F8FAFC;
+  color: #1E293B;
+}
+
+#root {
+  width: 100%;
+  margin: 0;
+  text-align: left;
+}
+
+.leaflet-container {
+  z-index: 1;
+}
+
+.kanban-card-dragging {
+  opacity: 0.8;
+  transform: rotate(2deg);
+}
