@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import { TIPOS_CLIENTE, ESPECIALIDADES, ESTADOS_CLIENTE } from '../../utils/constants';
@@ -13,6 +13,14 @@ const empty = {
 export default function ClienteForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (open) {
+      setForm(initial || empty);
+      setErrors({});
+    }
+  }, [open, initial]);
+
   const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const espOptions = isCarlos() ? CARLOS_ESPECIALIDADES : ESPECIALIDADES;
 
