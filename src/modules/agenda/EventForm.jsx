@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import { useClientesStore } from '../../store/clientesStore';
@@ -8,10 +8,29 @@ import { TIPOS_EVENTO } from '../../utils/constants';
 
 const empty = { titulo: '', tipo: 'Visita comercial', inicio: '', fin: '', clienteId: '', responsable: '', descripcion: '', equipoId: '' };
 
-export default function EventForm({ open, onClose, onSave, initial, defaultDate }) {
-  const init = initial || { ...empty, inicio: defaultDate ? `${defaultDate}T09:00` : '', fin: defaultDate ? `${defaultDate}T10:00` : '' };
-  const [form, setForm] = useState(init);
+function buildDefault(initial, defaultDate, defaultHour) {
+  if (initial) return initial;
+  const hora = defaultHour || '09:00';
+  const [h, m] = hora.split(':').map(Number);
+  const finH = String(h + 1).padStart(2, '0');
+  const fin = `${finH}:${String(m).padStart(2, '0')}`;
+  return {
+    ...empty,
+    inicio: defaultDate ? `${defaultDate}T${hora}` : '',
+    fin:    defaultDate ? `${defaultDate}T${fin}`  : '',
+  };
+}
+
+export default function EventForm({ open, onClose, onSave, initial, defaultDate, defaultHour }) {
+  const [form, setForm] = useState(() => buildDefault(initial, defaultDate, defaultHour));
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (open) {
+      setForm(buildDefault(initial, defaultDate, defaultHour));
+      setErrors({});
+    }
+  }, [open, initial, defaultDate, defaultHour]);
   const { clientes: todosClientes } = useClientesStore();
   const { equipos } = useEquiposStore();
   const { users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
