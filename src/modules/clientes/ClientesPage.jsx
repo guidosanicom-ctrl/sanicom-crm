@@ -25,9 +25,9 @@ export default function ClientesPage() {
   const [filterEstado, setFilterEstado] = useState('');
   const [filterEsp, setFilterEsp] = useState('');
   const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(50);
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const PER_PAGE = 10;
 
   const carlos = isCarlos();
   const espOptions = carlos ? CARLOS_ESPECIALIDADES : ESPECIALIDADES;
@@ -44,7 +44,7 @@ export default function ClientesPage() {
     });
   }, [clientes, search, filterTipo, filterEstado, filterEsp, carlos]);
 
-  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
   const handleImport = (rows, mode) => {
     const result = importClientes(rows, mode);
@@ -113,7 +113,7 @@ export default function ClientesPage() {
               </table>
             </div>
             <div className="px-4 pb-4">
-              <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
+              <Pagination page={page} total={filtered.length} perPage={perPage} onChange={setPage} onPerPageChange={setPerPage} perPageOptions={[25, 50, 100]} />
             </div>
           </>
         )}
