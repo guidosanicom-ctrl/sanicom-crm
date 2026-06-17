@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
-import { TIPOS_CLIENTE, ESPECIALIDADES, ESTADOS_CLIENTE } from '../../utils/constants';
+import { TIPOS_CLIENTE, ESTADOS_CLIENTE } from '../../utils/constants';
 import { useAuthStore } from '../../store/authStore';
+import { useEspecialidadesStore } from '../../store/especialidadesStore';
 
 const empty = {
   nombre: '', tipo: 'Clínica', especialidad: 'Medicina general', cif: '',
@@ -15,7 +16,10 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
   const [errors, setErrors] = useState({});
 
   const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
-  const espOptions = isCarlos() ? CARLOS_ESPECIALIDADES : ESPECIALIDADES;
+  const { especialidades } = useEspecialidadesStore();
+  const espOptions = isCarlos()
+    ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e))
+    : especialidades;
 
   useEffect(() => {
     if (open) {

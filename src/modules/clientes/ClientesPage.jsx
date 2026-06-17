@@ -13,12 +13,14 @@ import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import ClienteForm from './ClienteForm';
 import ImportWizard from './ImportWizard';
 import { formatDate } from '../../utils/formatters';
-import { TIPOS_CLIENTE, ESPECIALIDADES } from '../../utils/constants';
+import { TIPOS_CLIENTE } from '../../utils/constants';
+import { useEspecialidadesStore } from '../../store/especialidadesStore';
 
 export default function ClientesPage() {
   const navigate = useNavigate();
   const { clientes, addCliente, deleteCliente, importClientes } = useClientesStore();
   const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const { especialidades } = useEspecialidadesStore();
   const [search, setSearch] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
@@ -31,7 +33,7 @@ export default function ClientesPage() {
   const [delBulkOpen, setDelBulkOpen] = useState(false);
 
   const carlos = isCarlos();
-  const espOptions = carlos ? CARLOS_ESPECIALIDADES : ESPECIALIDADES;
+  const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
 
   const filtered = useMemo(() => {
     return clientes.filter(c => {
