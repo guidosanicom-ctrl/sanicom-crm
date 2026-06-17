@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, CheckCircle } from 'lucide-react';
+import { Plus, CheckCircle, TrendingUp, TrendingDown, Package, Euro, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useServicioStore } from '../../store/servicioStore';
 import { useClientesStore } from '../../store/clientesStore';
@@ -17,6 +17,105 @@ import { formatDate } from '../../utils/formatters';
 import { ESTADOS_SERVICIO, TIPOS_SERVICIO, PRIORIDADES_SERVICIO } from '../../utils/constants';
 import { Wrench } from 'lucide-react';
 
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function StatCard({ label, value, sub, color = 'gray', icon: Icon }) {
+  const colors = {
+    gray:   'bg-gray-50 border-gray-200 text-gray-700',
+    blue:   'bg-blue-50 border-blue-200 text-blue-700',
+    green:  'bg-green-50 border-green-200 text-green-700',
+    red:    'bg-red-50 border-red-200 text-red-700',
+    orange: 'bg-orange-50 border-orange-200 text-orange-700',
+    yellow: 'bg-yellow-50 border-yellow-200 text-yellow-700',
+  };
+  return (
+    <div className={`border rounded-xl p-4 ${colors[color]}`}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-medium opacity-70">{label}</p>
+        {Icon && <Icon className="w-4 h-4 opacity-50" />}
+      </div>
+      <p className="text-2xl font-bold">{value}</p>
+      {sub && <p className="text-xs mt-1 opacity-60">{sub}</p>}
+    </div>
+  );
+}
+
+function ResumenMensual({ servicios }) {
+  const now = new Date();
+  const [mes, setMes] = useState(now.getMonth());
+  const [anio, setAnio] = useState(now.getFullYear());
+
+  const años = useMemo(() => {
+    const set = new Set(servicios.map(s => new Date(s.fechaCreacion || s.fechaProgramada).getFullYear()).filter(Boolean));
+    set.add(now.getFullYear());
+    return [...set].sort((a, b) => b - a);
+  }, [servicios]);
+
+  const del = useMemo(() => servicios.filter(s => {
+    const d = new Date(s.fechaCreacion || s.fechaProgramada);
+    return d.getFullYear() === anio && d.getMonth() === mes;
+  }), [servicios, mes, anio]);
+
+  const completadas = del.filter(s => s.estado === 'Completada').length;
+  const enCurso    = del.filter(s => s.estado === 'En curso').length;
+  const pendientes  = del.filter(s => s.estado === 'Pendiente' || s.estado === 'Programada').length;
+  const canceladas  = del.filter(s => s.estado === 'Cancelada').length;
+
+  const totalCoste   = del.reduce((acc, s) => acc + (parseFloat(s.costeRepuestos) || 0), 0);
+  const totalPrecio  = del.reduce((acc, s) => acc + (parseFloat(s.precioCobrado) || 0), 0);
+  const margen       = totalPrecio - totalCoste;
+
+  const fmt = (n) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+
+  return (
+    <div className="space-y-6">
+      {/* Selector */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-wrap gap-3 items-center">
+        <span className="text-sm font-medium text-gray-600">Período:</span>
+        <select value={mes} onChange={e => setMes(Number(e.target.value))}
+          className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white">
+          {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+        </select>
+        <select value={anio} onChange={e => setAnio(Number(e.target.value))}
+          className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white">
+          {años.map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <span className="text-sm text-gray-400">{del.length} órdenes en este período</span>
+      </div>
+
+      {/* Estado de órdenes */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Órdenes de trabajo</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard label="Total" value={del.length} color="blue" icon={Wrench} />
+          <StatCard label="Completadas" value={completadas} color="green" icon={CheckCircle} />
+          <StatCard label="En curso / Programadas" value={enCurso + pendientes} color="orange" icon={BarChart3} sub={`${enCurso} en curso · ${pendientes} pendientes`} />
+          <StatCard label="Canceladas" value={canceladas} color="gray" />
+        </div>
+      </div>
+
+      {/* Control económico */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Control económico</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <StatCard label="Coste de repuestos" value={fmt(totalCoste)} color="orange" icon={Package} sub="Total gastado en materiales" />
+          <StatCard label="Facturado al cliente" value={fmt(totalPrecio)} color="blue" icon={Euro} sub="Total cobrado" />
+          <StatCard
+            label="Margen total"
+            value={(margen >= 0 ? '+' : '') + fmt(margen)}
+            color={margen >= 0 ? 'green' : 'red'}
+            icon={margen >= 0 ? TrendingUp : TrendingDown}
+            sub={totalPrecio > 0 ? `${((margen / totalPrecio) * 100).toFixed(1)}% sobre facturado` : undefined}
+          />
+        </div>
+        {del.length === 0 && (
+          <p className="text-center text-sm text-gray-400 mt-6">No hay órdenes registradas en {MESES[mes]} {anio}.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const ESTADO_BADGE = { 'Pendiente': 'yellow', 'Programada': 'blue', 'En curso': 'orange', 'Completada': 'green', 'Cancelada': 'gray' };
 const PRIORIDAD_BADGE = { 'Baja': 'gray', 'Normal': 'blue', 'Alta': 'orange', 'Urgente': 'red' };
 
@@ -24,8 +123,9 @@ export default function ServicioTecnicoPage() {
   const { servicios, addServicio, updateServicio, deleteServicio } = useServicioStore();
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
-  const { users, isReadOnly } = useAuthStore();
+  const { users, isReadOnly, isCarlos } = useAuthStore();
   const readOnly = isReadOnly('servicio-tecnico');
+  const [activeTab, setActiveTab] = useState('ordenes');
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
@@ -59,6 +159,27 @@ export default function ServicioTecnicoPage() {
 
   return (
     <div className="space-y-6">
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('ordenes')}
+          className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer ${activeTab === 'ordenes' ? 'bg-white border border-b-white border-gray-200 -mb-px text-[#1B4F8A]' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          Órdenes de trabajo
+        </button>
+        {!isCarlos() && (
+          <button
+            onClick={() => setActiveTab('resumen')}
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer ${activeTab === 'resumen' ? 'bg-white border border-b-white border-gray-200 -mb-px text-[#1B4F8A]' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Resumen mensual
+          </button>
+        )}
+      </div>
+
+      {activeTab === 'resumen' && !isCarlos() && <ResumenMensual servicios={servicios} />}
+
+      {activeTab === 'ordenes' && <>
       <div className="flex flex-wrap gap-3 items-start justify-between">
         <div className="flex flex-wrap gap-2">
           <SearchBar value={search} onChange={s => { setSearch(s); setPage(1); }} placeholder="Buscar por cliente, equipo, Nº..." className="w-56" />
@@ -139,6 +260,8 @@ export default function ServicioTecnicoPage() {
           </>
         )}
       </div>
+
+      </>}
 
       {/* Detail modal */}
       <ServicioDetail
