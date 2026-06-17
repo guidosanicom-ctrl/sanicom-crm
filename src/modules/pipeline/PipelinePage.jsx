@@ -10,12 +10,12 @@ import Badge from '../../components/ui/Badge';
 import OportunidadForm from './OportunidadForm';
 import OportunidadDetail from './OportunidadDetail';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { ETAPAS_PIPELINE } from '../../utils/constants';
+import { usePipelineStore } from '../../store/pipelineStore';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 
 const STAGE_COLORS = {
   'Prospecto': 'bg-gray-100 border-gray-200',
-  'Cualificado': 'bg-blue-50 border-blue-100',
+  'Interesado': 'bg-blue-50 border-blue-100',
   'Propuesta enviada': 'bg-purple-50 border-purple-100',
   'Negociación': 'bg-yellow-50 border-yellow-100',
   'Ganado': 'bg-green-50 border-green-100',
@@ -23,7 +23,7 @@ const STAGE_COLORS = {
 };
 const STAGE_HEADER = {
   'Prospecto': 'text-gray-600',
-  'Cualificado': 'text-blue-700',
+  'Interesado': 'text-blue-700',
   'Propuesta enviada': 'text-purple-700',
   'Negociación': 'text-yellow-700',
   'Ganado': 'text-green-700',
@@ -99,6 +99,7 @@ export default function PipelinePage() {
   const { oportunidades, addOportunidad, updateOportunidad, deleteOportunidad } = useOportunidadesStore();
   const { clientes } = useClientesStore();
   const { users, canEditRecord } = useAuthStore();
+  const { etapas: ETAPAS_PIPELINE } = usePipelineStore();
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState(null);

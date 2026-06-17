@@ -4,7 +4,8 @@ import Button from '../../components/ui/Button';
 import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
-import { ETAPAS_PIPELINE, ORIGENES_OPP } from '../../utils/constants';
+import { ORIGENES_OPP } from '../../utils/constants';
+import { usePipelineStore } from '../../store/pipelineStore';
 
 const ESTADOS_CLIENTE = ['Evaluando opciones', 'Esperando aprobación', 'Consultando dirección', 'Silencio', 'Listo para decidir'];
 const FINANCIACIONES = ['Propia', 'Financiación bancaria', 'Leasing', 'Subvención', 'Por definir'];
@@ -13,6 +14,7 @@ const TEMPERATURAS = [{ value: 'frio', label: '❄️ Frío' }, { value: 'tibio'
 const empty = { nombre: '', clienteId: '', equipos: [], valor: '', probabilidad: 50, etapa: 'Prospecto', fechaCierre: '', responsable: '', origen: '', descripcion: '', estadoCliente: '', financiacion: '', temperatura: '', notaSeguimiento: '' };
 
 export default function OportunidadForm({ open, onClose, onSave, initial }) {
+  const { etapas: ETAPAS_PIPELINE } = usePipelineStore();
   const [form, setForm] = useState(initial || empty);
   const [errors, setErrors] = useState({});
 

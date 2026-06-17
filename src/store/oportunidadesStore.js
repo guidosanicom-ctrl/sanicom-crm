@@ -10,7 +10,12 @@ const KEY = 'sanicom_oportunidades';
 const load = () => {
   try {
     const data = localStorage.getItem(KEY);
-    if (data) return JSON.parse(data);
+    if (data) {
+      // Migración: renombrar etapa 'Cualificado' → 'Interesado'
+      const parsed = JSON.parse(data).map(o => o.etapa === 'Cualificado' ? { ...o, etapa: 'Interesado' } : o);
+      localStorage.setItem(KEY, JSON.stringify(parsed));
+      return parsed;
+    }
     localStorage.setItem(KEY, JSON.stringify(SEED_OPORTUNIDADES));
     return SEED_OPORTUNIDADES;
   } catch { return SEED_OPORTUNIDADES; }

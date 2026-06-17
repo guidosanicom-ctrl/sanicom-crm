@@ -9,7 +9,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Edit, Trash2 } from 'lucide-react';
 
 const STAGE_COLOR = {
-  'Prospecto': 'gray', 'Cualificado': 'blue', 'Propuesta enviada': 'purple',
+  'Prospecto': 'gray', 'Interesado': 'blue', 'Propuesta enviada': 'purple',
   'Negociación': 'yellow', 'Ganado': 'green', 'Perdido': 'red',
 };
 

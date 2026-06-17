@@ -11,7 +11,7 @@ import { useAgendaStore } from '../../store/agendaStore';
 import { useActividadStore } from '../../store/actividadStore';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/formatters';
-import { ETAPAS_PIPELINE } from '../../utils/constants';
+import { usePipelineStore } from '../../store/pipelineStore';
 
 const TIPO_ICON = { cliente: Users, oportunidad: TrendingUp, demo: PlaySquare, servicio: Wrench, agenda: Calendar };
 const TIPO_COLOR = {
@@ -60,6 +60,7 @@ export default function DashboardPage() {
   const { actividad } = useActividadStore();
   const { isCarlos } = useAuthStore();
   const carlos = isCarlos();
+  const { etapas: ETAPAS_PIPELINE } = usePipelineStore();
 
   const stats = useMemo(() => {
     const activeClients = clientes.filter(c => c.estado === 'Activo').length;
@@ -95,7 +96,7 @@ export default function DashboardPage() {
     }
 
     return { activeClients, openOpps: openOpps.length, totalPipeline, pendingServices, upcomingEvents, closeRate, byStage, months };
-  }, [clientes, oportunidades, servicios, eventos]);
+  }, [clientes, oportunidades, servicios, eventos, ETAPAS_PIPELINE]);
 
   const feed = useMemo(() => {
     const items = carlos ? actividad.filter(a => a.modulo !== 'servicio-tecnico') : actividad;

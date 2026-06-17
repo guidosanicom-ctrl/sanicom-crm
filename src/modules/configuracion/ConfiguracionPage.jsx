@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
+import { usePipelineStore } from '../../store/pipelineStore';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -16,7 +17,11 @@ const EMPRESA_INIT = { nombre: 'Sanicom S.L.', cif: 'B12345678', direccion: 'C/ 
 export default function ConfiguracionPage() {
   const { user, users } = useAuthStore();
   const { especialidades, addEspecialidad, updateEspecialidad, deleteEspecialidad } = useEspecialidadesStore();
+  const { etapas, setEtapas } = usePipelineStore();
   const [activeTab, setActiveTab] = useState(0);
+
+  // Pipeline state — copia local editable, se guarda al pulsar "Guardar"
+  const [etapasLocal, setEtapasLocal] = useState(etapas);
 
   // Especialidades state
   const [editingEsp, setEditingEsp] = useState(null); // nombre original being edited
@@ -85,7 +90,7 @@ export default function ConfiguracionPage() {
       <div className="border-b border-gray-200">
         <div className="flex gap-1 overflow-x-auto">
           {TABS.map((t, i) => (
-            <button key={i} onClick={() => setActiveTab(i)}
+            <button key={i} onClick={() => { setActiveTab(i); if (i === 3) setEtapasLocal(etapas); }}
               className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap cursor-pointer border-b-2 -mb-px transition-colors
                 ${activeTab === i ? 'border-[#1B4F8A] text-[#1B4F8A]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               {t}
@@ -192,16 +197,23 @@ export default function ConfiguracionPage() {
 
       {activeTab === 3 && (
         <Card className="max-w-lg">
-          <h3 className="font-semibold text-gray-800 mb-4">Etapas del pipeline</h3>
+          <h3 className="font-semibold text-gray-800 mb-1">Etapas del pipeline</h3>
+          <p className="text-xs text-gray-400 mb-4">Los cambios se reflejan en el Kanban, formularios y filtros al guardar.</p>
           <div className="space-y-2">
-            {['Prospecto', 'Cualificado', 'Propuesta enviada', 'Negociación', 'Ganado', 'Perdido'].map((s, i) => (
+            {etapasLocal.map((s, i) => (
               <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <span className="w-6 h-6 rounded-full bg-white border border-gray-200 text-xs flex items-center justify-center text-gray-500 font-medium">{i + 1}</span>
-                <input defaultValue={s} className="flex-1 bg-transparent text-sm focus:outline-none" />
+                <span className="w-6 h-6 rounded-full bg-white border border-gray-200 text-xs flex items-center justify-center text-gray-500 font-medium flex-shrink-0">{i + 1}</span>
+                <input
+                  value={s}
+                  onChange={e => setEtapasLocal(prev => prev.map((v, j) => j === i ? e.target.value : v))}
+                  className="flex-1 bg-transparent text-sm focus:outline-none"
+                />
               </div>
             ))}
           </div>
-          <Button className="mt-4" onClick={() => toast.success('Etapas guardadas (demo).')}>Guardar etapas</Button>
+          <Button className="mt-4" onClick={() => { setEtapas(etapasLocal); toast.success('Etapas guardadas correctamente.'); }}>
+            Guardar etapas
+          </Button>
         </Card>
       )}
 
