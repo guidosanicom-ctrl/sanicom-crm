@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
+import { useCategoriasStore } from '../../store/categoriasStore';
+import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import SearchBar from '../../components/shared/SearchBar';
@@ -11,14 +13,23 @@ import EmptyState from '../../components/shared/EmptyState';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import Modal from '../../components/ui/Modal';
 import { formatCurrency } from '../../utils/formatters';
-import { CATEGORIAS_EQUIPO, ESPECIALIDADES } from '../../utils/constants';
 import { Package } from 'lucide-react';
 
-const empty = { nombre: '', marca: '', modelo: '', categoria: 'Diagnóstico por imagen', descripcion: '', precioVenta: '', precioCoste: '', estado: 'Activo', especialidades: [] };
+const emptyBase = { nombre: '', marca: '', modelo: '', categoria: '', descripcion: '', precioVenta: '', precioCoste: '', estado: 'Activo', especialidades: [] };
 
 function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
-  const [form, setForm] = useState(initial || empty);
+  const { categorias } = useCategoriasStore();
+  const { especialidades } = useEspecialidadesStore();
+  const [form, setForm] = useState(initial || { ...emptyBase, categoria: categorias[0] || '' });
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (open) {
+      setForm(initial || { ...emptyBase, categoria: categorias[0] || '' });
+      setErrors({});
+    }
+  }, [open, initial]);
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const validate = () => {
@@ -72,7 +83,7 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
           <label className="block text-xs font-medium text-gray-600 mb-1">Categoría</label>
           <select value={form.categoria} onChange={e => set('categoria', e.target.value)} disabled={readOnly}
             className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none ${readOnly ? 'bg-gray-50' : ''}`}>
-            {CATEGORIAS_EQUIPO.map(c => <option key={c}>{c}</option>)}
+            {categorias.map(c => <option key={c}>{c}</option>)}
           </select>
         </div>
         <div>
@@ -98,7 +109,7 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-2">Especialidades médicas relacionadas</label>
           <div className="flex flex-wrap gap-2">
-            {ESPECIALIDADES.map(e => (
+            {especialidades.map(e => (
               <button key={e} type="button" onClick={() => !readOnly && toggleEsp(e)} disabled={readOnly}
                 className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${readOnly ? 'cursor-default' : 'cursor-pointer'} ${(form.especialidades || []).includes(e) ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
                 {e}
@@ -114,6 +125,7 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
 export default function EquiposPage() {
   const { equipos, addEquipo, updateEquipo, deleteEquipo } = useEquiposStore();
   const { isReadOnly } = useAuthStore();
+  const { categorias } = useCategoriasStore();
   const readOnly = isReadOnly('equipos');
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
@@ -140,7 +152,7 @@ export default function EquiposPage() {
           <SearchBar value={search} onChange={s => { setSearch(s); setPage(1); }} placeholder="Buscar por nombre, marca, modelo..." className="w-64" />
           <select className={sel} value={filterCat} onChange={e => { setFilterCat(e.target.value); setPage(1); }}>
             <option value="">Todas las categorías</option>
-            {CATEGORIAS_EQUIPO.map(c => <option key={c}>{c}</option>)}
+            {categorias.map(c => <option key={c}>{c}</option>)}
           </select>
           <select className={sel} value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1); }}>
             <option value="">Todos los estados</option>

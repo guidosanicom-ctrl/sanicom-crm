@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { usePipelineStore } from '../../store/pipelineStore';
+import { useCategoriasStore } from '../../store/categoriasStore';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -10,7 +11,7 @@ import toast from 'react-hot-toast';
 import { ROLES } from '../../utils/constants';
 import { Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 
-const TABS = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades'];
+const TABS = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos'];
 
 const EMPRESA_INIT = { nombre: 'Sanicom S.L.', cif: 'B12345678', direccion: 'C/ Ejemplo, 1, Sevilla', telefono: '954 000 000' };
 
@@ -18,49 +19,61 @@ export default function ConfiguracionPage() {
   const { user, users } = useAuthStore();
   const { especialidades, addEspecialidad, updateEspecialidad, deleteEspecialidad } = useEspecialidadesStore();
   const { etapas, setEtapas } = usePipelineStore();
+  const { categorias, addCategoria, updateCategoria, deleteCategoria } = useCategoriasStore();
   const [activeTab, setActiveTab] = useState(0);
 
   // Pipeline state — copia local editable, se guarda al pulsar "Guardar"
   const [etapasLocal, setEtapasLocal] = useState(etapas);
 
-  // Especialidades state
-  const [editingEsp, setEditingEsp] = useState(null); // nombre original being edited
-  const [editingValue, setEditingValue] = useState('');
+  // ── Especialidades CRUD state ──────────────────────────────────────────────
+  const [editingEsp, setEditingEsp] = useState(null);
+  const [editingEspValue, setEditingEspValue] = useState('');
   const [newEspValue, setNewEspValue] = useState('');
   const [addingEsp, setAddingEsp] = useState(false);
-  const [delEsp, setDelEsp] = useState(null); // nombre to delete
+  const [delEsp, setDelEsp] = useState(null);
   const newEspRef = useRef(null);
 
-  const startEdit = (nombre) => { setEditingEsp(nombre); setEditingValue(nombre); setAddingEsp(false); };
-  const cancelEdit = () => { setEditingEsp(null); setEditingValue(''); };
-
+  const startEdit = (nombre) => { setEditingEsp(nombre); setEditingEspValue(nombre); setAddingEsp(false); };
+  const cancelEdit = () => { setEditingEsp(null); setEditingEspValue(''); };
   const confirmEdit = () => {
-    const result = updateEspecialidad(editingEsp, editingValue);
+    const result = updateEspecialidad(editingEsp, editingEspValue);
     if (!result.ok) { toast.error(result.error); return; }
     toast.success('Especialidad actualizada.');
     cancelEdit();
   };
-
-  const startAdd = () => {
-    setAddingEsp(true);
-    setEditingEsp(null);
-    setNewEspValue('');
-    setTimeout(() => newEspRef.current?.focus(), 50);
-  };
-
+  const startAdd = () => { setAddingEsp(true); setEditingEsp(null); setNewEspValue(''); setTimeout(() => newEspRef.current?.focus(), 50); };
   const confirmAdd = () => {
     const result = addEspecialidad(newEspValue);
     if (!result.ok) { toast.error(result.error); return; }
     toast.success('Especialidad añadida.');
-    setAddingEsp(false);
-    setNewEspValue('');
+    setAddingEsp(false); setNewEspValue('');
   };
+  const confirmDelete = () => { deleteEspecialidad(delEsp); toast.success(`"${delEsp}" eliminada.`); setDelEsp(null); };
 
-  const confirmDelete = () => {
-    deleteEspecialidad(delEsp);
-    toast.success(`"${delEsp}" eliminada.`);
-    setDelEsp(null);
+  // ── Categorías de equipos CRUD state ──────────────────────────────────────
+  const [editingCat, setEditingCat] = useState(null);
+  const [editingCatValue, setEditingCatValue] = useState('');
+  const [newCatValue, setNewCatValue] = useState('');
+  const [addingCat, setAddingCat] = useState(false);
+  const [delCat, setDelCat] = useState(null);
+  const newCatRef = useRef(null);
+
+  const startEditCat = (nombre) => { setEditingCat(nombre); setEditingCatValue(nombre); setAddingCat(false); };
+  const cancelEditCat = () => { setEditingCat(null); setEditingCatValue(''); };
+  const confirmEditCat = () => {
+    const result = updateCategoria(editingCat, editingCatValue);
+    if (!result.ok) { toast.error(result.error); return; }
+    toast.success('Categoría actualizada.');
+    cancelEditCat();
   };
+  const startAddCat = () => { setAddingCat(true); setEditingCat(null); setNewCatValue(''); setTimeout(() => newCatRef.current?.focus(), 50); };
+  const confirmAddCat = () => {
+    const result = addCategoria(newCatValue);
+    if (!result.ok) { toast.error(result.error); return; }
+    toast.success('Categoría añadida.');
+    setAddingCat(false); setNewCatValue('');
+  };
+  const confirmDeleteCat = () => { deleteCategoria(delCat); toast.success(`"${delCat}" eliminada.`); setDelCat(null); };
 
   const [empresa, setEmpresa] = useState(() => {
     try { return JSON.parse(localStorage.getItem('sanicom_empresa')) || EMPRESA_INIT; } catch { return EMPRESA_INIT; }
@@ -250,8 +263,8 @@ export default function ConfiguracionPage() {
                   <>
                     <input
                       autoFocus
-                      value={editingValue}
-                      onChange={e => setEditingValue(e.target.value)}
+                      value={editingEspValue}
+                      onChange={e => setEditingEspValue(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter') confirmEdit(); if (e.key === 'Escape') cancelEdit(); }}
                       className="flex-1 text-sm px-2 py-1 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     />
@@ -304,12 +317,93 @@ export default function ConfiguracionPage() {
         </Card>
       )}
 
+      {activeTab === 6 && (
+        <Card className="max-w-xl">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="font-semibold text-gray-800">Categorías de equipos</h3>
+              <p className="text-xs text-gray-400 mt-0.5">{categorias.length} categorías · Se sincronizan con el formulario de equipos</p>
+            </div>
+            <Button size="sm" onClick={startAddCat} disabled={addingCat}>
+              <Plus className="w-4 h-4" />Nueva categoría
+            </Button>
+          </div>
+
+          <div className="space-y-1">
+            {categorias.map((cat) => (
+              <div key={cat} className={`flex items-center gap-2 px-3 py-2.5 rounded-lg group transition-colors ${editingCat === cat ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'}`}>
+                {editingCat === cat ? (
+                  <>
+                    <input
+                      autoFocus
+                      value={editingCatValue}
+                      onChange={e => setEditingCatValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') confirmEditCat(); if (e.key === 'Escape') cancelEditCat(); }}
+                      className="flex-1 text-sm px-2 py-1 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    <button onClick={confirmEditCat} className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 cursor-pointer" title="Guardar">
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={cancelEditCat} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 cursor-pointer" title="Cancelar">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm text-gray-700">{cat}</span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => startEditCat(cat)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer" title="Editar">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => setDelCat(cat)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer" title="Eliminar">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+
+            {addingCat && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200 mt-1">
+                <input
+                  ref={newCatRef}
+                  value={newCatValue}
+                  onChange={e => setNewCatValue(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') confirmAddCat(); if (e.key === 'Escape') { setAddingCat(false); setNewCatValue(''); } }}
+                  placeholder="Nombre de la categoría..."
+                  className="flex-1 text-sm px-2 py-1 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 bg-white"
+                />
+                <button onClick={confirmAddCat} className="p-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 cursor-pointer" title="Añadir">
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => { setAddingCat(false); setNewCatValue(''); }} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 cursor-pointer" title="Cancelar">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {categorias.length === 0 && !addingCat && (
+              <p className="text-sm text-gray-400 text-center py-6">No hay categorías. Añade la primera.</p>
+            )}
+          </div>
+        </Card>
+      )}
+
       <ConfirmDialog
         open={!!delEsp}
         onClose={() => setDelEsp(null)}
         onConfirm={confirmDelete}
         title="Eliminar especialidad"
         message={`¿Eliminar "${delEsp}"? Los clientes que ya tengan esta especialidad asignada no se verán afectados, pero no podrá seleccionarse en nuevos registros.`}
+        confirmText="Eliminar"
+      />
+      <ConfirmDialog
+        open={!!delCat}
+        onClose={() => setDelCat(null)}
+        onConfirm={confirmDeleteCat}
+        title="Eliminar categoría"
+        message={`¿Eliminar "${delCat}"? Los equipos que ya tengan esta categoría asignada no se verán afectados, pero no podrá seleccionarse en nuevos registros.`}
         confirmText="Eliminar"
       />
     </div>
