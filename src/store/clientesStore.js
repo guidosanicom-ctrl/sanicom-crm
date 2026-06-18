@@ -111,7 +111,7 @@ export const useClientesStore = create((set, get) => ({
           imported++;
         } else { skipped++; }
       } else {
-        const item = { ...row, id: generateId(), fechaAlta: new Date().toISOString().split('T')[0], contactos: [] };
+        const item = { ...row, id: generateId(), fechaAlta: new Date().toISOString().split('T')[0], contactos: [], estado: 'Activo' };
         updated.push(item);
         toInsert.push(item);
         imported++;
