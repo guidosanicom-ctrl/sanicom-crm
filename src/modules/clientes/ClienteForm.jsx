@@ -9,11 +9,21 @@ import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 import { useTiposClienteStore } from '../../store/tiposClienteStore';
 import { Loader2 } from 'lucide-react';
 
+const SERVICIOS_HOSPITAL = [
+  'Cardiología', 'Urgencias', 'UCI', 'Cirugía', 'Traumatología',
+  'Pediatría', 'Ginecología', 'Oncología', 'Neurología', 'Radiología',
+  'Laboratorio', 'Oftalmología', 'Medicina interna', 'Rehabilitación', 'Otro',
+];
+
 const empty = {
   nombre: '', tipo: 'Clínica', especialidad: 'Medicina general', subespecialidad: '', cif: '',
   direccion: '', ciudad: '', provincia: '', cp: '',
   telefono: '', email: '', website: '', estado: 'Activo', notas: '',
+  // Campos exclusivos de Hospital público
+  servicio: '', jefeNombre: '', jefeTelefono: '', jefeEmail: '', jefeNotas: '',
 };
+
+function genId() { return `srv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`; }
 
 export default function ClienteForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
@@ -29,9 +39,11 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
     ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e))
     : especialidades;
 
+  const esHospitalPublico = form.tipo === 'Hospital público';
+
   useEffect(() => {
     if (open) {
-      const base = initial || { ...empty, especialidad: espOptions[0] };
+      const base = initial || { ...empty, especialidad: espOptions[0], servicio: SERVICIOS_HOSPITAL[0] };
       setForm(base);
       setErrors({});
       setCpLoading(false);
@@ -42,20 +54,17 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
   useEffect(() => {
     const cp = form.cp?.trim();
     if (!cp || cp.length !== 5 || !/^\d{5}$/.test(cp)) return;
-
     if (cpAbort.current) cpAbort.current.abort();
     const controller = new AbortController();
     cpAbort.current = controller;
-
     setCpLoading(true);
     fetch(`https://api.zippopotam.us/es/${cp}`, { signal: controller.signal })
       .then(r => { if (!r.ok) throw new Error('not found'); return r.json(); })
       .then(data => {
         const place = data.places?.[0];
         if (place) {
-          const ciudadApi = place['place name'];
           const provincia = CP_PROVINCIA[cp.substring(0, 2)] || '';
-          setForm(f => ({ ...f, ciudad: ciudadApi, provincia }));
+          setForm(f => ({ ...f, ciudad: place['place name'], provincia }));
         }
       })
       .catch(e => { if (e.name !== 'AbortError') { /* campo queda editable */ } })
@@ -73,7 +82,28 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
 
   const handleSave = () => {
     if (!validate()) return;
-    onSave(form);
+
+    let data = { ...form };
+
+    // Para Hospital público: convertir el servicio + jefe en la primera entrada de serviciosEspecialidades
+    if (esHospitalPublico && form.servicio) {
+      const entradaExistente = (initial?.serviciosEspecialidades || []).find(e => e.nombre === form.servicio);
+      if (!entradaExistente) {
+        data.serviciosEspecialidades = [
+          ...(initial?.serviciosEspecialidades || []),
+          {
+            id:       genId(),
+            nombre:   form.servicio,
+            jefe:     form.jefeNombre  || '',
+            telefono: form.jefeTelefono || '',
+            email:    form.jefeEmail    || '',
+            notas:    form.jefeNotas    || '',
+          },
+        ];
+      }
+    }
+
+    onSave(data);
     onClose();
     setForm(empty);
   };
@@ -87,13 +117,17 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
     }));
   };
 
-  const f = (k) => ({
+  const inp = (k) => ({
     value: form[k] || '',
     onChange: e => set(k, e.target.value),
     className: `w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 ${errors[k] ? 'border-red-400' : 'border-gray-200'}`,
   });
 
-  const sel = (k) => ({ ...f(k), className: `w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20` });
+  const sel = (k) => ({
+    value: form[k] || '',
+    onChange: e => set(k, e.target.value),
+    className: 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20',
+  });
 
   return (
     <Modal open={open} onClose={onClose} title={initial ? 'Editar cliente' : 'Nuevo cliente'} size="lg"
@@ -103,37 +137,45 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
       </>}
     >
       <div className="space-y-6">
+
+        {/* ── Información general ── */}
         <div>
           <h4 className="text-sm font-semibold text-gray-700 mb-3">Información general</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Nombre empresa *</label>
-              <input {...f('nombre')} placeholder="Hospital / Clínica..." />
+              <input {...inp('nombre')} placeholder="Hospital / Clínica..." />
               {errors.nombre && <p className="text-xs text-red-500 mt-1">{errors.nombre}</p>}
             </div>
+
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
               <select {...sel('tipo')}>{tiposCliente.map(t => <option key={t}>{t}</option>)}</select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Especialidad médica</label>
-              <select {...sel('especialidad')} onChange={e => { set('especialidad', e.target.value); if (e.target.value !== 'Fisioterapia') set('subespecialidad', ''); }}>
-                {espOptions.map(e => <option key={e}>{e}</option>)}
-              </select>
-              {form.especialidad === 'Fisioterapia' && (
-                <select
-                  value={form.subespecialidad || ''}
-                  onChange={e => set('subespecialidad', e.target.value)}
-                  className="w-full mt-2 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                >
-                  <option value="">Subespecialidad (opcional)</option>
-                  {subespecialidades.map(s => <option key={s}>{s}</option>)}
+
+            {/* Campo condicional: Especialidad médica (todos excepto Hospital público) */}
+            {!esHospitalPublico && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Especialidad médica</label>
+                <select {...sel('especialidad')} onChange={e => { set('especialidad', e.target.value); if (e.target.value !== 'Fisioterapia') set('subespecialidad', ''); }}>
+                  {espOptions.map(e => <option key={e}>{e}</option>)}
                 </select>
-              )}
-            </div>
+                {form.especialidad === 'Fisioterapia' && (
+                  <select
+                    value={form.subespecialidad || ''}
+                    onChange={e => set('subespecialidad', e.target.value)}
+                    className="w-full mt-2 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    <option value="">Subespecialidad (opcional)</option>
+                    {subespecialidades.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">CIF / NIF</label>
-              <input {...f('cif')} placeholder="B12345678" />
+              <input {...inp('cif')} placeholder="B12345678" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
@@ -142,57 +184,89 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
           </div>
         </div>
 
+        {/* ── Sección exclusiva Hospital público: Servicio + Jefe de servicio ── */}
+        {esHospitalPublico && (
+          <div className="border border-blue-100 bg-blue-50/40 rounded-xl p-4 space-y-4">
+            <h4 className="text-sm font-semibold text-blue-800">Servicio hospitalario</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Servicio</label>
+                <select {...sel('servicio')}>
+                  {SERVICIOS_HOSPITAL.map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Nombre del jefe de servicio</label>
+                <input {...inp('jefeNombre')} placeholder="Dr. / Dra. ..." />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono directo</label>
+                <input {...inp('jefeTelefono')} placeholder="Ext. o directo" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                <input {...inp('jefeEmail')} type="email" placeholder="jefe@hospital.es" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Notas</label>
+                <input {...inp('jefeNotas')} placeholder="Observaciones sobre el servicio..." />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Dirección ── */}
         <div>
           <h4 className="text-sm font-semibold text-gray-700 mb-3">Dirección</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Dirección (calle)</label>
-              <input {...f('direccion')} placeholder="C/ Ejemplo, 1" />
+              <input {...inp('direccion')} placeholder="C/ Ejemplo, 1" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Ciudad</label>
-              <CiudadInput
-                value={form.ciudad}
-                onSelect={handleCiudadSelect}
-                error={!!errors.ciudad}
-              />
+              <CiudadInput value={form.ciudad} onSelect={handleCiudadSelect} error={!!errors.ciudad} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Provincia</label>
-              <input {...f('provincia')} placeholder="Sevilla" />
+              <input {...inp('provincia')} placeholder="Sevilla" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
                 Código Postal
                 {cpLoading && <Loader2 className="w-3 h-3 text-[#3ABDD5] animate-spin" />}
               </label>
-              <input {...f('cp')} placeholder="41001" maxLength={5} />
+              <input {...inp('cp')} placeholder="41001" maxLength={5} />
             </div>
           </div>
         </div>
 
+        {/* ── Contacto ── */}
         <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">Contacto</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3">Contacto general</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Teléfono</label>
-              <input {...f('telefono')} placeholder="000 000 000" />
+              <input {...inp('telefono')} placeholder="000 000 000" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
-              <input {...f('email')} type="email" placeholder="info@empresa.es" />
+              <input {...inp('email')} type="email" placeholder="info@empresa.es" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Website</label>
-              <input {...f('website')} placeholder="www.empresa.es" />
+              <input {...inp('website')} placeholder="www.empresa.es" />
             </div>
           </div>
         </div>
 
+        {/* ── Notas ── */}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Notas internas</label>
-          <textarea {...f('notas')} rows={3} placeholder="Observaciones..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
+          <textarea {...inp('notas')} rows={3} placeholder="Observaciones..."
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
         </div>
+
       </div>
     </Modal>
   );
