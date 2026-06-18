@@ -4,7 +4,7 @@ export const ESPECIALIDADES = ['Cardiología', 'Radiología', 'Urgencias', 'Pedi
 export const ESTADOS_CLIENTE = ['Activo', 'Inactivo'];
 export const CATEGORIAS_EQUIPO = ['Diagnóstico por imagen', 'Monitorización', 'Laboratorio', 'Electromedicina', 'Mobiliario clínico', 'Esterilización', 'Óptica y oftalmología', 'Otro'];
 export const ETAPAS_PIPELINE = ['Prospecto', 'Interesado', 'Propuesta enviada', 'Negociación', 'Ganado', 'Perdido'];
-export const TIPOS_EVENTO = ['Visita comercial', 'Mantenimiento preventivo', 'Reparación/Servicio técnico', 'Llamada/Seguimiento', 'Demo de equipo'];
+export const TIPOS_EVENTO = ['Visita comercial', 'Mantenimiento preventivo', 'Reparación/Servicio técnico', 'Llamada/Seguimiento', 'Demo de equipo', 'Cierre de venta con cliente'];
 export const TIPOS_SERVICIO = ['Mantenimiento preventivo', 'Reparación correctiva', 'Instalación', 'Calibración/Verificación', 'Garantía', 'Asesoramiento técnico'];
 export const PRIORIDADES_SERVICIO = ['Baja', 'Normal', 'Alta', 'Urgente'];
 export const ESTADOS_SERVICIO = ['Pendiente', 'Programada', 'En curso', 'Completada', 'Cancelada'];
@@ -21,6 +21,7 @@ export const COLORS_EVENTO = {
   'Reparación/Servicio técnico': '#F59E0B',
   'Llamada/Seguimiento': '#EF4444',
   'Demo de equipo': '#8B5CF6',
+  'Cierre de venta con cliente': '#10B981',
 };
 
 export const COLORS_ESTADO_SERVICIO = {
