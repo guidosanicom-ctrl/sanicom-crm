@@ -42,7 +42,6 @@ export const useClientesStore = create((set, get) => ({
     db.update(id, updated).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ clientes: s.clientes.map(c => c.id === id ? prev : c) })); }
     });
-    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'cliente', accion: 'actualizó el cliente', registroId: id, registroLabel: updated?.nombre || id, modulo: 'clientes' });
   },
 
   deleteCliente: (id) => {
@@ -53,7 +52,6 @@ export const useClientesStore = create((set, get) => ({
     db.delete(id).then(({ error }) => {
       if (error) { console.error(error); set({ clientes: prev }); }
     });
-    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'cliente', accion: 'eliminó el cliente', registroId: id, registroLabel: target?.nombre || id, modulo: 'clientes' });
   },
 
   deleteClientes: (ids) => {

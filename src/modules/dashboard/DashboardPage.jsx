@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, TrendingUp, Wrench, Calendar, Target, PlaySquare, Briefcase, Clock } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
@@ -9,10 +10,10 @@ import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useServicioStore } from '../../store/servicioStore';
 import { useAgendaStore } from '../../store/agendaStore';
 import { useActividadStore } from '../../store/actividadStore';
-import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/formatters';
 import { usePipelineStore } from '../../store/pipelineStore';
 
+const MODULO_RUTA = { clientes: '/clientes', pipeline: '/pipeline', demostraciones: '/demostraciones', 'servicio-tecnico': '/servicio-tecnico' };
 const TIPO_ICON = { cliente: Users, oportunidad: TrendingUp, demo: PlaySquare, servicio: Wrench, agenda: Calendar };
 const TIPO_COLOR = {
   cliente: 'bg-blue-100 text-blue-600',
@@ -58,8 +59,7 @@ export default function DashboardPage() {
   const { servicios } = useServicioStore();
   const { eventos } = useAgendaStore();
   const { actividad } = useActividadStore();
-  const { isCarlos } = useAuthStore();
-  const carlos = isCarlos();
+  const navigate = useNavigate();
   const { etapas: ETAPAS_PIPELINE } = usePipelineStore();
 
   const stats = useMemo(() => {
@@ -98,10 +98,7 @@ export default function DashboardPage() {
     return { activeClients, openOpps: openOpps.length, totalPipeline, pendingServices, upcomingEvents, closeRate, byStage, months };
   }, [clientes, oportunidades, servicios, eventos, ETAPAS_PIPELINE]);
 
-  const feed = useMemo(() => {
-    const items = carlos ? actividad.filter(a => a.modulo !== 'servicio-tecnico') : actividad;
-    return items.slice(0, 20);
-  }, [actividad, carlos]);
+  const feed = useMemo(() => actividad.slice(0, 20), [actividad]);
 
   return (
     <div className="space-y-6">
@@ -167,9 +164,18 @@ export default function DashboardPage() {
                       <span className="text-sm font-semibold text-gray-800">{item.userName}</span>
                       <span className="text-sm text-gray-600">{item.accion}</span>
                       {item.registroLabel && (
-                        <span className="text-sm font-medium text-[#1B4F8A] truncate max-w-[200px]">
-                          {item.registroLabel}
-                        </span>
+                        MODULO_RUTA[item.modulo] ? (
+                          <button
+                            onClick={() => navigate(MODULO_RUTA[item.modulo])}
+                            className="text-sm font-medium text-[#1B4F8A] hover:underline truncate max-w-[200px] text-left"
+                          >
+                            {item.registroLabel}
+                          </button>
+                        ) : (
+                          <span className="text-sm font-medium text-[#1B4F8A] truncate max-w-[200px]">
+                            {item.registroLabel}
+                          </span>
+                        )
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">

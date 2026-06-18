@@ -55,11 +55,8 @@ export const useServicioStore = create((set, get) => ({
     supabase.from(TABLE).update({ data: updated }).eq('id', id).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ servicios: s.servicios.map(s => s.id === id ? prev : s) })); }
     });
-    if (user) {
-      const accion = updates.estado && prev?.estado !== updates.estado
-        ? `cambió la ${prev?.numero} a "${updates.estado}"`
-        : `actualizó la orden ${prev?.numero}`;
-      useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'servicio', accion, registroId: id, registroLabel: prev?.numero || id, modulo: 'servicio-tecnico' });
+    if (user && updates.estado && prev?.estado !== updates.estado && updates.estado === 'Completada') {
+      useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'servicio', accion: 'completó la orden de servicio', registroId: id, registroLabel: prev?.numero || id, modulo: 'servicio-tecnico' });
       if (updates.estado === 'Completada' && prev?.estado !== 'Completada') {
         const push = useNotificacionesStore.getState().pushNotificacion;
         const numero = prev?.numero || id;
@@ -81,7 +78,6 @@ export const useServicioStore = create((set, get) => ({
     supabase.from(TABLE).delete().eq('id', id).then(({ error }) => {
       if (error) { console.error(error); set({ servicios: prev }); }
     });
-    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'servicio', accion: 'eliminó la orden de servicio', registroId: id, registroLabel: target?.numero || id, modulo: 'servicio-tecnico' });
   },
 
   addAccion: (servicioId, accion) => {

@@ -54,10 +54,14 @@ export const useOportunidadesStore = create((set, get) => ({
       if (error) { console.error(error); set(s => ({ oportunidades: s.oportunidades.map(o => o.id === id ? prev : o) })); }
     });
     if (user) {
-      const accion = updates.etapa && prev?.etapa !== updates.etapa
-        ? `movió la oportunidad a "${updates.etapa}"`
-        : 'actualizó la oportunidad';
-      useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'oportunidad', accion, registroId: id, registroLabel: prev?.nombre || id, modulo: 'pipeline' });
+      if (updates.etapa && prev?.etapa !== updates.etapa) {
+        const accion = updates.etapa === 'Ganado'
+          ? 'ganó la oportunidad'
+          : updates.etapa === 'Perdido'
+            ? 'perdió la oportunidad'
+            : `movió la oportunidad a "${updates.etapa}"`;
+        useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'oportunidad', accion, registroId: id, registroLabel: prev?.nombre || id, modulo: 'pipeline' });
+      }
       const push = useNotificacionesStore.getState().pushNotificacion;
       if (updates.etapa && prev?.etapa !== updates.etapa) {
         const resp = updates.responsable || prev?.responsable;
@@ -77,7 +81,6 @@ export const useOportunidadesStore = create((set, get) => ({
     supabase.from(TABLE).delete().eq('id', id).then(({ error }) => {
       if (error) { console.error(error); set({ oportunidades: prev }); }
     });
-    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'oportunidad', accion: 'eliminó la oportunidad', registroId: id, registroLabel: target?.nombre || id, modulo: 'pipeline' });
   },
 
   getOportunidad: (id) => get().oportunidades.find(o => o.id === id),

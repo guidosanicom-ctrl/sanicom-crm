@@ -54,7 +54,7 @@ export const useDemosStore = create((set, get) => ({
       if (error) { console.error(error); set(s => ({ demos: s.demos.filter(d => d.id !== itemWithEvento.id) })); }
     });
     if (user) {
-      useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion: 'creó una demostración', registroId: item.id, registroLabel: numero, modulo: 'demostraciones' });
+      useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion: 'programó una nueva demostración', registroId: item.id, registroLabel: numero, modulo: 'demostraciones' });
       if (demoData.responsable && demoData.responsable !== user.id) {
         const cliente = useClientesStore.getState().clientes.find(c => c.id === demoData.clienteId);
         const equipo  = useEquiposStore.getState().equipos.find(e => e.id === demoData.equipoId);
@@ -83,10 +83,9 @@ export const useDemosStore = create((set, get) => ({
         useAgendaStore.getState().updateEvento(prev.eventoId, buildEventoFromDemo({ ...prev, ...updates }));
       }
     }
-    if (user) {
-      const accion = updates.estado && prev?.estado !== updates.estado
-        ? `cambió la demo ${prev?.numero} a "${updates.estado}"`
-        : `actualizó la demo ${prev?.numero}`;
+    if (user && updates.estado && prev?.estado !== updates.estado && updates.estado === 'Completada') {
+      const resultado = updates.resultado || prev?.resultado;
+      const accion = resultado ? `completó la demostración con resultado "${resultado}"` : 'completó la demostración';
       useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion, registroId: id, registroLabel: prev?.numero || id, modulo: 'demostraciones' });
     }
   },
@@ -100,7 +99,6 @@ export const useDemosStore = create((set, get) => ({
       if (error) { console.error(error); set({ demos: prev }); }
     });
     if (target?.eventoId) useAgendaStore.getState().deleteEvento(target.eventoId);
-    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion: 'eliminó la demostración', registroId: id, registroLabel: target?.numero || id, modulo: 'demostraciones' });
   },
 
   getDemo: (id) => get().demos.find(d => d.id === id),
