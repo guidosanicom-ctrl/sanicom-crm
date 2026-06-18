@@ -6,7 +6,7 @@ import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Phone, Mail, MapPin, User } from 'lucide-react';
 
 const STAGE_COLOR = {
   'Prospecto': 'gray', 'Interesado': 'blue', 'Propuesta enviada': 'purple',
@@ -106,10 +106,42 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
           )}
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <Row label="Cliente" value={cliente?.nombre} />
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">Cliente</p>
+              <p className="text-sm font-medium text-gray-800">{cliente?.nombre || '-'}</p>
+              {cliente && (
+                <div className="mt-1.5 flex flex-col gap-1">
+                  {cliente.telefono && (
+                    <a href={`tel:${cliente.telefono}`} className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#1B4F8A] transition-colors">
+                      <Phone className="w-3 h-3 flex-shrink-0" />{cliente.telefono}
+                    </a>
+                  )}
+                  {cliente.email && (
+                    <a href={`mailto:${cliente.email}`} className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#1B4F8A] transition-colors">
+                      <Mail className="w-3 h-3 flex-shrink-0" />{cliente.email}
+                    </a>
+                  )}
+                  {(cliente.ciudad || cliente.provincia) && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                      <MapPin className="w-3 h-3 flex-shrink-0" />
+                      {[cliente.ciudad, cliente.provincia].filter(Boolean).join(', ')}
+                    </span>
+                  )}
+                  {(() => {
+                    const cp = (cliente.contactos || []).find(c => c.esPrincipal) || cliente.contactos?.[0];
+                    return cp ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                        <User className="w-3 h-3 flex-shrink-0" />
+                        {cp.nombre}{cp.cargo ? ` · ${cp.cargo}` : ''}
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
             <Row label="Responsable" value={responsable?.name} />
             <Row label="Fecha de cierre" value={formatDate(oportunidad.fechaCierre)} />
-            <Row label="Origen" value={oportunidad.origen} />
+            <Row label="Origen" value={oportunidad.origen === 'Redes sociales' && oportunidad.redSocial ? `Redes sociales · ${oportunidad.redSocial}` : oportunidad.origen} />
             <Row label="Creado" value={formatDate(oportunidad.fechaCreacion)} />
             {equiposNombres && <Row label="Equipos de interés" value={equiposNombres} />}
           </div>
