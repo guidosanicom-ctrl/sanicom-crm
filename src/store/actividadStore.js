@@ -20,6 +20,11 @@ export const useActividadStore = create((set, get) => ({
     set({ actividad: (data || []).map(r => r.data), initialized: true });
   },
 
+  clearActividad: async () => {
+    await supabase.from(TABLE).delete().neq('id', '');
+    set({ actividad: [] });
+  },
+
   addActividad: (entry) => {
     const item = { ...entry, id: generateId(), fechaHora: new Date().toISOString() };
     set(s => ({ actividad: [item, ...s.actividad].slice(0, MAX) }));

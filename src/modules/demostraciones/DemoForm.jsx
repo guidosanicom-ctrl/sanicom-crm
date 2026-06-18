@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
+import ClienteSearchInput from '../../components/ui/ClienteSearchInput';
 import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
@@ -59,10 +60,13 @@ export default function DemoForm({ open, onClose, onSave, initial }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Cliente *</label>
-          <select value={form.clienteId} onChange={e => { set('clienteId', e.target.value); set('contactoId', ''); }} className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none ${errors.clienteId ? 'border-red-400' : 'border-gray-200'}`}>
-            <option value="">Selecciona cliente</option>
-            {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
+          <ClienteSearchInput
+            value={form.clienteId}
+            onChange={id => { set('clienteId', id); set('contactoId', ''); }}
+            clientes={clientes}
+            error={!!errors.clienteId}
+            placeholder="Buscar cliente..."
+          />
           {errors.clienteId && <p className="text-xs text-red-500 mt-1">{errors.clienteId}</p>}
         </div>
         <div>

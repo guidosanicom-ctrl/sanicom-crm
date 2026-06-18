@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
+import ClienteSearchInput from '../../components/ui/ClienteSearchInput';
 import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
@@ -89,10 +90,12 @@ export default function EventForm({ open, onClose, onSave, initial, defaultDate,
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Cliente relacionado</label>
-          <select value={form.clienteId} onChange={e => set('clienteId', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
-            <option value="">Sin cliente</option>
-            {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
+          <ClienteSearchInput
+            value={form.clienteId}
+            onChange={id => set('clienteId', id)}
+            clientes={clientes}
+            placeholder="Buscar cliente (opcional)..."
+          />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Responsable</label>
