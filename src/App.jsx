@@ -15,6 +15,7 @@ import { useSubespecialidadesStore } from './store/subespecialidadesStore';
 import { useCategoriasStore } from './store/categoriasStore';
 import { useTiposClienteStore } from './store/tiposClienteStore';
 import { useServiciosHospitalStore } from './store/serviciosHospitalStore';
+import { useDriveStore } from './store/driveStore';
 import { usePipelineStore } from './store/pipelineStore';
 import Layout from './components/layout/Layout';
 import LoginPage from './modules/auth/LoginPage';
@@ -27,6 +28,7 @@ import PipelinePage from './modules/pipeline/PipelinePage';
 import DemostracionesPage from './modules/demostraciones/DemostracionesPage';
 import ServicioTecnicoPage from './modules/servicio-tecnico/ServicioTecnicoPage';
 import EquiposPage from './modules/equipos/EquiposPage';
+import DocumentosPage from './modules/documentos/DocumentosPage';
 import ConfiguracionPage from './modules/configuracion/ConfiguracionPage';
 import NotificacionesPage from './modules/notificaciones/NotificacionesPage';
 
@@ -52,6 +54,7 @@ function AppInit() {
   const initCategorias    = useCategoriasStore(s => s.initialize);
   const initTiposCliente  = useTiposClienteStore(s => s.initialize);
   const initServiciosHospital = useServiciosHospitalStore(s => s.initialize);
+  const initDrive         = useDriveStore(s => s.initialize);
   const initPipeline      = usePipelineStore(s => s.initialize);
 
   useEffect(() => {
@@ -60,7 +63,7 @@ function AppInit() {
     Promise.all([
       initClientes(), initEquipos(), initOportunidades(), initDemos(),
       initServicios(), initAgenda(), initActividad(),
-      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initPipeline(),
+      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(),
     ]).catch(e => console.error('[AppInit]', e));
   }, [user?.id]);
 
@@ -95,6 +98,7 @@ export default function App() {
           <Route path="/demostraciones" element={<ProtectedRoute module="demostraciones"><DemostracionesPage /></ProtectedRoute>} />
           <Route path="/servicio-tecnico" element={<ProtectedRoute module="servicio-tecnico"><ServicioTecnicoPage /></ProtectedRoute>} />
           <Route path="/equipos" element={<ProtectedRoute module="equipos"><EquiposPage /></ProtectedRoute>} />
+          <Route path="/documentos" element={<DocumentosPage />} />
           <Route path="/configuracion" element={<ProtectedRoute module="configuracion"><ConfiguracionPage /></ProtectedRoute>} />
           <Route path="/notificaciones" element={<NotificacionesPage />} />
         </Route>

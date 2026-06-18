@@ -6,6 +6,7 @@ import { usePipelineStore } from '../../store/pipelineStore';
 import { useCategoriasStore } from '../../store/categoriasStore';
 import { useTiposClienteStore } from '../../store/tiposClienteStore';
 import { useServiciosHospitalStore } from '../../store/serviciosHospitalStore';
+import { useDriveStore } from '../../store/driveStore';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -14,7 +15,7 @@ import toast from 'react-hot-toast';
 import { ROLES } from '../../utils/constants';
 import { Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 
-const TABS = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos', 'Tipos de cliente', 'Servicios hospitalarios'];
+const TABS = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos', 'Tipos de cliente', 'Servicios hospitalarios', 'Enlace Google Drive'];
 
 const EMPRESA_INIT = { nombre: 'Sanicom S.L.', cif: 'B12345678', direccion: 'C/ Ejemplo, 1, Sevilla', telefono: '954 000 000' };
 
@@ -26,6 +27,7 @@ export default function ConfiguracionPage() {
   const { categorias, addCategoria, updateCategoria, deleteCategoria } = useCategoriasStore();
   const { tipos: tiposCliente, addTipo, updateTipo, deleteTipo } = useTiposClienteStore();
   const { servicios: serviciosHospital, addServicio, updateServicio, deleteServicio } = useServiciosHospitalStore();
+  const { driveUrl, saveDriveUrl } = useDriveStore();
   const [activeTab, setActiveTab] = useState(0);
 
   // Pipeline state — copia local editable, se guarda al pulsar "Guardar"
@@ -155,6 +157,13 @@ export default function ConfiguracionPage() {
     setAddingServ(false); setNewServValue('');
   };
   const confirmDeleteServ = () => { deleteServicio(delServ); toast.success(`"${delServ}" eliminado.`); setDelServ(null); };
+
+  const [driveInput, setDriveInput] = useState(driveUrl);
+
+  const handleSaveDrive = async () => {
+    await saveDriveUrl(driveInput);
+    toast.success('Enlace de Google Drive guardado.');
+  };
 
   const [empresa, setEmpresa] = useState(() => {
     try { return JSON.parse(localStorage.getItem('sanicom_empresa')) || EMPRESA_INIT; } catch { return EMPRESA_INIT; }
@@ -726,6 +735,25 @@ export default function ConfiguracionPage() {
         message={`¿Eliminar "${delCat}"? Los equipos que ya tengan esta categoría asignada no se verán afectados, pero no podrá seleccionarse en nuevos registros.`}
         confirmText="Eliminar"
       />
+
+      {activeTab === 9 && (
+        <Card className="max-w-lg">
+          <h3 className="font-semibold text-gray-800 mb-1">Enlace Google Drive</h3>
+          <p className="text-xs text-gray-400 mb-5">Este enlace aparece en el módulo Documentos como botón de acceso directo para todos los usuarios.</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">URL de Google Drive</label>
+              <input
+                value={driveInput}
+                onChange={e => setDriveInput(e.target.value)}
+                placeholder="https://drive.google.com/drive/folders/..."
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+              />
+            </div>
+            <Button onClick={handleSaveDrive}>Guardar enlace</Button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

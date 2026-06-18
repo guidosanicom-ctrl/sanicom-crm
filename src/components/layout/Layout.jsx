@@ -11,6 +11,7 @@ const TITLES = {
   '/demostraciones': 'Demostraciones',
   '/servicio-tecnico': 'Servicio Técnico',
   '/equipos': 'Equipos en stock',
+  '/documentos': 'Documentos',
   '/configuracion': 'Configuración',
   '/notificaciones': 'Notificaciones',
 };
