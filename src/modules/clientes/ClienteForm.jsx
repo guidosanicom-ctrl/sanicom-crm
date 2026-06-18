@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
-import { TIPOS_CLIENTE, ESTADOS_CLIENTE } from '../../utils/constants';
+import { ESTADOS_CLIENTE } from '../../utils/constants';
 import { useAuthStore } from '../../store/authStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
+import { useTiposClienteStore } from '../../store/tiposClienteStore';
 
 const empty = {
   nombre: '', tipo: 'Clínica', especialidad: 'Medicina general', subespecialidad: '', cif: '',
@@ -19,6 +20,7 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
   const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const { especialidades } = useEspecialidadesStore();
   const { subespecialidades } = useSubespecialidadesStore();
+  const { tipos: tiposCliente } = useTiposClienteStore();
   const espOptions = isCarlos()
     ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e))
     : especialidades;
@@ -73,7 +75,7 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
-              <select {...sel('tipo')}>{TIPOS_CLIENTE.map(t => <option key={t}>{t}</option>)}</select>
+              <select {...sel('tipo')}>{tiposCliente.map(t => <option key={t}>{t}</option>)}</select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Especialidad médica</label>

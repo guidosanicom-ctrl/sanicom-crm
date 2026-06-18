@@ -1,4 +1,5 @@
-export const TIPOS_CLIENTE = ['Hospital público', 'Hospital privado', 'Clínica', 'Consultorio médico', 'Residencia', 'Distribuidor', 'Otro'];
+export const TIPOS_CLIENTE = ['Hospital público', 'Hospital privado', 'Clínica', 'Consultorio médico', 'Residencia', 'Distribuidor', 'Fisioterapia', 'Podología', 'Veterinaria', 'Otro'];
+export const TIPOS_CLIENTE_DEFAULT = ['Hospital público', 'Hospital privado', 'Clínica', 'Consultorio médico', 'Residencia', 'Distribuidor', 'Fisioterapia', 'Podología', 'Veterinaria', 'Otro'];
 export const ESPECIALIDADES = ['Cardiología', 'Radiología', 'Urgencias', 'Pediatría', 'Cirugía', 'Traumatología', 'Oftalmología', 'Laboratorio / Análisis clínicos', 'Medicina general', 'UCI / Cuidados intensivos', 'Oncología', 'Neurología', 'Ginecología', 'Dermatología', 'Fisioterapia', 'Podología', 'Veterinaria', 'Otra'];
 export const ESTADOS_CLIENTE = ['Activo', 'Inactivo'];
 export const CATEGORIAS_EQUIPO = ['Diagnóstico por imagen', 'Monitorización', 'Laboratorio', 'Electromedicina', 'Mobiliario clínico', 'Esterilización', 'Óptica y oftalmología', 'Otro'];

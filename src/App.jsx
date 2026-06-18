@@ -13,6 +13,7 @@ import { useActividadStore } from './store/actividadStore';
 import { useEspecialidadesStore } from './store/especialidadesStore';
 import { useSubespecialidadesStore } from './store/subespecialidadesStore';
 import { useCategoriasStore } from './store/categoriasStore';
+import { useTiposClienteStore } from './store/tiposClienteStore';
 import { usePipelineStore } from './store/pipelineStore';
 import Layout from './components/layout/Layout';
 import LoginPage from './modules/auth/LoginPage';
@@ -48,6 +49,7 @@ function AppInit() {
   const initEspecialidades = useEspecialidadesStore(s => s.initialize);
   const initSubespecialidades = useSubespecialidadesStore(s => s.initialize);
   const initCategorias    = useCategoriasStore(s => s.initialize);
+  const initTiposCliente  = useTiposClienteStore(s => s.initialize);
   const initPipeline      = usePipelineStore(s => s.initialize);
 
   useEffect(() => {
@@ -56,7 +58,7 @@ function AppInit() {
     Promise.all([
       initClientes(), initEquipos(), initOportunidades(), initDemos(),
       initServicios(), initAgenda(), initActividad(),
-      initEspecialidades(), initSubespecialidades(), initCategorias(), initPipeline(),
+      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initPipeline(),
     ]).catch(e => console.error('[AppInit]', e));
   }, [user?.id]);
 

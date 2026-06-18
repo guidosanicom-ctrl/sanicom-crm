@@ -4,6 +4,7 @@ import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { useCategoriasStore } from '../../store/categoriasStore';
+import { useTiposClienteStore } from '../../store/tiposClienteStore';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -12,7 +13,7 @@ import toast from 'react-hot-toast';
 import { ROLES } from '../../utils/constants';
 import { Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 
-const TABS = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos'];
+const TABS = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos', 'Tipos de cliente'];
 
 const EMPRESA_INIT = { nombre: 'Sanicom S.L.', cif: 'B12345678', direccion: 'C/ Ejemplo, 1, Sevilla', telefono: '954 000 000' };
 
@@ -22,6 +23,7 @@ export default function ConfiguracionPage() {
   const { subespecialidades, addSubespecialidad, updateSubespecialidad, deleteSubespecialidad } = useSubespecialidadesStore();
   const { etapas, setEtapas } = usePipelineStore();
   const { categorias, addCategoria, updateCategoria, deleteCategoria } = useCategoriasStore();
+  const { tipos: tiposCliente, addTipo, updateTipo, deleteTipo } = useTiposClienteStore();
   const [activeTab, setActiveTab] = useState(0);
 
   // Pipeline state — copia local editable, se guarda al pulsar "Guardar"
@@ -101,6 +103,31 @@ export default function ConfiguracionPage() {
     setAddingCat(false); setNewCatValue('');
   };
   const confirmDeleteCat = () => { deleteCategoria(delCat); toast.success(`"${delCat}" eliminada.`); setDelCat(null); };
+
+  // ── Tipos de cliente CRUD state ───────────────────────────────────────────
+  const [editingTipo, setEditingTipo] = useState(null);
+  const [editingTipoValue, setEditingTipoValue] = useState('');
+  const [newTipoValue, setNewTipoValue] = useState('');
+  const [addingTipo, setAddingTipo] = useState(false);
+  const [delTipo, setDelTipo] = useState(null);
+  const newTipoRef = useRef(null);
+
+  const startEditTipo = (n) => { setEditingTipo(n); setEditingTipoValue(n); setAddingTipo(false); };
+  const cancelEditTipo = () => { setEditingTipo(null); setEditingTipoValue(''); };
+  const confirmEditTipo = () => {
+    const result = updateTipo(editingTipo, editingTipoValue);
+    if (!result.ok) { toast.error(result.error); return; }
+    toast.success('Tipo actualizado.');
+    cancelEditTipo();
+  };
+  const startAddTipo = () => { setAddingTipo(true); setEditingTipo(null); setNewTipoValue(''); setTimeout(() => newTipoRef.current?.focus(), 50); };
+  const confirmAddTipo = () => {
+    const result = addTipo(newTipoValue);
+    if (!result.ok) { toast.error(result.error); return; }
+    toast.success('Tipo añadido.');
+    setAddingTipo(false); setNewTipoValue('');
+  };
+  const confirmDeleteTipo = () => { deleteTipo(delTipo); toast.success(`"${delTipo}" eliminado.`); setDelTipo(null); };
 
   const [empresa, setEmpresa] = useState(() => {
     try { return JSON.parse(localStorage.getItem('sanicom_empresa')) || EMPRESA_INIT; } catch { return EMPRESA_INIT; }
@@ -486,6 +513,90 @@ export default function ConfiguracionPage() {
             )}
           </div>
         </Card>
+      )}
+
+      {activeTab === 7 && (
+        <>
+        <Card className="max-w-xl">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="font-semibold text-gray-800">Tipos de cliente</h3>
+              <p className="text-xs text-gray-400 mt-0.5">{tiposCliente.length} tipos · Se sincronizan con el formulario de clientes</p>
+            </div>
+            <Button size="sm" onClick={startAddTipo} disabled={addingTipo}>
+              <Plus className="w-4 h-4" />Nuevo tipo
+            </Button>
+          </div>
+
+          <div className="space-y-1">
+            {tiposCliente.map((tipo) => (
+              <div key={tipo} className={`flex items-center gap-2 px-3 py-2.5 rounded-lg group transition-colors ${editingTipo === tipo ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'}`}>
+                {editingTipo === tipo ? (
+                  <>
+                    <input
+                      autoFocus
+                      value={editingTipoValue}
+                      onChange={e => setEditingTipoValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') confirmEditTipo(); if (e.key === 'Escape') cancelEditTipo(); }}
+                      className="flex-1 text-sm px-2 py-1 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    <button onClick={confirmEditTipo} className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 cursor-pointer" title="Guardar">
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={cancelEditTipo} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 cursor-pointer" title="Cancelar">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm text-gray-700">{tipo}</span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => startEditTipo(tipo)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer" title="Editar">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => setDelTipo(tipo)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer" title="Eliminar">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+
+            {addingTipo && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200 mt-1">
+                <input
+                  ref={newTipoRef}
+                  value={newTipoValue}
+                  onChange={e => setNewTipoValue(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') confirmAddTipo(); if (e.key === 'Escape') { setAddingTipo(false); setNewTipoValue(''); } }}
+                  placeholder="Nombre del tipo..."
+                  className="flex-1 text-sm px-2 py-1 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 bg-white"
+                />
+                <button onClick={confirmAddTipo} className="p-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 cursor-pointer" title="Añadir">
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => { setAddingTipo(false); setNewTipoValue(''); }} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 cursor-pointer" title="Cancelar">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {tiposCliente.length === 0 && !addingTipo && (
+              <p className="text-sm text-gray-400 text-center py-6">No hay tipos. Añade el primero.</p>
+            )}
+          </div>
+        </Card>
+
+        <ConfirmDialog
+          open={!!delTipo}
+          onClose={() => setDelTipo(null)}
+          onConfirm={confirmDeleteTipo}
+          title="Eliminar tipo de cliente"
+          message={`¿Eliminar "${delTipo}"? Los clientes que ya tengan este tipo asignado no se verán afectados, pero no podrá seleccionarse en nuevos registros.`}
+          confirmText="Eliminar"
+        />
+        </>
       )}
 
       <ConfirmDialog
