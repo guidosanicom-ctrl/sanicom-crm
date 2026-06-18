@@ -2,9 +2,10 @@
 """
 Importador de Planilla Sanicom (Carlos)
 ========================================
-Lee el archivo Excel con openpyxl para conservar los colores de celda.
+Detecta automáticamente si el Excel es la planilla de Fisioterapia o la de
+Podología leyendo los encabezados de la fila 5, y aplica la estructura correcta.
 
-Estructura exacta de la planilla:
+── Planilla Fisioterapia ──────────────────────────────────────────────────────
   Fila 5  → encabezados
   Fila 9+ → datos (filas 6-8 son cabeceras visuales / espaciado)
 
@@ -26,6 +27,24 @@ Estructura exacta de la planilla:
   Col 18  E-MAIL
   Col 19  WEB
   Col 20  OBSERVACIONES
+
+── Planilla Podología ─────────────────────────────────────────────────────────
+  Fila 5  → encabezados
+  Fila 6+ → datos
+
+  Col  1  Diatermia       ┐
+  Col  2  Ondas de choque │ Columnas de equipos (mismas reglas de colores)
+  Col  3  Ecógrafo        │
+  Col  4  Otros           ┘
+  Col  5  NOMBRE
+  Col  6  DIRECCION
+  Col  7  PROVINCIA
+  Col  8  LOCALIDAD
+  Col  9  C.P.
+  Col 10  TELEFONO
+  Col 11  E-MAIL
+  Col 12  WEB
+  Col 13  OBSERVACIONES
 
 Uso:
   python importar_sanicom.py planilla.xlsx
@@ -49,44 +68,68 @@ except ImportError:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ESTRUCTURA EXACTA DE LA PLANILLA DE CARLOS
+# CONFIGURACIONES POR TIPO DE PLANILLA
 # ═══════════════════════════════════════════════════════════════════════════════
 
-FILA_CABECERA  = 5   # Fila con los encabezados
-FILA_DATOS     = 9   # Primera fila con datos de clientes
-
-# Columnas de equipos: índice (1-based) → nombre del equipo
-COLS_EQUIPOS = {
-    1:  'Diatermia',
-    2:  'O.Choque',
-    3:  'ECO',
-    4:  'Magneto',
-    5:  'Láser',
-    6:  'Radio',
-    7:  'Otros',
-    8:  'Otros 2',
-    9:  'Otros 3',
+PLANILLAS = {
+    'fisioterapia': {
+        'nombre':       'Fisioterapia',
+        'especialidad': 'Fisioterapia',
+        'fila_cabecera': 5,
+        'fila_datos':    9,
+        'cols_equipos': {
+            1: 'Diatermia',
+            2: 'O.Choque',
+            3: 'ECO',
+            4: 'Magneto',
+            5: 'Láser',
+            6: 'Radio',
+            7: 'Otros',
+            8: 'Otros 2',
+            9: 'Otros 3',
+        },
+        'col_nombre':        12,
+        'col_direccion':     13,
+        'col_ciudad':        14,   # POB.
+        'col_provincia':     15,   # PROV.
+        'col_cp':            16,
+        'col_telefono':      17,
+        'col_email':         18,
+        'col_web':           19,
+        'col_observaciones': 20,
+        # Celda detectora: col 12 contiene "NOMBRE" en la fila de cabecera
+        'detect_col':  12,
+        'detect_text': 'nombre',
+    },
+    'podologia': {
+        'nombre':       'Podología',
+        'especialidad': 'Podología',
+        'fila_cabecera': 5,
+        'fila_datos':    6,
+        'cols_equipos': {
+            1: 'Diatermia',
+            2: 'Ondas de choque',
+            3: 'Ecógrafo',
+            4: 'Otros',
+        },
+        'col_nombre':        5,
+        'col_direccion':     6,
+        'col_ciudad':        8,   # LOCALIDAD
+        'col_provincia':     7,   # PROVINCIA
+        'col_cp':            9,
+        'col_telefono':      10,
+        'col_email':         11,
+        'col_web':           12,
+        'col_observaciones': 13,
+        # Celda detectora: col 5 contiene "NOMBRE" en la fila de cabecera
+        'detect_col':  5,
+        'detect_text': 'nombre',
+    },
 }
 
-# Columnas de datos del cliente: índice (1-based)
-COL_NOMBRE        = 12
-COL_DIRECCION     = 13
-COL_CIUDAD        = 14   # POB.
-COL_PROVINCIA     = 15   # PROV.
-COL_CP            = 16   # C.P
-COL_TELEFONO      = 17
-COL_EMAIL         = 18
-COL_WEB           = 19
-COL_OBSERVACIONES = 20
-
-# Valores por defecto para todos los clientes importados
-ESPECIALIDAD_DEFECTO = 'Fisioterapia'
-TIPO_DEFECTO         = 'Clínica'
-ESTADO_DEFECTO       = 'Activo'
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# COLORES EXACTOS (ARGB en formato openpyxl: 8 caracteres hex AARRGGBB)
+# COLORES EXACTOS (ARGB formato openpyxl: 8 caracteres hex AARRGGBB)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 COLOR_VERDE   = 'FF00FF00'   # Verde puro  → equipo que TIENE
@@ -98,7 +141,6 @@ COLOR_TRANS   = '00000000'   # Transparente → ignorar
 def get_cell_color_type(cell):
     """
     Retorna 'verde', 'celeste' o None según el color ARGB exacto del relleno.
-    Comprueba fgColor (patrón sólido en Excel = fgColor tiene el color real).
     """
     try:
         fill = cell.fill
@@ -107,12 +149,10 @@ def get_cell_color_type(cell):
 
         argb = None
 
-        # En Excel, los rellenos sólidos guardan el color en fgColor
         fgc = fill.fgColor
         if fgc and fgc.type == 'rgb':
             argb = fgc.rgb.upper()
 
-        # Si fgColor es transparente, probar bgColor
         if not argb or argb in (COLOR_BLANCO, COLOR_TRANS):
             bgc = fill.bgColor
             if bgc and bgc.type == 'rgb':
@@ -133,7 +173,26 @@ def get_cell_color_type(cell):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PROCESADO
+# DETECCIÓN AUTOMÁTICA
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def detectar_tipo_planilla(ws):
+    """
+    Lee la fila de cabecera (fila 5) y devuelve la clave del tipo de planilla.
+    Prueba cada configuración buscando el texto esperado en la columna detectora.
+    """
+    for clave, cfg in PLANILLAS.items():
+        fila = cfg['fila_cabecera']
+        col  = cfg['detect_col']
+        val  = ws.cell(row=fila, column=col).value
+        if val and str(val).strip().lower() == cfg['detect_text']:
+            return clave
+
+    return None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HELPERS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def normalizar(val):
@@ -141,7 +200,6 @@ def normalizar(val):
     if val is None:
         return ''
     s = str(val).strip()
-    # Eliminar ".0" que Excel añade a números (ej. CP "41001.0" → "41001")
     if s.endswith('.0') and s[:-2].isdigit():
         s = s[:-2]
     return s
@@ -151,57 +209,69 @@ def cell_val(ws, row, col):
     return normalizar(ws.cell(row=row, column=col).value)
 
 
-def procesar_hoja(ws, nombre_hoja, verbose=False):
-    """Procesa una hoja y devuelve lista de clientes."""
+# ═══════════════════════════════════════════════════════════════════════════════
+# PROCESADO
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def procesar_hoja(ws, nombre_hoja, cfg, verbose=False):
+    """Procesa una hoja según la configuración dada y devuelve lista de clientes."""
     clientes = []
 
-    for row_idx in range(FILA_DATOS, ws.max_row + 1):
-        nombre = cell_val(ws, row_idx, COL_NOMBRE)
-        if not nombre:
-            continue  # Fila sin nombre → omitir
+    fila_datos        = cfg['fila_datos']
+    cols_equipos      = cfg['cols_equipos']
+    col_nombre        = cfg['col_nombre']
+    col_direccion     = cfg['col_direccion']
+    col_ciudad        = cfg['col_ciudad']
+    col_provincia     = cfg['col_provincia']
+    col_cp            = cfg['col_cp']
+    col_telefono      = cfg['col_telefono']
+    col_email         = cfg['col_email']
+    col_web           = cfg['col_web']
+    col_observaciones = cfg['col_observaciones']
+    especialidad      = cfg['especialidad']
 
-        provincia_celda = cell_val(ws, row_idx, COL_PROVINCIA)
+    for row_idx in range(fila_datos, ws.max_row + 1):
+        nombre = cell_val(ws, row_idx, col_nombre)
+        if not nombre:
+            continue
+
+        provincia_celda = cell_val(ws, row_idx, col_provincia)
         cliente = {
             'nombre':       nombre,
-            'direccion':    cell_val(ws, row_idx, COL_DIRECCION),
-            'ciudad':       cell_val(ws, row_idx, COL_CIUDAD) or nombre_hoja,
+            'direccion':    cell_val(ws, row_idx, col_direccion),
+            'ciudad':       cell_val(ws, row_idx, col_ciudad) or nombre_hoja,
             'provincia':    provincia_celda or nombre_hoja,
-            'cp':           cell_val(ws, row_idx, COL_CP),
-            'telefono':     cell_val(ws, row_idx, COL_TELEFONO),
-            'email':        cell_val(ws, row_idx, COL_EMAIL),
-            'web':          cell_val(ws, row_idx, COL_WEB),
-            'especialidad': ESPECIALIDAD_DEFECTO,
-            'tipo':         TIPO_DEFECTO,
-            'estado':       ESTADO_DEFECTO,
+            'cp':           cell_val(ws, row_idx, col_cp),
+            'telefono':     cell_val(ws, row_idx, col_telefono),
+            'email':        cell_val(ws, row_idx, col_email),
+            'web':          cell_val(ws, row_idx, col_web),
+            'especialidad': especialidad,
+            'tipo':         'Clínica',
+            'estado':       'Activo',
             'equiposInstalados': [],
             'equiposInteres':    [],
         }
 
-        obs = cell_val(ws, row_idx, COL_OBSERVACIONES)
+        obs = cell_val(ws, row_idx, col_observaciones)
         if obs:
             cliente['notas'] = obs
 
-        # Leer columnas de equipos por color
-        tiene = []
+        tiene   = []
         interes = []
-        for col_idx, eq_nombre in COLS_EQUIPOS.items():
+        for col_idx, eq_nombre in cols_equipos.items():
             cell = ws.cell(row=row_idx, column=col_idx)
 
-            # Condición 1: la celda debe tener texto real
             val_celda = normalizar(cell.value)
             if not val_celda:
                 continue
 
-            # Condición 2: color exacto FF00FF00 o FF00FFFF
             color = get_cell_color_type(cell)
             if color not in ('verde', 'celeste'):
                 continue
 
-            # Condición 3: el texto no puede ser igual al nombre de la columna
             if val_celda.strip().lower() == eq_nombre.strip().lower():
                 continue
 
-            # Formato: "NombreColumna: TextoCelda"
             nombre_equipo = f"{eq_nombre}: {val_celda}"
 
             if color == 'verde':
@@ -233,6 +303,10 @@ def procesar_hoja(ws, nombre_hoja, verbose=False):
     return clientes
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# MAIN
+# ═══════════════════════════════════════════════════════════════════════════════
+
 def main():
     parser = argparse.ArgumentParser(description='Importador de planilla Sanicom')
     parser.add_argument('archivo', help='Ruta al archivo Excel (.xlsx)')
@@ -250,14 +324,27 @@ def main():
     print(f"\n📂 Leyendo: {archivo.name}")
     wb = openpyxl.load_workbook(archivo, data_only=True)
     print(f"   Hojas encontradas ({len(wb.sheetnames)}): {', '.join(wb.sheetnames)}")
-    print(f"   Encabezados en fila {FILA_CABECERA}, datos desde fila {FILA_DATOS}\n")
+
+    # Detectar tipo de planilla usando la primera hoja
+    primera_hoja = wb[wb.sheetnames[0]]
+    tipo_detectado = detectar_tipo_planilla(primera_hoja)
+
+    if tipo_detectado is None:
+        print("\nERROR: No se pudo detectar el tipo de planilla.")
+        print("  Se esperaba encontrar 'NOMBRE' en la columna 5 (Podología)")
+        print("  o en la columna 12 (Fisioterapia) de la fila 5.\n")
+        sys.exit(1)
+
+    cfg = PLANILLAS[tipo_detectado]
+    print(f"   Tipo detectado: {cfg['nombre']} ✓")
+    print(f"   Encabezados en fila {cfg['fila_cabecera']}, datos desde fila {cfg['fila_datos']}\n")
 
     todos_clientes = []
 
     print(f"⚙️  Procesando...\n")
     for nombre_hoja in wb.sheetnames:
         ws = wb[nombre_hoja]
-        clientes = procesar_hoja(ws, nombre_hoja, verbose=args.verbose)
+        clientes = procesar_hoja(ws, nombre_hoja, cfg, verbose=args.verbose)
         todos_clientes.extend(clientes)
 
         n_verde   = sum(1 for c in clientes if c['equiposInstalados'])
@@ -269,12 +356,14 @@ def main():
     with open(salida, 'w', encoding='utf-8') as f:
         json.dump(todos_clientes, f, ensure_ascii=False, indent=2)
 
-    total          = len(todos_clientes)
-    total_equipos  = sum(len(c['equiposInstalados']) for c in todos_clientes)
-    total_interes  = sum(len(c['equiposInteres'])    for c in todos_clientes)
+    total         = len(todos_clientes)
+    total_equipos = sum(len(c['equiposInstalados']) for c in todos_clientes)
+    total_interes = sum(len(c['equiposInteres'])    for c in todos_clientes)
 
     print(f"\n{'─'*50}")
-    print(f"✅ Total clientes:         {total}")
+    print(f"✅ Planilla:               {cfg['nombre']}")
+    print(f"   Especialidad asignada:  {cfg['especialidad']}")
+    print(f"   Total clientes:         {total}")
     print(f"   Equipos que tienen:    {total_equipos}  (celdas verdes  FF00FF00)")
     print(f"   Equipos con interés:   {total_interes}  (celdas celeste FF00FFFF)")
     print(f"\n📄 JSON guardado en: {salida}")
