@@ -7,8 +7,9 @@ import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { useDemosStore } from '../../store/demosStore';
+import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { formatDate } from '../../utils/formatters';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, TrendingUp } from 'lucide-react';
 
 const BADGE_MAP = { 'Pendiente': 'yellow', 'Confirmada': 'blue', 'Realizada': 'green', 'Reprogramada': 'orange', 'Cancelada': 'gray' };
 
@@ -26,10 +27,12 @@ export default function DemoDetail({ open, onClose, demo, onEdit, onDelete }) {
   const { equipos } = useEquiposStore();
   const { users } = useAuthStore();
   const { updateDemo } = useDemosStore();
+  const { oportunidades } = useOportunidadesStore();
 
   if (!demo) return null;
 
   const cliente = clientes.find(c => c.id === demo.clienteId);
+  const oppVinculada = demo.oportunidadId ? oportunidades.find(o => o.id === demo.oportunidadId) : null;
   const equipo = demo.equipoNombre ? { nombre: demo.equipoNombre } : equipos.find(e => e.id === demo.equipoId);
   const responsable = users.find(u => u.id === demo.responsable);
 
@@ -85,6 +88,20 @@ export default function DemoDetail({ open, onClose, demo, onEdit, onDelete }) {
             </div>
           )}
         </div>
+
+        {/* Oportunidad vinculada */}
+        {oppVinculada && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#1B4F8A]/10 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="w-4 h-4 text-[#1B4F8A]" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-blue-500 font-medium uppercase tracking-wide">Oportunidad vinculada</p>
+              <p className="text-sm font-semibold text-gray-800 truncate">{oppVinculada.nombre}</p>
+              <p className="text-xs text-gray-500">Etapa: {oppVinculada.etapa}</p>
+            </div>
+          </div>
+        )}
 
         {/* Presupuestos */}
         <PresupuestosSection

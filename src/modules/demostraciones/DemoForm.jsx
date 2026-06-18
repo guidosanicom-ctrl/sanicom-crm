@@ -6,7 +6,7 @@ import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import { ESTADOS_DEMO, RESULTADOS_DEMO, LUGARES_DEMO } from '../../utils/constants';
 
-const empty = { clienteId: '', contactoId: '', equipoNombre: '', responsable: '', fecha: '', hora: '09:00', lugar: 'Cliente', direccion: '', objetivo: '', estado: 'Pendiente', resultado: '', observaciones: '', generarOportunidad: false };
+const empty = { clienteId: '', contactoId: '', equipoNombre: '', responsable: '', fecha: '', hora: '09:00', lugar: 'Cliente', direccion: '', objetivo: '', estado: 'Pendiente', resultado: '', observaciones: '' };
 
 export default function DemoForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
@@ -131,12 +131,7 @@ export default function DemoForm({ open, onClose, onSave, initial }) {
           <label className="block text-xs font-medium text-gray-600 mb-1">Observaciones</label>
           <textarea value={form.observaciones} onChange={e => set('observaciones', e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
         </div>
-        <div className="md:col-span-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={form.generarOportunidad} onChange={e => set('generarOportunidad', e.target.checked)} className="rounded" />
-            <span className="text-sm text-gray-700">Generar oportunidad automáticamente</span>
-          </label>
-        </div>
+
       </div>
     </Modal>
   );

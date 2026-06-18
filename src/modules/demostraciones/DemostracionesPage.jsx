@@ -8,6 +8,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
+import Modal from '../../components/ui/Modal';
 import SearchBar from '../../components/shared/SearchBar';
 import Pagination from '../../components/shared/Pagination';
 import EmptyState from '../../components/shared/EmptyState';
@@ -16,16 +17,18 @@ import DemoForm from './DemoForm';
 import DemoDetail from './DemoDetail';
 import { formatDate } from '../../utils/formatters';
 import { ESTADOS_DEMO } from '../../utils/constants';
-import { PlaySquare } from 'lucide-react';
+import { PlaySquare, TrendingUp, Link2 } from 'lucide-react';
 
 const BADGE_MAP = { 'Pendiente': 'yellow', 'Confirmada': 'blue', 'Realizada': 'green', 'Reprogramada': 'orange', 'Cancelada': 'black' };
+const ETAPAS_ABIERTAS = ['Prospecto', 'Interesado', 'Propuesta enviada', 'Negociación'];
 
 export default function DemostracionesPage() {
   const { demos, addDemo, updateDemo, deleteDemo } = useDemosStore();
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
   const { users, canEditRecord } = useAuthStore();
-  const { addOportunidad } = useOportunidadesStore();
+  const { oportunidades, addOportunidad, updateOportunidad } = useOportunidadesStore();
+
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterResp, setFilterResp] = useState('');
@@ -35,6 +38,10 @@ export default function DemostracionesPage() {
   const [selected, setSelected] = useState(null);
   const [delOpen, setDelOpen] = useState(false);
   const PER_PAGE = 10;
+
+  // ── Flujo post-creación ────────────────────────────────────────────────────
+  // oppFlow: null | { demo, step: 'ask' | 'conflict', conflictOpp: opp | null }
+  const [oppFlow, setOppFlow] = useState(null);
 
   const filtered = useMemo(() => demos.filter(d => {
     const client = clientes.find(c => c.id === d.clienteId);
@@ -49,25 +56,72 @@ export default function DemostracionesPage() {
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const openDetail = (d) => { setSelected(d); setDetailOpen(true); };
-  const openEdit = (d) => { setSelected(d); setDetailOpen(false); setFormOpen(true); };
+  const openEdit   = (d) => { setSelected(d); setDetailOpen(false); setFormOpen(true); };
 
+  // ── Vincular demo ↔ oportunidad ───────────────────────────────────────────
+  const vincularDemoOpp = (demoId, opp) => {
+    updateDemo(demoId, { oportunidadId: opp.id, oportunidadNombre: opp.nombre });
+    updateOportunidad(opp.id, { demoIds: [...(opp.demoIds || []), demoId] });
+  };
+
+  const crearOportunidadDesdeDemo = (demo) => {
+    const nuevaOpp = addOportunidad({
+      nombre: `Demo ${demo.equipoNombre}`,
+      clienteId: demo.clienteId,
+      equiposDescripcion: demo.equipoNombre,
+      valor: 0,
+      probabilidad: 50,
+      etapa: 'Prospecto',
+      fechaCierre: '',
+      responsable: demo.responsable,
+      origen: 'Demo de equipo',
+      demoIds: [demo.id],
+    });
+    updateDemo(demo.id, { oportunidadId: nuevaOpp.id, oportunidadNombre: nuevaOpp.nombre });
+    return nuevaOpp;
+  };
+
+  // ── Guardar demo ───────────────────────────────────────────────────────────
   const handleSave = (data) => {
     if (selected) {
       updateDemo(selected.id, data);
       toast.success('Demostración actualizada.');
     } else {
       const demo = addDemo({ ...data, adjuntos: [] });
-      if (data.generarOportunidad && data.clienteId && data.equipoNombre) {
-        addOportunidad({
-          nombre: `Demo ${data.equipoNombre}`,
-          clienteId: data.clienteId, equiposDescripcion: data.equipoNombre, valor: 0, probabilidad: 50,
-          etapa: 'Prospecto', fechaCierre: '', responsable: data.responsable, origen: 'Demo de equipo',
-        });
-        toast.success('Demostración creada y oportunidad generada.');
-      } else {
-        toast.success('Demostración creada.');
-      }
+      toast.success('Demostración creada.');
+      // Abrir flujo de oportunidad
+      setOppFlow({ demo, step: 'ask', conflictOpp: null });
     }
+  };
+
+  // ── Respuesta: "Sí, crear oportunidad" ────────────────────────────────────
+  const handleQuiereOpp = () => {
+    const { demo } = oppFlow;
+    const oppsAbiertas = oportunidades.filter(
+      o => o.clienteId === demo.clienteId && ETAPAS_ABIERTAS.includes(o.etapa)
+    );
+    if (oppsAbiertas.length > 0) {
+      setOppFlow(f => ({ ...f, step: 'conflict', conflictOpp: oppsAbiertas[0] }));
+    } else {
+      const nueva = crearOportunidadDesdeDemo(demo);
+      toast.success(`Oportunidad "${nueva.nombre}" creada y vinculada.`);
+      setOppFlow(null);
+    }
+  };
+
+  // ── Respuestas de conflicto ────────────────────────────────────────────────
+  const handleVincularExistente = () => {
+    const { demo, conflictOpp } = oppFlow;
+    vincularDemoOpp(demo.id, conflictOpp);
+    toast.success(`Demo vinculada a "${conflictOpp.nombre}".`);
+    setOppFlow(null);
+  };
+
+  const handleCrearNueva = () => {
+    const { demo } = oppFlow;
+    const nueva = crearOportunidadDesdeDemo(demo);
+    toast.success(`Oportunidad "${nueva.nombre}" creada y vinculada.`);
+    setOppFlow(null);
   };
 
   const sel = `px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white`;
@@ -151,10 +205,68 @@ export default function DemostracionesPage() {
         initial={selected}
         onSave={handleSave}
       />
+
       <ConfirmDialog open={delOpen} onClose={() => setDelOpen(false)}
         onConfirm={() => { deleteDemo(selected?.id); toast.success('Demostración eliminada.'); setSelected(null); }}
         title="Eliminar demostración"
         message={`¿Eliminar la demo ${selected?.numero}?`} />
+
+      {/* ── Modal paso 1: ¿Crear oportunidad? ── */}
+      <Modal
+        open={oppFlow?.step === 'ask'}
+        onClose={() => setOppFlow(null)}
+        title="Crear oportunidad"
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setOppFlow(null)}>No, solo la demo</Button>
+            <Button onClick={handleQuiereOpp}>
+              <TrendingUp className="w-4 h-4" />Sí, crear oportunidad
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col items-center text-center gap-3 py-2">
+          <div className="w-12 h-12 rounded-full bg-[#1B4F8A]/10 flex items-center justify-center">
+            <TrendingUp className="w-6 h-6 text-[#1B4F8A]" />
+          </div>
+          <p className="text-gray-700 font-medium">¿Quieres crear una oportunidad a partir de esta demo?</p>
+          <p className="text-sm text-gray-400">
+            Demo <span className="font-medium text-gray-600">{oppFlow?.demo?.numero}</span>
+            {' · '}{clientes.find(c => c.id === oppFlow?.demo?.clienteId)?.nombre}
+          </p>
+        </div>
+      </Modal>
+
+      {/* ── Modal paso 2: conflicto con opp existente ── */}
+      <Modal
+        open={oppFlow?.step === 'conflict'}
+        onClose={() => setOppFlow(null)}
+        title="Ya existe una oportunidad abierta"
+        size="sm"
+        footer={
+          <div className="flex flex-col gap-2 w-full">
+            <Button onClick={handleVincularExistente}>
+              <Link2 className="w-4 h-4" />Vincular a la existente
+            </Button>
+            <Button variant="outline" onClick={handleCrearNueva}>
+              <TrendingUp className="w-4 h-4" />Crear nueva oportunidad
+            </Button>
+            <Button variant="outline" onClick={() => setOppFlow(null)}>Cancelar</Button>
+          </div>
+        }
+      >
+        <div className="py-2 space-y-3">
+          <p className="text-sm text-gray-600">
+            Ya existe una oportunidad abierta para este cliente:
+          </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+            <p className="text-sm font-semibold text-amber-800">{oppFlow?.conflictOpp?.nombre}</p>
+            <p className="text-xs text-amber-600 mt-0.5">Etapa: {oppFlow?.conflictOpp?.etapa}</p>
+          </div>
+          <p className="text-sm text-gray-500">¿Quieres vincular esta demo a la existente o crear una nueva oportunidad?</p>
+        </div>
+      </Modal>
     </div>
   );
 }

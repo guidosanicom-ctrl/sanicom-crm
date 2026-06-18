@@ -9,8 +9,9 @@ import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Edit, Trash2, Phone, Mail, MapPin, User } from 'lucide-react';
+import { Edit, Trash2, Phone, Mail, MapPin, User, PlaySquare } from 'lucide-react';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
+import { useDemosStore } from '../../store/demosStore';
 
 const STAGE_COLOR = {
   'Prospecto': 'gray', 'Interesado': 'blue', 'Propuesta enviada': 'purple',
@@ -48,6 +49,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
   const { equipos } = useEquiposStore();
   const { users } = useAuthStore();
   const { updateOportunidad } = useOportunidadesStore();
+  const { demos } = useDemosStore();
   const [clienteData, setClienteData] = useState(null);
 
   useEffect(() => {
@@ -63,6 +65,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
   if (!oportunidad) return null;
 
   const cliente = clienteData || clientes.find(c => c.id === oportunidad.clienteId);
+  const demosVinculadas = (oportunidad.demoIds || []).map(id => demos.find(d => d.id === id)).filter(Boolean);
   const responsable = users.find(u => u.id === oportunidad.responsable);
   const equiposNombres = oportunidad.equiposDescripcion ||
     (oportunidad.equipos || []).map(id => equipos.find(e => e.id === id)?.nombre).filter(Boolean).join(', ');
@@ -178,6 +181,29 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
             </div>
           )}
         </div>
+
+        {/* Demos vinculadas */}
+        {demosVinculadas.length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <span className="w-1 h-4 bg-[#3ABDD5] rounded-full inline-block" />
+              Demostraciones vinculadas
+            </h3>
+            <div className="space-y-2">
+              {demosVinculadas.map(d => (
+                <div key={d.id} className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3">
+                  <div className="w-7 h-7 rounded-lg bg-[#3ABDD5]/10 flex items-center justify-center flex-shrink-0">
+                    <PlaySquare className="w-4 h-4 text-[#3ABDD5]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800">{d.numero} · {d.equipoNombre}</p>
+                    <p className="text-xs text-gray-400">{formatDate(d.fecha)} · {d.estado}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Presupuestos */}
         <PresupuestosSection
