@@ -2,9 +2,11 @@ import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import HistorialTimeline from '../../components/shared/HistorialTimeline';
+import PresupuestosSection from '../../components/shared/PresupuestosSection';
 import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
+import { useDemosStore } from '../../store/demosStore';
 import { formatDate } from '../../utils/formatters';
 import { Edit, Trash2 } from 'lucide-react';
 
@@ -23,6 +25,7 @@ export default function DemoDetail({ open, onClose, demo, onEdit, onDelete }) {
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
   const { users } = useAuthStore();
+  const { updateDemo } = useDemosStore();
 
   if (!demo) return null;
 
@@ -82,6 +85,14 @@ export default function DemoDetail({ open, onClose, demo, onEdit, onDelete }) {
             </div>
           )}
         </div>
+
+        {/* Presupuestos */}
+        <PresupuestosSection
+          presupuestos={demo.presupuestos || []}
+          onUpdate={(list) => updateDemo(demo.id, { presupuestos: list })}
+          origen="demo"
+          origenId={demo.id}
+        />
 
         {/* Historial */}
         <div>

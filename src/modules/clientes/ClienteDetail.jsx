@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Phone, Mail, Globe, Edit, Plus, Trash2, Pencil,
-         Package, ShoppingBag, Star, Stethoscope } from 'lucide-react';
+         Package, ShoppingBag, Star, Stethoscope, FileText, ExternalLink } from 'lucide-react';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
+import { useDemosStore } from '../../store/demosStore';
 import { useServicioStore } from '../../store/servicioStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -350,6 +351,7 @@ export default function ClienteDetail() {
   const navigate = useNavigate();
   const { getCliente, updateCliente, deleteCliente, addContacto, deleteContacto } = useClientesStore();
   const { oportunidades } = useOportunidadesStore();
+  const { demos } = useDemosStore();
   const { servicios } = useServicioStore();
   const [activeTab, setActiveTab] = useState('resumen');
   const [editOpen, setEditOpen] = useState(false);
@@ -383,12 +385,20 @@ export default function ClienteDetail() {
     { key: 'equipos-tiene',     label: 'Equipos que tiene' },
     { key: 'equipos-vendidos',  label: 'Equipos vendidos por Sanicom' },
     { key: 'oportunidades',     label: 'Oportunidades' },
+    { key: 'presupuestos',      label: 'Presupuestos' },
     { key: 'servicio-tecnico',  label: 'Servicio técnico' },
     { key: 'notas',             label: 'Notas & actividad' },
   ];
 
   const clienteOpps     = oportunidades.filter(o => o.clienteId === id);
   const clienteServices = servicios.filter(s => s.clienteId === id);
+  const clienteDemos    = demos.filter(d => d.clienteId === id);
+
+  // Todos los presupuestos del cliente, de opps y demos
+  const todosPresupuestos = [
+    ...clienteOpps.flatMap(o => (o.presupuestos || []).map(p => ({ ...p, origen: 'Oportunidad', origenNombre: o.nombre }))),
+    ...clienteDemos.flatMap(d => (d.presupuestos || []).map(p => ({ ...p, origen: 'Demo', origenNombre: `Demo ${d.numero}` }))),
+  ].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
   const addNote = () => {
     if (!note.trim()) return;
@@ -557,6 +567,56 @@ export default function ClienteDetail() {
                     <p className="text-xs text-gray-500">{op.etapa} · {formatCurrency(op.valor)}</p>
                   </div>
                   <Badge color={op.etapa === 'Ganado' ? 'green' : op.etapa === 'Perdido' ? 'gray' : 'blue'}>{op.etapa}</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* ── Presupuestos ── */}
+      {activeTab === 'presupuestos' && (
+        <Card>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="font-semibold text-gray-800">Presupuestos enviados</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Todos los PDFs subidos en oportunidades y demos de este cliente</p>
+            </div>
+            <span className="text-sm text-gray-400">{todosPresupuestos.length} {todosPresupuestos.length === 1 ? 'archivo' : 'archivos'}</span>
+          </div>
+
+          {todosPresupuestos.length === 0 ? (
+            <div className="py-12 text-center">
+              <FileText className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+              <p className="text-sm text-gray-400">No hay presupuestos subidos aún</p>
+              <p className="text-xs text-gray-300 mt-1">Súbelos desde una Oportunidad o Demo de este cliente</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {todosPresupuestos.map(p => (
+                <div key={p.id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-4 h-4 text-red-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{p.nombre}</p>
+                      <p className="text-xs text-gray-400">
+                        <span className="text-[#1B4F8A] font-medium">{p.origen}:</span> {p.origenNombre}
+                        {' · '}{p.subidoPorNombre}
+                        {' · '}{p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer inline-flex flex-shrink-0"
+                    title="Abrir"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
                 </div>
               ))}
             </div>

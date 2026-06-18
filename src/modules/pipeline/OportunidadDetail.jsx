@@ -3,12 +3,14 @@ import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import HistorialTimeline from '../../components/shared/HistorialTimeline';
+import PresupuestosSection from '../../components/shared/PresupuestosSection';
 import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Edit, Trash2, Phone, Mail, MapPin, User } from 'lucide-react';
+import { useOportunidadesStore } from '../../store/oportunidadesStore';
 
 const STAGE_COLOR = {
   'Prospecto': 'gray', 'Interesado': 'blue', 'Propuesta enviada': 'purple',
@@ -45,6 +47,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
   const { users } = useAuthStore();
+  const { updateOportunidad } = useOportunidadesStore();
   const [clienteData, setClienteData] = useState(null);
 
   useEffect(() => {
@@ -175,6 +178,14 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
             </div>
           )}
         </div>
+
+        {/* Presupuestos */}
+        <PresupuestosSection
+          presupuestos={oportunidad.presupuestos || []}
+          onUpdate={(list) => updateOportunidad(oportunidad.id, { presupuestos: list })}
+          origen="oportunidad"
+          origenId={oportunidad.id}
+        />
 
         {/* Historial */}
         <div>
