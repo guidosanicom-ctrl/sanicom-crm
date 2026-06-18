@@ -45,22 +45,58 @@ export const useClientesStore = create((set, get) => ({
     });
   },
 
-  deleteCliente: (id) => {
-    const user = useAuthStore.getState().user;
-    const target = get().clientes.find(c => c.id === id);
+  deleteCliente: async (id) => {
     const prev = get().clientes;
     set(s => ({ clientes: s.clientes.filter(c => c.id !== id) }));
-    db.delete(id).then(({ error }) => {
-      if (error) { console.error(error); set({ clientes: prev }); }
-    });
+    const { error, status } = await db.delete(id);
+    if (error) {
+      console.error(`[deleteCliente] Error eliminando ${id}:`, { error, status });
+      set({ clientes: prev });
+      return { ok: false, error };
+    }
+    console.log(`[deleteCliente] ${id} eliminado OK (status ${status})`);
+    return { ok: true };
   },
 
-  deleteClientes: (ids) => {
+  deleteClientes: async (ids) => {
+    console.log(`[deleteClientes] Eliminando ${ids.length} registros:`, ids);
     const prev = get().clientes;
+
+    // Optimistic: quitar del estado local inmediatamente
     set(s => ({ clientes: s.clientes.filter(c => !ids.includes(c.id)) }));
-    supabase.from(TABLE).delete().in('id', ids).then(({ error }) => {
-      if (error) { console.error(error); set({ clientes: prev }); }
-    });
+
+    // Eliminar en Supabase en lotes de 100 (el .in() tiene límite práctico)
+    const BATCH = 100;
+    const errors = [];
+    for (let i = 0; i < ids.length; i += BATCH) {
+      const batch = ids.slice(i, i + BATCH);
+      const { error, status, statusText } = await supabase
+        .from(TABLE)
+        .delete()
+        .in('id', batch);
+      if (error) {
+        console.error(`[deleteClientes] Error lote ${i}–${i + batch.length - 1}:`, { error, status, statusText });
+        errors.push(error);
+      } else {
+        console.log(`[deleteClientes] Lote ${i}–${i + batch.length - 1} eliminado OK (status ${status})`);
+      }
+    }
+
+    if (errors.length > 0) {
+      // Revertir estado local si algún lote falló
+      set({ clientes: prev });
+      return { ok: false, errors };
+    }
+
+    // Re-fetch para confirmar que los registros ya no existen en Supabase
+    set({ initialized: false });
+    const { data, error: fetchError } = await fetchAll(TABLE);
+    if (!fetchError) {
+      set({ clientes: (data || []).map(r => r.data), initialized: true });
+      console.log(`[deleteClientes] Re-fetch OK: ${(data || []).length} clientes en BD`);
+    }
+
+    return { ok: true };
   },
 
   addContacto: (clienteId, contacto) => {

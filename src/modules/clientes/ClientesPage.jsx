@@ -328,9 +328,13 @@ export default function ClientesPage() {
         open={dupOpen}
         onClose={() => setDupOpen(false)}
         clientes={clientes}
-        onEliminar={(ids) => {
-          deleteClientes(ids);
-          toast.success(`${ids.length} duplicado${ids.length !== 1 ? 's' : ''} eliminado${ids.length !== 1 ? 's' : ''}.`);
+        onEliminar={async (ids) => {
+          const result = await deleteClientes(ids);
+          if (result?.ok === false) {
+            toast.error('Error al eliminar en Supabase. Revisa la consola (F12) para ver el detalle.');
+          } else {
+            toast.success(`${ids.length} duplicado${ids.length !== 1 ? 's' : ''} eliminado${ids.length !== 1 ? 's' : ''}.`);
+          }
         }}
       />
     </div>
