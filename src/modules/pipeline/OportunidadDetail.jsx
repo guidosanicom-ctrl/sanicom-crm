@@ -130,9 +130,9 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
                     </a>
                   )}
                   {cliente.email && (
-                    <a href={`mailto:${cliente.email}`} className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#1B4F8A] transition-colors">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
                       <Mail className="w-3 h-3 flex-shrink-0" />{cliente.email}
-                    </a>
+                    </span>
                   )}
                   {(cliente.ciudad || cliente.provincia) && (
                     <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
