@@ -186,14 +186,23 @@ def procesar_hoja(ws, nombre_hoja, verbose=False):
         interes = []
         for col_idx, eq_nombre in COLS_EQUIPOS.items():
             cell = ws.cell(row=row_idx, column=col_idx)
-            color = get_cell_color_type(cell)
 
+            # Condición 1: la celda debe tener texto real
+            val_celda = normalizar(cell.value)
+            if not val_celda:
+                continue
+
+            # Condición 2: color exacto FF00FF00 o FF00FFFF
+            color = get_cell_color_type(cell)
             if color not in ('verde', 'celeste'):
                 continue
 
-            val_celda = normalizar(cell.value)
-            # "ECO: V. Esaote mylab X6"  o solo "ECO" si la celda está vacía
-            nombre_equipo = f"{eq_nombre}: {val_celda}" if val_celda else eq_nombre
+            # Condición 3: el texto no puede ser igual al nombre de la columna
+            if val_celda.strip().lower() == eq_nombre.strip().lower():
+                continue
+
+            # Formato: "NombreColumna: TextoCelda"
+            nombre_equipo = f"{eq_nombre}: {val_celda}"
 
             if color == 'verde':
                 cliente['equiposInstalados'].append({
