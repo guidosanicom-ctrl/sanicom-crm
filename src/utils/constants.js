@@ -14,6 +14,11 @@ export const ORIGENES_OPP = ['Visita comercial', 'Referido', 'Web', 'Llamada ent
 export const REDES_SOCIALES = ['Instagram', 'Facebook', 'LinkedIn', 'WhatsApp', 'YouTube', 'Otra'];
 export const LUGARES_DEMO = ['Cliente', 'Sala Sanicom', 'Videollamada'];
 export const ROLES = ['Administración', 'Comercial Restringido'];
+export const SERVICIOS_HOSPITAL_DEFAULT = [
+  'Cardiología', 'Urgencias', 'UCI / Cuidados intensivos', 'Cirugía', 'Traumatología',
+  'Pediatría', 'Ginecología', 'Oncología', 'Neurología', 'Radiología',
+  'Laboratorio', 'Oftalmología', 'Medicina interna', 'Rehabilitación', 'Otro',
+];
 
 export const COLORS_EVENTO = {
   'Visita comercial': '#3B82F6',

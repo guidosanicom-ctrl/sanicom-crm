@@ -5,6 +5,7 @@ import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { useCategoriasStore } from '../../store/categoriasStore';
 import { useTiposClienteStore } from '../../store/tiposClienteStore';
+import { useServiciosHospitalStore } from '../../store/serviciosHospitalStore';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -13,7 +14,7 @@ import toast from 'react-hot-toast';
 import { ROLES } from '../../utils/constants';
 import { Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 
-const TABS = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos', 'Tipos de cliente'];
+const TABS = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos', 'Tipos de cliente', 'Servicios hospitalarios'];
 
 const EMPRESA_INIT = { nombre: 'Sanicom S.L.', cif: 'B12345678', direccion: 'C/ Ejemplo, 1, Sevilla', telefono: '954 000 000' };
 
@@ -24,6 +25,7 @@ export default function ConfiguracionPage() {
   const { etapas, setEtapas } = usePipelineStore();
   const { categorias, addCategoria, updateCategoria, deleteCategoria } = useCategoriasStore();
   const { tipos: tiposCliente, addTipo, updateTipo, deleteTipo } = useTiposClienteStore();
+  const { servicios: serviciosHospital, addServicio, updateServicio, deleteServicio } = useServiciosHospitalStore();
   const [activeTab, setActiveTab] = useState(0);
 
   // Pipeline state — copia local editable, se guarda al pulsar "Guardar"
@@ -128,6 +130,31 @@ export default function ConfiguracionPage() {
     setAddingTipo(false); setNewTipoValue('');
   };
   const confirmDeleteTipo = () => { deleteTipo(delTipo); toast.success(`"${delTipo}" eliminado.`); setDelTipo(null); };
+
+  // ── Servicios hospitalarios CRUD state ────────────────────────────────────
+  const [editingServ, setEditingServ] = useState(null);
+  const [editingServValue, setEditingServValue] = useState('');
+  const [newServValue, setNewServValue] = useState('');
+  const [addingServ, setAddingServ] = useState(false);
+  const [delServ, setDelServ] = useState(null);
+  const newServRef = useRef(null);
+
+  const startEditServ = (n) => { setEditingServ(n); setEditingServValue(n); setAddingServ(false); };
+  const cancelEditServ = () => { setEditingServ(null); setEditingServValue(''); };
+  const confirmEditServ = () => {
+    const result = updateServicio(editingServ, editingServValue);
+    if (!result.ok) { toast.error(result.error); return; }
+    toast.success('Servicio actualizado.');
+    cancelEditServ();
+  };
+  const startAddServ = () => { setAddingServ(true); setEditingServ(null); setNewServValue(''); setTimeout(() => newServRef.current?.focus(), 50); };
+  const confirmAddServ = () => {
+    const result = addServicio(newServValue);
+    if (!result.ok) { toast.error(result.error); return; }
+    toast.success('Servicio añadido.');
+    setAddingServ(false); setNewServValue('');
+  };
+  const confirmDeleteServ = () => { deleteServicio(delServ); toast.success(`"${delServ}" eliminado.`); setDelServ(null); };
 
   const [empresa, setEmpresa] = useState(() => {
     try { return JSON.parse(localStorage.getItem('sanicom_empresa')) || EMPRESA_INIT; } catch { return EMPRESA_INIT; }
@@ -594,6 +621,90 @@ export default function ConfiguracionPage() {
           onConfirm={confirmDeleteTipo}
           title="Eliminar tipo de cliente"
           message={`¿Eliminar "${delTipo}"? Los clientes que ya tengan este tipo asignado no se verán afectados, pero no podrá seleccionarse en nuevos registros.`}
+          confirmText="Eliminar"
+        />
+        </>
+      )}
+
+      {activeTab === 8 && (
+        <>
+        <Card className="max-w-xl">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="font-semibold text-gray-800">Servicios hospitalarios</h3>
+              <p className="text-xs text-gray-400 mt-0.5">{serviciosHospital.length} servicios · Se sincronizan con el formulario de clientes tipo Hospital público</p>
+            </div>
+            <Button size="sm" onClick={startAddServ} disabled={addingServ}>
+              <Plus className="w-4 h-4" />Nuevo servicio
+            </Button>
+          </div>
+
+          <div className="space-y-1">
+            {serviciosHospital.map((serv) => (
+              <div key={serv} className={`flex items-center gap-2 px-3 py-2.5 rounded-lg group transition-colors ${editingServ === serv ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'}`}>
+                {editingServ === serv ? (
+                  <>
+                    <input
+                      autoFocus
+                      value={editingServValue}
+                      onChange={e => setEditingServValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') confirmEditServ(); if (e.key === 'Escape') cancelEditServ(); }}
+                      className="flex-1 text-sm px-2 py-1 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    <button onClick={confirmEditServ} className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 cursor-pointer" title="Guardar">
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={cancelEditServ} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 cursor-pointer" title="Cancelar">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm text-gray-700">{serv}</span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => startEditServ(serv)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer" title="Editar">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => setDelServ(serv)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer" title="Eliminar">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+
+            {addingServ && (
+              <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200 mt-1">
+                <input
+                  ref={newServRef}
+                  value={newServValue}
+                  onChange={e => setNewServValue(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') confirmAddServ(); if (e.key === 'Escape') { setAddingServ(false); setNewServValue(''); } }}
+                  placeholder="Nombre del servicio..."
+                  className="flex-1 text-sm px-2 py-1 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 bg-white"
+                />
+                <button onClick={confirmAddServ} className="p-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 cursor-pointer" title="Añadir">
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => { setAddingServ(false); setNewServValue(''); }} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 cursor-pointer" title="Cancelar">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {serviciosHospital.length === 0 && !addingServ && (
+              <p className="text-sm text-gray-400 text-center py-6">No hay servicios. Añade el primero.</p>
+            )}
+          </div>
+        </Card>
+
+        <ConfirmDialog
+          open={!!delServ}
+          onClose={() => setDelServ(null)}
+          onConfirm={confirmDeleteServ}
+          title="Eliminar servicio hospitalario"
+          message={`¿Eliminar "${delServ}"? Los clientes que ya tengan este servicio asignado no se verán afectados, pero no podrá seleccionarse en nuevos registros.`}
           confirmText="Eliminar"
         />
         </>

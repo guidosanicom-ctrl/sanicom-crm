@@ -7,13 +7,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 import { useTiposClienteStore } from '../../store/tiposClienteStore';
+import { useServiciosHospitalStore } from '../../store/serviciosHospitalStore';
 import { Loader2 } from 'lucide-react';
-
-const SERVICIOS_HOSPITAL = [
-  'Cardiología', 'Urgencias', 'UCI', 'Cirugía', 'Traumatología',
-  'Pediatría', 'Ginecología', 'Oncología', 'Neurología', 'Radiología',
-  'Laboratorio', 'Oftalmología', 'Medicina interna', 'Rehabilitación', 'Otro',
-];
 
 const empty = {
   nombre: '', tipo: 'Clínica', especialidad: 'Medicina general', subespecialidad: '', cif: '',
@@ -35,6 +30,7 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
   const { especialidades } = useEspecialidadesStore();
   const { subespecialidades } = useSubespecialidadesStore();
   const { tipos: tiposCliente } = useTiposClienteStore();
+  const { servicios: serviciosHospital } = useServiciosHospitalStore();
   const espOptions = isCarlos()
     ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e))
     : especialidades;
@@ -43,7 +39,7 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
 
   useEffect(() => {
     if (open) {
-      const base = initial || { ...empty, especialidad: espOptions[0], servicio: SERVICIOS_HOSPITAL[0] };
+      const base = initial || { ...empty, especialidad: espOptions[0], servicio: serviciosHospital[0] || '' };
       setForm(base);
       setErrors({});
       setCpLoading(false);
@@ -192,7 +188,7 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
               <div className="md:col-span-2">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Servicio</label>
                 <select {...sel('servicio')}>
-                  {SERVICIOS_HOSPITAL.map(s => <option key={s}>{s}</option>)}
+                  {serviciosHospital.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
               <div>
