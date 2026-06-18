@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 
 const TITLES = {
-  '/dashboard': 'Dashboard',
+  '/dashboard': 'Panel de control',
   '/clientes': 'Clientes',
   '/agenda': 'Agenda / Calendario',
   '/pipeline': 'Pipeline de Oportunidades',

@@ -38,9 +38,10 @@ function TimeAgo({ dateStr }) {
   } catch { return null; }
 }
 
-function KpiCard({ icon: Icon, label, value, sub, color = '#1B4F8A' }) {
-  return (
-    <Card className="flex items-start gap-4">
+function KpiCard({ icon: Icon, label, value, sub, color = '#1B4F8A', to }) {
+  const navigate = useNavigate();
+  const inner = (
+    <>
       <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: color + '15' }}>
         <Icon className="w-6 h-6" style={{ color }} />
       </div>
@@ -49,8 +50,14 @@ function KpiCard({ icon: Icon, label, value, sub, color = '#1B4F8A' }) {
         <p className="text-2xl font-bold text-gray-900 mt-0.5">{value}</p>
         {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
       </div>
+    </>
+  );
+  if (to) return (
+    <Card className="flex items-start gap-4 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-150" onClick={() => navigate(to)}>
+      {inner}
     </Card>
   );
+  return <Card className="flex items-start gap-4">{inner}</Card>;
 }
 
 export default function DashboardPage() {
@@ -103,11 +110,11 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-        <KpiCard icon={Users} label="Clientes activos" value={stats.activeClients} color="#1B4F8A" />
-        <KpiCard icon={TrendingUp} label="Oportunidades abiertas" value={stats.openOpps} sub={formatCurrency(stats.totalPipeline)} color="#3ABDD5" />
-        <KpiCard icon={Wrench} label="Órdenes pendientes" value={stats.pendingServices} color="#F59E0B" />
-        <KpiCard icon={Calendar} label="Eventos próximos" value={stats.upcomingEvents} sub="Hoy y mañana" color="#8B5CF6" />
-        <KpiCard icon={Target} label="Tasa de cierre" value={`${stats.closeRate}%`} color="#22C55E" />
+        <KpiCard icon={Users} label="Clientes activos" value={stats.activeClients} color="#1B4F8A" to="/clientes" />
+        <KpiCard icon={TrendingUp} label="Oportunidades abiertas" value={stats.openOpps} sub={formatCurrency(stats.totalPipeline)} color="#3ABDD5" to="/pipeline" />
+        <KpiCard icon={Wrench} label="Órdenes pendientes" value={stats.pendingServices} color="#F59E0B" to="/servicio-tecnico" />
+        <KpiCard icon={Calendar} label="Eventos próximos" value={stats.upcomingEvents} sub="Hoy y mañana" color="#8B5CF6" to="/agenda" />
+        <KpiCard icon={Target} label="Tasa de cierre" value={`${stats.closeRate}%`} color="#22C55E" to="/pipeline" />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

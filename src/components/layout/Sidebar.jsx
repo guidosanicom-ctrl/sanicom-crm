@@ -7,7 +7,7 @@ import {
 import logo from '../../assets/sanicom_logo.png';
 
 const NAV_ITEMS = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, module: 'dashboard' },
+  { path: '/dashboard', label: 'Panel de control', icon: LayoutDashboard, module: 'dashboard' },
   { path: '/clientes', label: 'Clientes', icon: Users, module: 'clientes' },
   { path: '/agenda', label: 'Agenda', icon: Calendar, module: 'agenda' },
   { path: '/pipeline', label: 'Oportunidades', icon: TrendingUp, module: 'pipeline' },
