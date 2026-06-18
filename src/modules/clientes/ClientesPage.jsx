@@ -15,16 +15,19 @@ import ImportWizard from './ImportWizard';
 import { formatDate } from '../../utils/formatters';
 import { TIPOS_CLIENTE } from '../../utils/constants';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
+import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 
 export default function ClientesPage() {
   const navigate = useNavigate();
   const { clientes, addCliente, deleteCliente, importClientes } = useClientesStore();
   const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const { especialidades } = useEspecialidadesStore();
+  const { subespecialidades } = useSubespecialidadesStore();
   const [search, setSearch] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterEsp, setFilterEsp] = useState('');
+  const [filterSubesp, setFilterSubesp] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
   const [formOpen, setFormOpen] = useState(false);
@@ -43,9 +46,10 @@ export default function ClientesPage() {
       const matchTipo = !filterTipo || c.tipo === filterTipo;
       const matchEstado = !filterEstado || c.estado === filterEstado;
       const matchEsp = !filterEsp || c.especialidad === filterEsp;
-      return matchSearch && matchTipo && matchEstado && matchEsp;
+      const matchSubesp = !filterSubesp || c.subespecialidad === filterSubesp;
+      return matchSearch && matchTipo && matchEstado && matchEsp && matchSubesp;
     });
-  }, [clientes, search, filterTipo, filterEstado, filterEsp, carlos]);
+  }, [clientes, search, filterTipo, filterEstado, filterEsp, filterSubesp, carlos]);
 
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
@@ -102,10 +106,16 @@ export default function ClientesPage() {
             <option value="">Todos los estados</option>
             <option>Activo</option><option>Inactivo</option>
           </select>
-          <select className={sel} value={filterEsp} onChange={e => { setFilterEsp(e.target.value); setPage(1); setSelected(new Set()); }}>
+          <select className={sel} value={filterEsp} onChange={e => { setFilterEsp(e.target.value); setFilterSubesp(''); setPage(1); setSelected(new Set()); }}>
             <option value="">Todas las especialidades</option>
             {espOptions.map(e => <option key={e}>{e}</option>)}
           </select>
+          {filterEsp === 'Fisioterapia' && (
+            <select className={sel} value={filterSubesp} onChange={e => { setFilterSubesp(e.target.value); setPage(1); setSelected(new Set()); }}>
+              <option value="">Todas las subespecialidades</option>
+              {subespecialidades.map(s => <option key={s}>{s}</option>)}
+            </select>
+          )}
         </div>
         <div className="flex gap-2">
           {!carlos && <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>}
@@ -167,7 +177,13 @@ export default function ClientesPage() {
                         </td>
                         <td className="px-4 py-3 font-medium text-[#1B4F8A]">{c.nombre}</td>
                         <td className="px-4 py-3 text-gray-600">{c.tipo}</td>
-                        <td className="px-4 py-3 text-gray-500">{c.especialidad || '-'}</td>
+                        <td className="px-4 py-3 text-gray-500">
+                          {c.especialidad
+                            ? c.subespecialidad
+                              ? `${c.especialidad} (${c.subespecialidad})`
+                              : c.especialidad
+                            : '-'}
+                        </td>
                         <td className="px-4 py-3 text-gray-500">{c.telefono || '-'}</td>
                         <td className="px-4 py-3 text-gray-500">{c.email || '-'}</td>
                         <td className="px-4 py-3 text-gray-500">{c.ciudad || '-'}</td>

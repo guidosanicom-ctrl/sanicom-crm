@@ -4,9 +4,10 @@ import Button from '../../components/ui/Button';
 import { TIPOS_CLIENTE, ESTADOS_CLIENTE } from '../../utils/constants';
 import { useAuthStore } from '../../store/authStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
+import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 
 const empty = {
-  nombre: '', tipo: 'Clínica', especialidad: 'Medicina general', cif: '',
+  nombre: '', tipo: 'Clínica', especialidad: 'Medicina general', subespecialidad: '', cif: '',
   direccion: '', ciudad: '', provincia: '', cp: '',
   telefono: '', email: '', website: '', estado: 'Activo', notas: '',
 };
@@ -17,6 +18,7 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
 
   const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const { especialidades } = useEspecialidadesStore();
+  const { subespecialidades } = useSubespecialidadesStore();
   const espOptions = isCarlos()
     ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e))
     : especialidades;
@@ -75,7 +77,19 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Especialidad médica</label>
-              <select {...sel('especialidad')}>{espOptions.map(e => <option key={e}>{e}</option>)}</select>
+              <select {...sel('especialidad')} onChange={e => { set('especialidad', e.target.value); if (e.target.value !== 'Fisioterapia') set('subespecialidad', ''); }}>
+                {espOptions.map(e => <option key={e}>{e}</option>)}
+              </select>
+              {form.especialidad === 'Fisioterapia' && (
+                <select
+                  value={form.subespecialidad || ''}
+                  onChange={e => set('subespecialidad', e.target.value)}
+                  className="w-full mt-2 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="">Subespecialidad (opcional)</option>
+                  {subespecialidades.map(s => <option key={s}>{s}</option>)}
+                </select>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">CIF / NIF</label>

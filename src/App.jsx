@@ -11,6 +11,7 @@ import { useServicioStore } from './store/servicioStore';
 import { useAgendaStore } from './store/agendaStore';
 import { useActividadStore } from './store/actividadStore';
 import { useEspecialidadesStore } from './store/especialidadesStore';
+import { useSubespecialidadesStore } from './store/subespecialidadesStore';
 import { useCategoriasStore } from './store/categoriasStore';
 import { usePipelineStore } from './store/pipelineStore';
 import Layout from './components/layout/Layout';
@@ -45,6 +46,7 @@ function AppInit() {
   const initAgenda        = useAgendaStore(s => s.initialize);
   const initActividad     = useActividadStore(s => s.initialize);
   const initEspecialidades = useEspecialidadesStore(s => s.initialize);
+  const initSubespecialidades = useSubespecialidadesStore(s => s.initialize);
   const initCategorias    = useCategoriasStore(s => s.initialize);
   const initPipeline      = usePipelineStore(s => s.initialize);
 
@@ -54,7 +56,7 @@ function AppInit() {
     Promise.all([
       initClientes(), initEquipos(), initOportunidades(), initDemos(),
       initServicios(), initAgenda(), initActividad(),
-      initEspecialidades(), initCategorias(), initPipeline(),
+      initEspecialidades(), initSubespecialidades(), initCategorias(), initPipeline(),
     ]).catch(e => console.error('[AppInit]', e));
   }, [user?.id]);
 

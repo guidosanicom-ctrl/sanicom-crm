@@ -71,6 +71,11 @@ create table if not exists pipeline_etapas (
   orden integer not null default 0
 );
 
+-- Subespecialidades de Fisioterapia (opcional — la app usa localStorage como fallback)
+create table if not exists subespecialidades_fisioterapia (
+  nombre text primary key
+);
+
 -- ============================================================
 -- Row Level Security — permisivo para clave anon
 -- (la autenticación la gestiona la propia aplicación)
@@ -82,7 +87,7 @@ begin
   foreach t in array array[
     'clientes','equipos','oportunidades','demostraciones',
     'ordenes_servicio','eventos_agenda','notificaciones','actividad',
-    'especialidades','categorias_equipo','pipeline_etapas'
+    'especialidades','categorias_equipo','pipeline_etapas','subespecialidades_fisioterapia'
   ]
   loop
     execute format('alter table %I enable row level security', t);

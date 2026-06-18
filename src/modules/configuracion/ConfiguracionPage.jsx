@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
+import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { useCategoriasStore } from '../../store/categoriasStore';
 import Card from '../../components/ui/Card';
@@ -18,6 +19,7 @@ const EMPRESA_INIT = { nombre: 'Sanicom S.L.', cif: 'B12345678', direccion: 'C/ 
 export default function ConfiguracionPage() {
   const { user, users } = useAuthStore();
   const { especialidades, addEspecialidad, updateEspecialidad, deleteEspecialidad } = useEspecialidadesStore();
+  const { subespecialidades, addSubespecialidad, updateSubespecialidad, deleteSubespecialidad } = useSubespecialidadesStore();
   const { etapas, setEtapas } = usePipelineStore();
   const { categorias, addCategoria, updateCategoria, deleteCategoria } = useCategoriasStore();
   const [activeTab, setActiveTab] = useState(0);
@@ -49,6 +51,31 @@ export default function ConfiguracionPage() {
     setAddingEsp(false); setNewEspValue('');
   };
   const confirmDelete = () => { deleteEspecialidad(delEsp); toast.success(`"${delEsp}" eliminada.`); setDelEsp(null); };
+
+  // ── Subespecialidades Fisioterapia CRUD state ─────────────────────────────
+  const [editingSubesp, setEditingSubesp] = useState(null);
+  const [editingSubespValue, setEditingSubespValue] = useState('');
+  const [newSubespValue, setNewSubespValue] = useState('');
+  const [addingSubesp, setAddingSubesp] = useState(false);
+  const [delSubesp, setDelSubesp] = useState(null);
+  const newSubespRef = useRef(null);
+
+  const startEditSubesp = (n) => { setEditingSubesp(n); setEditingSubespValue(n); setAddingSubesp(false); };
+  const cancelEditSubesp = () => { setEditingSubesp(null); setEditingSubespValue(''); };
+  const confirmEditSubesp = () => {
+    const result = updateSubespecialidad(editingSubesp, editingSubespValue);
+    if (!result.ok) { toast.error(result.error); return; }
+    toast.success('Subespecialidad actualizada.');
+    cancelEditSubesp();
+  };
+  const startAddSubesp = () => { setAddingSubesp(true); setEditingSubesp(null); setNewSubespValue(''); setTimeout(() => newSubespRef.current?.focus(), 50); };
+  const confirmAddSubesp = () => {
+    const result = addSubespecialidad(newSubespValue);
+    if (!result.ok) { toast.error(result.error); return; }
+    toast.success('Subespecialidad añadida.');
+    setAddingSubesp(false); setNewSubespValue('');
+  };
+  const confirmDeleteSubesp = () => { deleteSubespecialidad(delSubesp); toast.success(`"${delSubesp}" eliminada.`); setDelSubesp(null); };
 
   // ── Categorías de equipos CRUD state ──────────────────────────────────────
   const [editingCat, setEditingCat] = useState(null);
@@ -314,7 +341,76 @@ export default function ConfiguracionPage() {
               <p className="text-sm text-gray-400 text-center py-6">No hay especialidades. Añade la primera.</p>
             )}
           </div>
+
+          {/* Subespecialidades de Fisioterapia */}
+          <div className="mt-8 pt-6 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700">Subespecialidades de Fisioterapia</h4>
+                <p className="text-xs text-gray-400 mt-0.5">{subespecialidades.length} opciones · Aparecen en el formulario de clientes al seleccionar Fisioterapia</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={startAddSubesp} disabled={addingSubesp}>
+                <Plus className="w-4 h-4" />Añadir
+              </Button>
+            </div>
+
+            <div className="space-y-1">
+              {subespecialidades.map((s) => (
+                <div key={s} className={`flex items-center gap-2 px-3 py-2.5 rounded-lg group transition-colors ${editingSubesp === s ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'}`}>
+                  {editingSubesp === s ? (
+                    <>
+                      <input
+                        autoFocus
+                        value={editingSubespValue}
+                        onChange={e => setEditingSubespValue(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') confirmEditSubesp(); if (e.key === 'Escape') cancelEditSubesp(); }}
+                        className="flex-1 text-sm px-2 py-1 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      />
+                      <button onClick={confirmEditSubesp} className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 cursor-pointer" title="Guardar"><Check className="w-3.5 h-3.5" /></button>
+                      <button onClick={cancelEditSubesp} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 cursor-pointer" title="Cancelar"><X className="w-3.5 h-3.5" /></button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm text-gray-700">{s}</span>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => startEditSubesp(s)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer" title="Editar"><Pencil className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setDelSubesp(s)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer" title="Eliminar"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+
+              {addingSubesp && (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200 mt-1">
+                  <input
+                    ref={newSubespRef}
+                    value={newSubespValue}
+                    onChange={e => setNewSubespValue(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') confirmAddSubesp(); if (e.key === 'Escape') { setAddingSubesp(false); setNewSubespValue(''); } }}
+                    placeholder="Nombre de la subespecialidad..."
+                    className="flex-1 text-sm px-2 py-1 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 bg-white"
+                  />
+                  <button onClick={confirmAddSubesp} className="p-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 cursor-pointer" title="Añadir"><Check className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => { setAddingSubesp(false); setNewSubespValue(''); }} className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 cursor-pointer" title="Cancelar"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              )}
+
+              {subespecialidades.length === 0 && !addingSubesp && (
+                <p className="text-sm text-gray-400 text-center py-4">No hay subespecialidades. Añade la primera.</p>
+              )}
+            </div>
+          </div>
         </Card>
+
+        <ConfirmDialog
+          open={!!delSubesp}
+          onClose={() => setDelSubesp(null)}
+          onConfirm={confirmDeleteSubesp}
+          title="Eliminar subespecialidad"
+          message={`¿Eliminar "${delSubesp}"? Los clientes que la tengan asignada no se verán afectados.`}
+          confirmText="Eliminar"
+        />
       )}
 
       {activeTab === 6 && (
