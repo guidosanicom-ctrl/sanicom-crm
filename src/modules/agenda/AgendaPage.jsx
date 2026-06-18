@@ -2,8 +2,8 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
-  addDays, subDays, addWeeks, subWeeks, addMonths, subMonths,
-  isSameDay, isSameMonth, parseISO, differenceInMinutes,
+  addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, addYears, subYears,
+  isSameDay, isSameMonth, parseISO, differenceInMinutes, getYear, setMonth, setYear,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -117,6 +117,79 @@ function TimeGridView({ days, getDayEvents, onSlotClick, onEventClick, today }) 
   );
 }
 
+// ── Vista Anual ───────────────────────────────────────────────────────────────
+const MINI_DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+function MiniMonth({ year, monthIndex, getDayEvents, today, onDayClick }) {
+  const monthDate = setMonth(setYear(new Date(), year), monthIndex);
+  const start = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
+  const end = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
+  const days = [];
+  let d = start;
+  while (d <= end) { days.push(new Date(d)); d = addDays(d, 1); }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 p-3 hover:shadow-sm transition-shadow">
+      <p className="text-xs font-semibold text-gray-700 capitalize text-center mb-2">
+        {format(monthDate, 'MMMM', { locale: es })}
+      </p>
+      <div className="grid grid-cols-7 mb-1">
+        {MINI_DAY_NAMES.map(n => (
+          <div key={n} className="text-center text-[9px] font-medium text-gray-400 pb-0.5">{n}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {days.map((date, i) => {
+          const inMonth = isSameMonth(date, monthDate);
+          const isToday = isSameDay(date, today);
+          const events = inMonth ? getDayEvents(date) : [];
+          const hasEvents = events.length > 0;
+          const colors = [...new Set(events.map(e => COLORS_EVENTO[e.tipo] || '#6B7280'))].slice(0, 3);
+
+          return (
+            <div
+              key={i}
+              onClick={() => hasEvents && onDayClick(date)}
+              className={`flex flex-col items-center py-0.5 rounded transition-colors
+                ${!inMonth ? 'opacity-0 pointer-events-none' : ''}
+                ${hasEvents ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+            >
+              <span className={`text-[10px] font-medium inline-flex w-5 h-5 items-center justify-center rounded-full leading-none
+                ${isToday ? 'bg-[#1B4F8A] text-white' : inMonth ? 'text-gray-700' : 'text-gray-300'}`}>
+                {format(date, 'd')}
+              </span>
+              {hasEvents && (
+                <div className="flex gap-px mt-px justify-center">
+                  {colors.map((c, ci) => (
+                    <div key={ci} className="w-1 h-1 rounded-full" style={{ backgroundColor: c }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function YearView({ year, getDayEvents, today, onDayClick }) {
+  return (
+    <div className="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 overflow-y-auto">
+      {Array.from({ length: 12 }, (_, i) => (
+        <MiniMonth
+          key={i}
+          year={year}
+          monthIndex={i}
+          getDayEvents={getDayEvents}
+          today={today}
+          onDayClick={onDayClick}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function AgendaPage() {
   const { eventos, addEvento, updateEvento, deleteEvento } = useAgendaStore();
@@ -166,16 +239,19 @@ export default function AgendaPage() {
   const goBack = () => {
     if (view === 'month') setCurrentDate(d => subMonths(d, 1));
     else if (view === 'week') setCurrentDate(d => subWeeks(d, 1));
+    else if (view === 'year') setCurrentDate(d => subYears(d, 1));
     else setCurrentDate(d => subDays(d, 1));
   };
   const goForward = () => {
     if (view === 'month') setCurrentDate(d => addMonths(d, 1));
     else if (view === 'week') setCurrentDate(d => addWeeks(d, 1));
+    else if (view === 'year') setCurrentDate(d => addYears(d, 1));
     else setCurrentDate(d => addDays(d, 1));
   };
 
   // Título de la cabecera según vista
   const headerTitle = useMemo(() => {
+    if (view === 'year') return format(currentDate, 'yyyy');
     if (view === 'month') return format(currentDate, 'MMMM yyyy', { locale: es });
     if (view === 'week') {
       const start = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -186,6 +262,12 @@ export default function AgendaPage() {
     }
     return format(currentDate, "EEEE, d 'de' MMMM yyyy", { locale: es });
   }, [view, currentDate]);
+
+  // Desde vista anual: navegar al día
+  const handleYearDayClick = (date) => {
+    setCurrentDate(date);
+    setView('day');
+  };
 
   // Abrir formulario desde clic en día/franja
   const handleDayClick = (date) => {
@@ -216,7 +298,7 @@ export default function AgendaPage() {
       {/* Toolbar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex gap-2">
-          {[['month','Mes'], ['week','Semana'], ['day','Día']].map(([v, label]) => (
+          {[['month','Mes'], ['week','Semana'], ['day','Día'], ['year','Año']].map(([v, label]) => (
             <button key={v} onClick={() => setView(v)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition-colors
                 ${view === v ? 'bg-[#1B4F8A] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
@@ -244,7 +326,7 @@ export default function AgendaPage() {
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* ── Área del calendario ── */}
         <div className={`xl:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col
-          ${view !== 'month' ? 'h-[640px]' : ''}`}>
+          ${view === 'week' || view === 'day' ? 'h-[640px]' : view === 'year' ? 'h-[680px]' : ''}`}>
           {/* Cabecera de navegación */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
             <button onClick={goBack} className="p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer">
@@ -312,6 +394,16 @@ export default function AgendaPage() {
               onSlotClick={handleSlotClick}
               onEventClick={setDetailEvent}
               today={today}
+            />
+          )}
+
+          {/* ── Vista Año ── */}
+          {view === 'year' && (
+            <YearView
+              year={getYear(currentDate)}
+              getDayEvents={getDayEvents}
+              today={today}
+              onDayClick={handleYearDayClick}
             />
           )}
         </div>
