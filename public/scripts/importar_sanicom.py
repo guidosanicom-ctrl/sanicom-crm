@@ -39,17 +39,18 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════════════════════
 CONFIG = {
     # Columnas de datos del cliente (tal como aparecen en la cabecera del Excel)
-    'col_nombre':        'NOMBRE',          # Obligatorio — si está vacío, la fila se omite
-    'col_direccion':     'DIRECCIÓN',       # o 'DIRECCION', 'DOMICILIO', etc.
-    'col_ciudad':        'POBLACIÓN',       # o 'CIUDAD', 'LOCALIDAD', None
-    'col_cp':            'CP',              # o 'CÓDIGO POSTAL', None
-    'col_telefono':      'TELÉFONO',        # o 'TELEFONO', 'TLF', None
-    'col_email':         'EMAIL',           # o 'CORREO', None
-    'col_web':           'WEB',             # o 'PÁGINA WEB', None
-    'col_observaciones': 'OBSERVACIONES',   # Las observaciones se guardan como nota
+    'col_nombre':        'NOMBRE',          # col 17
+    'col_direccion':     'DIRECCION',       # col 18
+    'col_ciudad':        'POB.',            # col 19 — Población
+    'col_provincia':     'PROV.',           # col 20
+    'col_cp':            'C.P',             # col 21
+    'col_telefono':      'TELEFONO',        # col 22
+    'col_email':         'E-MAIL',          # col 23
+    'col_web':           'WEB',             # col 24
+    'col_observaciones': 'OBSERVACIONES',   # col 25
 
-    # Fila donde están los encabezados (1 = primera fila)
-    'fila_cabecera': 1,
+    # Fila donde están los encabezados (fila 5 en la planilla de Carlos)
+    'fila_cabecera': 5,
 
     # Valores por defecto para todos los clientes importados
     'especialidad': 'Fisioterapia',
@@ -190,13 +191,18 @@ def normalizar(s):
 
 
 def col_index(ws, nombre_col, fila_cab):
-    """Devuelve el índice de columna (1-based) para un encabezado dado."""
+    """Devuelve el índice de columna (1-based) para un encabezado dado.
+    Compara quitando puntos, espacios y tildes para mayor tolerancia."""
     if nombre_col is None:
         return None
-    nombre_col_lower = nombre_col.lower()
+
+    def simplify(s):
+        return s.lower().replace('.', '').replace(' ', '').replace('-', '')
+
+    buscar = simplify(nombre_col)
     for cell in ws[fila_cab]:
-        val = normalizar(cell.value).lower()
-        if val == nombre_col_lower or nombre_col_lower in val:
+        val = simplify(normalizar(cell.value))
+        if val == buscar or buscar in val or val in buscar:
             return cell.column
     return None
 
@@ -230,6 +236,7 @@ def procesar_hoja(ws, nombre_hoja, verbose=False):
         'nombre':        col_index(ws, CONFIG['col_nombre'], fila_cab),
         'direccion':     col_index(ws, CONFIG['col_direccion'], fila_cab),
         'ciudad':        col_index(ws, CONFIG['col_ciudad'], fila_cab),
+        'provincia':     col_index(ws, CONFIG.get('col_provincia'), fila_cab),
         'cp':            col_index(ws, CONFIG['col_cp'], fila_cab),
         'telefono':      col_index(ws, CONFIG['col_telefono'], fila_cab),
         'email':         col_index(ws, CONFIG['col_email'], fila_cab),
@@ -253,7 +260,11 @@ def procesar_hoja(ws, nombre_hoja, verbose=False):
         print(f"  → Columnas de equipo detectadas: {list(cols_equipo.values())}")
 
     if cols['nombre'] is None:
-        print(f"  ⚠️  No se encontró la columna '{CONFIG['col_nombre']}' en hoja '{nombre_hoja}'. Omitida.")
+        # Muestra los encabezados reales de la fila de cabecera para facilitar el diagnóstico
+        headers_reales = [normalizar(cell.value) for cell in ws[fila_cab] if normalizar(cell.value)]
+        print(f"  ⚠️  No se encontró '{CONFIG['col_nombre']}' en hoja '{nombre_hoja}' (fila {fila_cab}).")
+        print(f"     Encabezados encontrados: {headers_reales}")
+        print(f"     Ajusta 'col_nombre' y 'fila_cabecera' en CONFIG al inicio del script.")
         return []
 
     clientes = []
@@ -265,6 +276,8 @@ def procesar_hoja(ws, nombre_hoja, verbose=False):
             continue  # Fila vacía, omitir
 
         # Datos base del cliente
+        # La provincia viene de la columna PROV. si existe; si no, del nombre de la hoja
+        provincia_celda = cell_val(ws, row_idx, cols['provincia'])
         cliente = {
             'nombre':       nombre,
             'direccion':    cell_val(ws, row_idx, cols['direccion']),
@@ -273,7 +286,7 @@ def procesar_hoja(ws, nombre_hoja, verbose=False):
             'telefono':     cell_val(ws, row_idx, cols['telefono']),
             'email':        cell_val(ws, row_idx, cols['email']),
             'web':          cell_val(ws, row_idx, cols['web']),
-            'provincia':    nombre_hoja,  # El nombre de la hoja = provincia
+            'provincia':    provincia_celda or nombre_hoja,
             'especialidad': CONFIG['especialidad'],
             'tipo':         CONFIG['tipo'],
             'estado':       CONFIG['estado'],
