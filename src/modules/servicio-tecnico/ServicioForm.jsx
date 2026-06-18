@@ -3,11 +3,10 @@ import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import ClienteSearchInput from '../../components/ui/ClienteSearchInput';
 import { useClientesStore } from '../../store/clientesStore';
-import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { TIPOS_SERVICIO, PRIORIDADES_SERVICIO, ESTADOS_SERVICIO } from '../../utils/constants';
 
-const empty = { clienteId: '', equipoId: '', tipo: 'Mantenimiento preventivo', prioridad: 'Normal', fechaProgramada: '', tecnico: '', descripcion: '', nSerie: '', resultado: '', estado: 'Pendiente', confirmacionCliente: false };
+const empty = { clienteId: '', equipoNombre: '', tipo: 'Mantenimiento preventivo', prioridad: 'Normal', fechaProgramada: '', tecnico: '', descripcion: '', nSerie: '', resultado: '', estado: 'Pendiente', confirmacionCliente: false };
 
 export default function ServicioForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
@@ -21,7 +20,6 @@ export default function ServicioForm({ open, onClose, onSave, initial }) {
   }, [open, initial]);
 
   const { clientes: todosClientes } = useClientesStore();
-  const { equipos } = useEquiposStore();
   const { users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const clientes = isCarlos() ? todosClientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : todosClientes;
 
@@ -30,7 +28,7 @@ export default function ServicioForm({ open, onClose, onSave, initial }) {
   const validate = () => {
     const e = {};
     if (!form.clienteId) e.clienteId = 'Requerido';
-    if (!form.equipoId) e.equipoId = 'Requerido';
+    if (!form.equipoNombre) e.equipoNombre = 'Requerido';
     if (!form.fechaProgramada) e.fechaProgramada = 'Requerido';
     if (!form.tecnico) e.tecnico = 'Requerido';
     setErrors(e);
@@ -64,11 +62,8 @@ export default function ServicioForm({ open, onClose, onSave, initial }) {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Equipo *</label>
-          <select value={form.equipoId} onChange={e => set('equipoId', e.target.value)} className={`w-full px-3 py-2 border ${err('equipoId')} rounded-lg text-sm focus:outline-none`}>
-            <option value="">Selecciona equipo</option>
-            {equipos.map(e => <option key={e.id} value={e.id}>{e.nombre} - {e.modelo}</option>)}
-          </select>
-          {errors.equipoId && <p className="text-xs text-red-500 mt-1">{errors.equipoId}</p>}
+          <input type="text" value={form.equipoNombre || ''} onChange={e => set('equipoNombre', e.target.value)} placeholder="Nombre del equipo" className={`w-full px-3 py-2 border ${err('equipoNombre')} rounded-lg text-sm focus:outline-none`} />
+          {errors.equipoNombre && <p className="text-xs text-red-500 mt-1">{errors.equipoNombre}</p>}
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de servicio *</label>

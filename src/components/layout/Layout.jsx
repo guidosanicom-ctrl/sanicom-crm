@@ -10,7 +10,7 @@ const TITLES = {
   '/pipeline': 'Pipeline de Oportunidades',
   '/demostraciones': 'Demostraciones',
   '/servicio-tecnico': 'Servicio Técnico',
-  '/equipos': 'Equipos',
+  '/equipos': 'Equipos en stock',
   '/configuracion': 'Configuración',
   '/notificaciones': 'Notificaciones',
 };

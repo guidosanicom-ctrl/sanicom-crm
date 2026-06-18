@@ -3,7 +3,6 @@ import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import ClienteSearchInput from '../../components/ui/ClienteSearchInput';
 import { useClientesStore } from '../../store/clientesStore';
-import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { ORIGENES_OPP, REDES_SOCIALES } from '../../utils/constants';
 import { usePipelineStore } from '../../store/pipelineStore';
@@ -12,7 +11,7 @@ const ESTADOS_CLIENTE = ['Evaluando opciones', 'Esperando aprobación', 'Consult
 const FINANCIACIONES = ['Propia', 'Financiación bancaria', 'Leasing', 'Subvención', 'Por definir'];
 const TEMPERATURAS = [{ value: 'frio', label: '❄️ Frío' }, { value: 'tibio', label: '🌤 Tibio' }, { value: 'caliente', label: '🔥 Caliente' }];
 
-const empty = { nombre: '', clienteId: '', equipos: [], valor: '', probabilidad: 50, etapa: 'Prospecto', fechaCierre: '', responsable: '', origen: '', descripcion: '', estadoCliente: '', financiacion: '', temperatura: '', notaSeguimiento: '' };
+const empty = { nombre: '', clienteId: '', equiposDescripcion: '', valor: '', probabilidad: 50, etapa: 'Prospecto', fechaCierre: '', responsable: '', origen: '', descripcion: '', estadoCliente: '', financiacion: '', temperatura: '', notaSeguimiento: '' };
 
 export default function OportunidadForm({ open, onClose, onSave, initial }) {
   const { etapas: ETAPAS_PIPELINE } = usePipelineStore();
@@ -27,7 +26,6 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
   }, [open, initial]);
 
   const { clientes: todosClientes } = useClientesStore();
-  const { equipos } = useEquiposStore();
   const { users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const clientes = isCarlos() ? todosClientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : todosClientes;
 
@@ -56,11 +54,6 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
     onChange: e => set(k, e.target.value),
     className: `w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors[k] ? 'border-red-400' : 'border-gray-200'}`,
   });
-
-  const toggleEquipo = (id) => {
-    const list = form.equipos || [];
-    set('equipos', list.includes(id) ? list.filter(e => e !== id) : [...list, id]);
-  };
 
   return (
     <Modal open={open} onClose={onClose} title={initial ? 'Editar oportunidad' : 'Nueva oportunidad'} size="lg"
@@ -125,15 +118,8 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
           )}
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-600 mb-2">Equipos de interés</label>
-          <div className="flex flex-wrap gap-2">
-            {equipos.map(e => (
-              <button key={e.id} type="button" onClick={() => toggleEquipo(e.id)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer ${(form.equipos || []).includes(e.id) ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
-                {e.nombre}
-              </button>
-            ))}
-          </div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Equipos de interés</label>
+          <input type="text" value={form.equiposDescripcion || ''} onChange={e => set('equiposDescripcion', e.target.value)} placeholder="Ej: Láser CO2, Ultrasonido terapéutico..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
         </div>
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-1">Descripción</label>

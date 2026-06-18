@@ -140,9 +140,9 @@ export default function ServicioTecnicoPage() {
 
   const filtered = useMemo(() => servicios.filter(s => {
     const client = clientes.find(c => c.id === s.clienteId);
-    const equipo = equipos.find(e => e.id === s.equipoId);
+    const equipoNombre = s.equipoNombre || equipos.find(e => e.id === s.equipoId)?.nombre || '';
     const q = search.toLowerCase();
-    const matchSearch = !q || client?.nombre?.toLowerCase().includes(q) || equipo?.nombre?.toLowerCase().includes(q) || s.numero?.toLowerCase().includes(q);
+    const matchSearch = !q || client?.nombre?.toLowerCase().includes(q) || equipoNombre.toLowerCase().includes(q) || s.numero?.toLowerCase().includes(q);
     return matchSearch
       && (!filterEstado || s.estado === filterEstado)
       && (!filterTipo || s.tipo === filterTipo)
@@ -220,7 +220,7 @@ export default function ServicioTecnicoPage() {
                 <tbody className="divide-y divide-gray-50">
                   {paginated.map(s => {
                     const client = clientes.find(c => c.id === s.clienteId);
-                    const equipo = equipos.find(e => e.id === s.equipoId);
+                    const equipoLabel = s.equipoNombre || equipos.find(e => e.id === s.equipoId)?.nombre;
                     const user = users.find(u => u.id === s.tecnico);
                     return (
                       <tr key={s.id} className="hover:bg-gray-50">
@@ -228,7 +228,7 @@ export default function ServicioTecnicoPage() {
                           <button onClick={() => openDetail(s)} className="font-mono text-xs text-[#1B4F8A] hover:underline cursor-pointer">{s.numero}</button>
                         </td>
                         <td className="px-3 py-3 font-medium">{client?.nombre || '-'}</td>
-                        <td className="px-3 py-3 text-gray-600">{equipo?.nombre || '-'}</td>
+                        <td className="px-3 py-3 text-gray-600">{equipoLabel || '-'}</td>
                         <td className="px-3 py-3 text-gray-500 text-xs">{s.tipo}</td>
                         <td className="px-3 py-3 text-gray-500 text-xs">{user?.name?.split(' ')[0] || '-'}</td>
                         <td className="px-3 py-3 whitespace-nowrap text-xs">{formatDate(s.fechaProgramada)}</td>

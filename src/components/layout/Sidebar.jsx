@@ -13,7 +13,7 @@ const NAV_ITEMS = [
   { path: '/pipeline', label: 'Oportunidades', icon: TrendingUp, module: 'pipeline' },
   { path: '/demostraciones', label: 'Demostraciones', icon: PlaySquare, module: 'demostraciones' },
   { path: '/servicio-tecnico', label: 'Servicio Técnico', icon: Wrench, module: 'servicio-tecnico' },
-  { path: '/equipos', label: 'Equipos', icon: Package, module: 'equipos' },
+  { path: '/equipos', label: 'Equipos en stock', icon: Package, module: 'equipos' },
   { path: '/configuracion', label: 'Configuración', icon: Settings, module: 'configuracion' },
 ];
 

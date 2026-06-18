@@ -3,11 +3,10 @@ import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import ClienteSearchInput from '../../components/ui/ClienteSearchInput';
 import { useClientesStore } from '../../store/clientesStore';
-import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { TIPOS_EVENTO } from '../../utils/constants';
 
-const empty = { titulo: '', tipo: 'Visita comercial', inicio: '', fin: '', clienteId: '', responsable: '', descripcion: '', equipoId: '' };
+const empty = { titulo: '', tipo: 'Visita comercial', inicio: '', fin: '', clienteId: '', responsable: '', descripcion: '', equipoNombre: '' };
 
 function buildDefault(initial, defaultDate, defaultHour) {
   if (initial) return initial;
@@ -33,7 +32,6 @@ export default function EventForm({ open, onClose, onSave, initial, defaultDate,
     }
   }, [open, initial, defaultDate, defaultHour]);
   const { clientes: todosClientes } = useClientesStore();
-  const { equipos } = useEquiposStore();
   const { users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const clientes = isCarlos() ? todosClientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : todosClientes;
 
@@ -106,10 +104,7 @@ export default function EventForm({ open, onClose, onSave, initial, defaultDate,
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Equipo relacionado</label>
-          <select value={form.equipoId} onChange={e => set('equipoId', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
-            <option value="">Ninguno</option>
-            {equipos.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-          </select>
+          <input type="text" value={form.equipoNombre || ''} onChange={e => set('equipoNombre', e.target.value)} placeholder="Nombre del equipo (opcional)" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Descripción</label>

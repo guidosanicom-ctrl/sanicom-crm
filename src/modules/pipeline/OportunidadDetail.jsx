@@ -61,8 +61,8 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
 
   const cliente = clienteData || clientes.find(c => c.id === oportunidad.clienteId);
   const responsable = users.find(u => u.id === oportunidad.responsable);
-  const equiposNombres = (oportunidad.equipos || [])
-    .map(id => equipos.find(e => e.id === id)?.nombre).filter(Boolean).join(', ');
+  const equiposNombres = oportunidad.equiposDescripcion ||
+    (oportunidad.equipos || []).map(id => equipos.find(e => e.id === id)?.nombre).filter(Boolean).join(', ');
 
   return (
     <Modal

@@ -27,7 +27,7 @@ export default function DemoDetail({ open, onClose, demo, onEdit, onDelete }) {
   if (!demo) return null;
 
   const cliente = clientes.find(c => c.id === demo.clienteId);
-  const equipo = equipos.find(e => e.id === demo.equipoId);
+  const equipo = demo.equipoNombre ? { nombre: demo.equipoNombre } : equipos.find(e => e.id === demo.equipoId);
   const responsable = users.find(u => u.id === demo.responsable);
 
   return (

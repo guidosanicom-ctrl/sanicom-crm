@@ -3,11 +3,10 @@ import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import ClienteSearchInput from '../../components/ui/ClienteSearchInput';
 import { useClientesStore } from '../../store/clientesStore';
-import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { ESTADOS_DEMO, RESULTADOS_DEMO, LUGARES_DEMO } from '../../utils/constants';
 
-const empty = { clienteId: '', contactoId: '', equipoId: '', responsable: '', fecha: '', hora: '09:00', lugar: 'Cliente', direccion: '', objetivo: '', estado: 'Pendiente', resultado: '', observaciones: '', generarOportunidad: false };
+const empty = { clienteId: '', contactoId: '', equipoNombre: '', responsable: '', fecha: '', hora: '09:00', lugar: 'Cliente', direccion: '', objetivo: '', estado: 'Pendiente', resultado: '', observaciones: '', generarOportunidad: false };
 
 export default function DemoForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
@@ -21,7 +20,6 @@ export default function DemoForm({ open, onClose, onSave, initial }) {
   }, [open, initial]);
 
   const { clientes: todosClientes } = useClientesStore();
-  const { equipos } = useEquiposStore();
   const { users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const clientes = isCarlos() ? todosClientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : todosClientes;
 
@@ -32,7 +30,7 @@ export default function DemoForm({ open, onClose, onSave, initial }) {
   const validate = () => {
     const e = {};
     if (!form.clienteId) e.clienteId = 'Requerido';
-    if (!form.equipoId) e.equipoId = 'Requerido';
+    if (!form.equipoNombre) e.equipoNombre = 'Requerido';
     if (!form.responsable) e.responsable = 'Requerido';
     if (!form.fecha) e.fecha = 'Requerido';
     setErrors(e);
@@ -78,11 +76,8 @@ export default function DemoForm({ open, onClose, onSave, initial }) {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Equipo *</label>
-          <select value={form.equipoId} onChange={e => set('equipoId', e.target.value)} className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none ${errors.equipoId ? 'border-red-400' : 'border-gray-200'}`}>
-            <option value="">Selecciona equipo</option>
-            {equipos.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-          </select>
-          {errors.equipoId && <p className="text-xs text-red-500 mt-1">{errors.equipoId}</p>}
+          <input {...inp('equipoNombre')} placeholder="Nombre del equipo a demostrar" />
+          {errors.equipoNombre && <p className="text-xs text-red-500 mt-1">{errors.equipoNombre}</p>}
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Responsable *</label>

@@ -45,7 +45,7 @@ export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete 
   if (!orden) return null;
 
   const cliente = clientes.find(c => c.id === orden.clienteId);
-  const equipo = equipos.find(e => e.id === orden.equipoId);
+  const equipo = orden.equipoNombre ? { nombre: orden.equipoNombre } : equipos.find(e => e.id === orden.equipoId);
   const tecnico = users.find(u => u.id === orden.tecnico);
 
   const handleExportPdf = async () => {

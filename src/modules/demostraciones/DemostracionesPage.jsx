@@ -38,9 +38,9 @@ export default function DemostracionesPage() {
 
   const filtered = useMemo(() => demos.filter(d => {
     const client = clientes.find(c => c.id === d.clienteId);
-    const equipo = equipos.find(e => e.id === d.equipoId);
+    const equipoNombre = d.equipoNombre || equipos.find(e => e.id === d.equipoId)?.nombre || '';
     const q = search.toLowerCase();
-    const matchSearch = !q || client?.nombre?.toLowerCase().includes(q) || equipo?.nombre?.toLowerCase().includes(q);
+    const matchSearch = !q || client?.nombre?.toLowerCase().includes(q) || equipoNombre.toLowerCase().includes(q);
     const matchEstado = !filterEstado || d.estado === filterEstado;
     const matchResp = !filterResp || d.responsable === filterResp;
     return matchSearch && matchEstado && matchResp;
@@ -57,10 +57,10 @@ export default function DemostracionesPage() {
       toast.success('Demostración actualizada.');
     } else {
       const demo = addDemo({ ...data, adjuntos: [] });
-      if (data.generarOportunidad && data.clienteId && data.equipoId) {
+      if (data.generarOportunidad && data.clienteId && data.equipoNombre) {
         addOportunidad({
-          nombre: `Demo ${equipos.find(e => e.id === data.equipoId)?.nombre}`,
-          clienteId: data.clienteId, equipos: [data.equipoId], valor: 0, probabilidad: 50,
+          nombre: `Demo ${data.equipoNombre}`,
+          clienteId: data.clienteId, equiposDescripcion: data.equipoNombre, valor: 0, probabilidad: 50,
           etapa: 'Prospecto', fechaCierre: '', responsable: data.responsable, origen: 'Demo de equipo',
         });
         toast.success('Demostración creada y oportunidad generada.');
@@ -106,7 +106,7 @@ export default function DemostracionesPage() {
                 <tbody className="divide-y divide-gray-50">
                   {paginated.map(d => {
                     const client = clientes.find(c => c.id === d.clienteId);
-                    const equipo = equipos.find(e => e.id === d.equipoId);
+                    const equipoLabel = d.equipoNombre || equipos.find(e => e.id === d.equipoId)?.nombre;
                     const user = users.find(u => u.id === d.responsable);
                     return (
                       <tr key={d.id} className="hover:bg-gray-50">
@@ -114,7 +114,7 @@ export default function DemostracionesPage() {
                           <button onClick={() => openDetail(d)} className="font-mono text-xs text-[#1B4F8A] hover:underline cursor-pointer">{d.numero}</button>
                         </td>
                         <td className="px-4 py-3 font-medium">{client?.nombre || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600">{equipo?.nombre || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{equipoLabel || '-'}</td>
                         <td className="px-4 py-3 text-gray-500">{user?.name || '-'}</td>
                         <td className="px-4 py-3 whitespace-nowrap">{formatDate(d.fecha)} {d.hora}</td>
                         <td className="px-4 py-3"><Badge color={BADGE_MAP[d.estado] || 'gray'}>{d.estado}</Badge></td>
