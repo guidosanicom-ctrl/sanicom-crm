@@ -1,47 +1,50 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 import { ESPECIALIDADES } from '../utils/constants';
 
-const KEY = 'sanicom_especialidades';
-
-const load = () => {
-  try {
-    const data = localStorage.getItem(KEY);
-    if (data) return JSON.parse(data);
-    localStorage.setItem(KEY, JSON.stringify(ESPECIALIDADES));
-    return ESPECIALIDADES;
-  } catch { return ESPECIALIDADES; }
-};
-
-const save = (items) => localStorage.setItem(KEY, JSON.stringify(items));
+const TABLE = 'especialidades';
 
 export const useEspecialidadesStore = create((set, get) => ({
-  especialidades: load(),
+  especialidades: [],
+  initialized: false,
+
+  initialize: async () => {
+    if (get().initialized) return;
+    const { data, error } = await supabase.from(TABLE).select('nombre').order('nombre');
+    if (error) { console.error('[especialidadesStore]', error); return; }
+    if ((data || []).length === 0) {
+      await supabase.from(TABLE).insert(ESPECIALIDADES.map(n => ({ nombre: n })));
+      set({ especialidades: ESPECIALIDADES, initialized: true });
+    } else {
+      set({ especialidades: data.map(r => r.nombre), initialized: true });
+    }
+  },
 
   addEspecialidad: (nombre) => {
-    const nombre_trim = nombre.trim();
-    if (!nombre_trim) return { ok: false, error: 'El nombre no puede estar vacío.' };
-    if (get().especialidades.some(e => e.toLowerCase() === nombre_trim.toLowerCase()))
+    const trimmed = nombre.trim();
+    if (!trimmed) return { ok: false, error: 'El nombre no puede estar vacío.' };
+    if (get().especialidades.some(e => e.toLowerCase() === trimmed.toLowerCase()))
       return { ok: false, error: 'Ya existe una especialidad con ese nombre.' };
-    const especialidades = [...get().especialidades, nombre_trim];
-    save(especialidades);
-    set({ especialidades });
+    set(s => ({ especialidades: [...s.especialidades, trimmed] }));
+    supabase.from(TABLE).insert({ nombre: trimmed })
+      .then(({ error }) => { if (error) console.error('[especialidadesStore.add]', error); });
     return { ok: true };
   },
 
   updateEspecialidad: (oldName, newName) => {
-    const newName_trim = newName.trim();
-    if (!newName_trim) return { ok: false, error: 'El nombre no puede estar vacío.' };
-    if (newName_trim !== oldName && get().especialidades.some(e => e.toLowerCase() === newName_trim.toLowerCase()))
+    const trimmed = newName.trim();
+    if (!trimmed) return { ok: false, error: 'El nombre no puede estar vacío.' };
+    if (trimmed !== oldName && get().especialidades.some(e => e.toLowerCase() === trimmed.toLowerCase()))
       return { ok: false, error: 'Ya existe una especialidad con ese nombre.' };
-    const especialidades = get().especialidades.map(e => e === oldName ? newName_trim : e);
-    save(especialidades);
-    set({ especialidades });
+    set(s => ({ especialidades: s.especialidades.map(e => e === oldName ? trimmed : e) }));
+    supabase.from(TABLE).update({ nombre: trimmed }).eq('nombre', oldName)
+      .then(({ error }) => { if (error) console.error('[especialidadesStore.update]', error); });
     return { ok: true };
   },
 
   deleteEspecialidad: (nombre) => {
-    const especialidades = get().especialidades.filter(e => e !== nombre);
-    save(especialidades);
-    set({ especialidades });
+    set(s => ({ especialidades: s.especialidades.filter(e => e !== nombre) }));
+    supabase.from(TABLE).delete().eq('nombre', nombre)
+      .then(({ error }) => { if (error) console.error('[especialidadesStore.delete]', error); });
   },
 }));

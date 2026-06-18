@@ -1,13 +1,16 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 import { SEED_DEMOS } from '../data/seedData';
 import { generateId, generateNumero } from '../utils/formatters';
 import { buildAuditEntries, createEntry } from '../utils/auditLog';
 import { useAuthStore } from './authStore';
 import { useActividadStore } from './actividadStore';
 import { useAgendaStore } from './agendaStore';
-import { useNotificacionesStore } from './notificacionesStore';
 import { useClientesStore } from './clientesStore';
 import { useEquiposStore } from './equiposStore';
+import { useNotificacionesStore } from './notificacionesStore';
+
+const TABLE = 'demostraciones';
 
 function buildEventoFromDemo(demo) {
   const cliente = useClientesStore.getState().clientes.find(c => c.id === demo.clienteId);
@@ -27,74 +30,68 @@ function buildEventoFromDemo(demo) {
   };
 }
 
-const KEY = 'sanicom_demos';
-
-const load = () => {
-  try {
-    const data = localStorage.getItem(KEY);
-    if (data) return JSON.parse(data);
-    localStorage.setItem(KEY, JSON.stringify(SEED_DEMOS));
-    return SEED_DEMOS;
-  } catch { return SEED_DEMOS; }
-};
-
-const save = (items) => localStorage.setItem(KEY, JSON.stringify(items));
-
 export const useDemosStore = create((set, get) => ({
-  demos: load(),
+  demos: [],
+  initialized: false,
 
-  addDemo: (data) => {
+  initialize: async () => {
+    if (get().initialized) return;
+    const { data, error } = await supabase.from(TABLE).select('data');
+    if (error) { console.error('[demosStore]', error); return; }
+    if ((data || []).length === 0) {
+      await supabase.from(TABLE).insert(SEED_DEMOS.map(d => ({ id: d.id, data: d })));
+      set({ demos: SEED_DEMOS, initialized: true });
+    } else {
+      set({ demos: data.map(r => r.data), initialized: true });
+    }
+  },
+
+  addDemo: (demoData) => {
     const user = useAuthStore.getState().user;
     const demos = get().demos;
     const numero = generateNumero('DM', demos);
     const historial = user ? [createEntry('creó esta demostración', user)] : [];
-    const item = { ...data, id: generateId(), numero, creadoPorId: user?.id || null, historial };
-    // Create linked agenda event
-    const evento = useAgendaStore.getState().addEvento({ ...buildEventoFromDemo(data), demoId: item.id });
+    const item = { ...demoData, id: generateId(), numero, creadoPorId: user?.id || null, historial };
+    // Crear evento en agenda vinculado
+    const evento = useAgendaStore.getState().addEvento({ ...buildEventoFromDemo(demoData), demoId: item.id });
     const itemWithEvento = { ...item, eventoId: evento.id };
-    const updated = [...demos, itemWithEvento];
-    save(updated);
-    set({ demos: updated });
+    set(s => ({ demos: [...s.demos, itemWithEvento] }));
+    supabase.from(TABLE).insert({ id: itemWithEvento.id, data: itemWithEvento }).then(({ error }) => {
+      if (error) { console.error(error); set(s => ({ demos: s.demos.filter(d => d.id !== itemWithEvento.id) })); }
+    });
     if (user) {
       useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion: 'creó una demostración', registroId: item.id, registroLabel: numero, modulo: 'demostraciones' });
-      // Notificar al responsable asignado (si es distinto al creador)
-      if (data.responsable && data.responsable !== user.id) {
-        const cliente = useClientesStore.getState().clientes.find(c => c.id === data.clienteId);
-        const equipo  = useEquiposStore.getState().equipos.find(e => e.id === data.equipoId);
-        useNotificacionesStore.getState().pushNotificacion(data.responsable, {
-          mensaje: `${user.name} te asignó una demostración: ${equipo?.nombre || 'equipo'} con ${cliente?.nombre || 'cliente'} (${data.fecha || 'sin fecha'})`,
-          tipo: 'demo',
-          modulo: 'demostraciones',
-          enlace: '/demostraciones',
+      if (demoData.responsable && demoData.responsable !== user.id) {
+        const cliente = useClientesStore.getState().clientes.find(c => c.id === demoData.clienteId);
+        const equipo  = useEquiposStore.getState().equipos.find(e => e.id === demoData.equipoId);
+        useNotificacionesStore.getState().pushNotificacion(demoData.responsable, {
+          mensaje: `${user.name} te asignó una demostración: ${equipo?.nombre || 'equipo'} con ${cliente?.nombre || 'cliente'} (${demoData.fecha || 'sin fecha'})`,
+          tipo: 'demo', modulo: 'demostraciones', enlace: '/demostraciones',
         });
       }
     }
     return itemWithEvento;
   },
 
-  updateDemo: (id, data) => {
+  updateDemo: (id, updates) => {
     const user = useAuthStore.getState().user;
     const prev = get().demos.find(d => d.id === id);
-    const demos = get().demos.map(d => {
-      if (d.id !== id) return d;
-      const entries = user ? buildAuditEntries(d, { ...d, ...data }, user) : [];
-      const historial = [...(d.historial || []), ...entries];
-      return { ...d, ...data, historial };
+    const entries = user ? buildAuditEntries(prev, { ...prev, ...updates }, user) : [];
+    const updated = { ...prev, ...updates, historial: [...(prev?.historial || []), ...entries] };
+    set(s => ({ demos: s.demos.map(d => d.id === id ? updated : d) }));
+    supabase.from(TABLE).update({ data: updated }).eq('id', id).then(({ error }) => {
+      if (error) { console.error(error); set(s => ({ demos: s.demos.map(d => d.id === id ? prev : d) })); }
     });
-    save(demos);
-    set({ demos });
-    // Sync agenda event if any relevant field changed
+    // Sincronizar evento de agenda si cambiaron campos relevantes
     if (prev?.eventoId) {
-      const merged = { ...prev, ...data };
       const syncFields = ['fecha', 'hora', 'clienteId', 'equipoId', 'responsable'];
-      const changed = syncFields.some(k => data[k] !== undefined && data[k] !== prev[k]);
-      if (changed) {
-        useAgendaStore.getState().updateEvento(prev.eventoId, buildEventoFromDemo(merged));
+      if (syncFields.some(k => updates[k] !== undefined && updates[k] !== prev[k])) {
+        useAgendaStore.getState().updateEvento(prev.eventoId, buildEventoFromDemo({ ...prev, ...updates }));
       }
     }
     if (user) {
-      const accion = data.estado && prev?.estado !== data.estado
-        ? `cambió la demo ${prev?.numero} a "${data.estado}"`
+      const accion = updates.estado && prev?.estado !== updates.estado
+        ? `cambió la demo ${prev?.numero} a "${updates.estado}"`
         : `actualizó la demo ${prev?.numero}`;
       useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion, registroId: id, registroLabel: prev?.numero || id, modulo: 'demostraciones' });
     }
@@ -103,13 +100,12 @@ export const useDemosStore = create((set, get) => ({
   deleteDemo: (id) => {
     const user = useAuthStore.getState().user;
     const target = get().demos.find(d => d.id === id);
-    const demos = get().demos.filter(d => d.id !== id);
-    save(demos);
-    set({ demos });
-    // Remove linked agenda event
-    if (target?.eventoId) {
-      useAgendaStore.getState().deleteEvento(target.eventoId);
-    }
+    const prev = get().demos;
+    set(s => ({ demos: s.demos.filter(d => d.id !== id) }));
+    supabase.from(TABLE).delete().eq('id', id).then(({ error }) => {
+      if (error) { console.error(error); set({ demos: prev }); }
+    });
+    if (target?.eventoId) useAgendaStore.getState().deleteEvento(target.eventoId);
     if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion: 'eliminó la demostración', registroId: id, registroLabel: target?.numero || id, modulo: 'demostraciones' });
   },
 

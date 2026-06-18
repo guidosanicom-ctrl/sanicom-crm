@@ -1,29 +1,30 @@
 import { create } from 'zustand';
+import { supabase } from '../lib/supabase';
 import { ETAPAS_PIPELINE } from '../utils/constants';
 
-const KEY = 'sanicom_etapas_pipeline';
+const TABLE = 'pipeline_etapas';
 
-const load = () => {
-  try {
-    const data = localStorage.getItem(KEY);
-    if (data) {
-      // Migración: renombrar 'Cualificado' → 'Interesado' si existe en datos guardados
-      const parsed = JSON.parse(data).map(e => e === 'Cualificado' ? 'Interesado' : e);
-      localStorage.setItem(KEY, JSON.stringify(parsed));
-      return parsed;
+export const usePipelineStore = create((set, get) => ({
+  etapas: [],
+  initialized: false,
+
+  initialize: async () => {
+    if (get().initialized) return;
+    const { data, error } = await supabase.from(TABLE).select('nombre, orden').order('orden');
+    if (error) { console.error('[pipelineStore]', error); return; }
+    if ((data || []).length === 0) {
+      await supabase.from(TABLE).insert(ETAPAS_PIPELINE.map((n, i) => ({ nombre: n, orden: i })));
+      set({ etapas: ETAPAS_PIPELINE, initialized: true });
+    } else {
+      set({ etapas: data.map(r => r.nombre), initialized: true });
     }
-    localStorage.setItem(KEY, JSON.stringify(ETAPAS_PIPELINE));
-    return ETAPAS_PIPELINE;
-  } catch { return ETAPAS_PIPELINE; }
-};
+  },
 
-const save = (items) => localStorage.setItem(KEY, JSON.stringify(items));
-
-export const usePipelineStore = create((set) => ({
-  etapas: load(),
-
-  setEtapas: (etapas) => {
-    save(etapas);
+  setEtapas: async (etapas) => {
     set({ etapas });
+    // Reemplazar todas las etapas en BD
+    await supabase.from(TABLE).delete().neq('nombre', '__none__');
+    const { error } = await supabase.from(TABLE).insert(etapas.map((n, i) => ({ nombre: n, orden: i })));
+    if (error) console.error('[pipelineStore.setEtapas]', error);
   },
 }));

@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { useAuthStore } from '../../store/authStore';
-import { useNotificacionesStore } from '../../store/notificacionesStore';
 
 const TITLES = {
   '/dashboard': 'Dashboard',
@@ -20,12 +18,6 @@ const TITLES = {
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const user = useAuthStore(s => s.user);
-  const initNotificaciones = useNotificacionesStore(s => s.init);
-
-  useEffect(() => {
-    if (user?.id) initNotificaciones(user.id);
-  }, [user?.id]);
   const base = '/' + location.pathname.split('/')[1];
   const title = TITLES[base] || 'Sanicom CRM';
 

@@ -1,8 +1,18 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from './store/authStore';
 import { useNotificacionesStore } from './store/notificacionesStore';
+import { useClientesStore } from './store/clientesStore';
+import { useEquiposStore } from './store/equiposStore';
+import { useOportunidadesStore } from './store/oportunidadesStore';
+import { useDemosStore } from './store/demosStore';
+import { useServicioStore } from './store/servicioStore';
+import { useAgendaStore } from './store/agendaStore';
+import { useActividadStore } from './store/actividadStore';
+import { useEspecialidadesStore } from './store/especialidadesStore';
+import { useCategoriasStore } from './store/categoriasStore';
+import { usePipelineStore } from './store/pipelineStore';
 import Layout from './components/layout/Layout';
 import LoginPage from './modules/auth/LoginPage';
 import NoAccess from './modules/auth/NoAccess';
@@ -26,10 +36,28 @@ function ProtectedRoute({ children, module }) {
 
 function AppInit() {
   const { user } = useAuthStore();
-  const { init } = useNotificacionesStore();
+  const initNotificaciones = useNotificacionesStore(s => s.init);
+  const initClientes      = useClientesStore(s => s.initialize);
+  const initEquipos       = useEquiposStore(s => s.initialize);
+  const initOportunidades = useOportunidadesStore(s => s.initialize);
+  const initDemos         = useDemosStore(s => s.initialize);
+  const initServicios     = useServicioStore(s => s.initialize);
+  const initAgenda        = useAgendaStore(s => s.initialize);
+  const initActividad     = useActividadStore(s => s.initialize);
+  const initEspecialidades = useEspecialidadesStore(s => s.initialize);
+  const initCategorias    = useCategoriasStore(s => s.initialize);
+  const initPipeline      = usePipelineStore(s => s.initialize);
+
   useEffect(() => {
-    if (user?.id) init(user.id);
+    if (!user?.id) return;
+    initNotificaciones(user.id);
+    Promise.all([
+      initClientes(), initEquipos(), initOportunidades(), initDemos(),
+      initServicios(), initAgenda(), initActividad(),
+      initEspecialidades(), initCategorias(), initPipeline(),
+    ]).catch(e => console.error('[AppInit]', e));
   }, [user?.id]);
+
   return null;
 }
 
