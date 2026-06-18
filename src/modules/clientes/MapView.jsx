@@ -1,29 +1,21 @@
-import { useEffect, useState } from 'react';
-import { MapPin } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { MapPin, Loader2 } from 'lucide-react';
 
 let leafletLoaded = false;
 
-export default function MapView({ lat, lng, nombre, ciudad }) {
+export default function MapView({ lat, lng, nombre, ciudad, onLocalizar, geoLoading }) {
   const [mapReady, setMapReady] = useState(false);
-  const mapId = `map-${Math.random().toString(36).slice(2)}`;
+  const mapRef = useRef(null);
+  const instanceRef = useRef(null);
+  const mapId = useRef(`map-${Math.random().toString(36).slice(2)}`).current;
 
+  // Cargar Leaflet una sola vez
   useEffect(() => {
     if (!lat || !lng) return;
-
-    const initMap = () => {
-      const L = window.L;
-      if (!L || !document.getElementById(mapId)) return;
-      const map = L.map(mapId).setView([lat, lng], 14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
-      L.marker([lat, lng]).addTo(map).bindPopup(`<b>${nombre}</b><br>${ciudad || ''}`).openPopup();
-      return map;
-    };
-
     if (window.L) { setMapReady(true); return; }
+    if (leafletLoaded) return;
+    leafletLoaded = true;
 
-    // Load Leaflet CSS
     if (!document.getElementById('leaflet-css')) {
       const link = document.createElement('link');
       link.id = 'leaflet-css';
@@ -31,35 +23,54 @@ export default function MapView({ lat, lng, nombre, ciudad }) {
       link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
       document.head.appendChild(link);
     }
-
-    // Load Leaflet JS
-    if (!document.getElementById('leaflet-js')) {
-      const script = document.createElement('script');
-      script.id = 'leaflet-js';
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.onload = () => setMapReady(true);
-      document.body.appendChild(script);
-    }
+    const script = document.createElement('script');
+    script.id = 'leaflet-js';
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => setMapReady(true);
+    document.body.appendChild(script);
   }, [lat, lng]);
 
+  // Inicializar / actualizar mapa cuando cambian coordenadas o Leaflet está listo
   useEffect(() => {
     if (!mapReady || !lat || !lng) return;
     const L = window.L;
-    if (!L || !document.getElementById(mapId)) return;
+    const el = document.getElementById(mapId);
+    if (!L || !el) return;
+
+    // Destruir instancia anterior si existe
+    if (instanceRef.current) {
+      try { instanceRef.current.remove(); } catch {}
+      instanceRef.current = null;
+    }
+
     try {
       const map = L.map(mapId).setView([lat, lng], 14);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+        attribution: '© OpenStreetMap contributors',
       }).addTo(map);
-      L.marker([lat, lng]).addTo(map).bindPopup(`<b>${nombre}</b><br>${ciudad || ''}`).openPopup();
+      L.marker([lat, lng]).addTo(map)
+        .bindPopup(`<b>${nombre || ''}</b><br>${ciudad || ''}`)
+        .openPopup();
+      instanceRef.current = map;
     } catch {}
   }, [mapReady, lat, lng]);
 
   if (!lat || !lng) {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col items-center justify-center h-48 text-gray-400">
-        <MapPin className="w-8 h-8 mb-2" />
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col items-center justify-center h-48 text-gray-400 gap-3">
+        <MapPin className="w-8 h-8" />
         <p className="text-sm">Sin coordenadas guardadas</p>
+        {onLocalizar && (
+          <button
+            onClick={onLocalizar}
+            disabled={geoLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#1B4F8A] rounded-lg hover:bg-[#163f6e] disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed transition-colors"
+          >
+            {geoLoading
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Localizando…</>
+              : <><MapPin className="w-3.5 h-3.5" />Localizar en mapa</>}
+          </button>
+        )}
       </div>
     );
   }

@@ -10,6 +10,7 @@ import { useTiposClienteStore } from '../../store/tiposClienteStore';
 import { useServiciosHospitalStore } from '../../store/serviciosHospitalStore';
 import { useVisitasStore } from '../../store/visitasStore';
 import { useAgendaStore } from '../../store/agendaStore';
+import { geocodificar } from '../../utils/geocode';
 import { Loader2 } from 'lucide-react';
 
 const empty = {
@@ -28,6 +29,7 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
   const [errors, setErrors] = useState({});
   const [cpLoading, setCpLoading] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
   const [primeraVisita, setPrimeraVisita] = useState(emptyVisita);
   const cpAbort = useRef(null);
 
@@ -84,10 +86,18 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
     return Object.keys(e).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
 
     let data = { ...form };
+
+    // Geocodificar si tiene dirección/ciudad y aún no tiene coordenadas guardadas
+    if ((data.direccion || data.ciudad) && (!data.lat || !data.lng)) {
+      setGeoLoading(true);
+      const coords = await geocodificar(data.direccion, data.ciudad, data.provincia);
+      setGeoLoading(false);
+      if (coords) { data.lat = coords.lat; data.lng = coords.lng; }
+    }
 
     // Para Hospital público: convertir el servicio + jefe en la primera entrada de serviciosEspecialidades
     if (esHospitalPublico && form.servicio) {
@@ -155,8 +165,12 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
   return (
     <Modal open={open} onClose={onClose} title={initial ? 'Editar cliente' : 'Nuevo cliente'} size="lg"
       footer={<>
-        <Button variant="outline" onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSave}>{initial ? 'Guardar cambios' : 'Crear cliente'}</Button>
+        <Button variant="outline" onClick={onClose} disabled={geoLoading}>Cancelar</Button>
+        <Button onClick={handleSave} disabled={geoLoading}>
+          {geoLoading
+            ? <><Loader2 className="w-4 h-4 animate-spin" />Localizando…</>
+            : initial ? 'Guardar cambios' : 'Crear cliente'}
+        </Button>
       </>}
     >
       <div className="space-y-6">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Phone, Mail, Globe, Edit, Plus, Trash2, Pencil,
          Package, ShoppingBag, Star, Stethoscope, FileText, ExternalLink,
@@ -17,6 +17,7 @@ import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import ClienteForm from './ClienteForm';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import MapView from './MapView';
+import { geocodificar } from '../../utils/geocode';
 
 // ── Tipos que muestran la pestaña Servicios/Especialidades ─────────────────
 const TIPOS_SERVICIOS = {
@@ -537,6 +538,7 @@ export default function ClienteDetail() {
   const [contactoForm, setContactoForm] = useState(null);
   const [note, setNote] = useState('');
   const [notes, setNotes] = useState([]);
+  const [geoLoading, setGeoLoading] = useState(false);
 
   const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const carlos = isCarlos();
@@ -584,6 +586,25 @@ export default function ClienteDetail() {
     if (!note.trim()) return;
     setNotes(n => [{ text: note, date: new Date().toISOString() }, ...n]);
     setNote('');
+  };
+
+  // Auto-geocodificar al abrir la ficha si tiene dirección pero no coordenadas
+  useEffect(() => {
+    if (cliente.lat || cliente.lng) return;
+    if (!cliente.direccion && !cliente.ciudad) return;
+    let cancelled = false;
+    geocodificar(cliente.direccion, cliente.ciudad, cliente.provincia).then(coords => {
+      if (!cancelled && coords) updateCliente(id, { lat: coords.lat, lng: coords.lng });
+    });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  const handleLocalizar = async () => {
+    if (!cliente.direccion && !cliente.ciudad) return;
+    setGeoLoading(true);
+    const coords = await geocodificar(cliente.direccion, cliente.ciudad, cliente.provincia);
+    setGeoLoading(false);
+    if (coords) updateCliente(id, { lat: coords.lat, lng: coords.lng });
   };
 
   const saveServicios      = (list) => updateCliente(id, { serviciosEspecialidades: list });
@@ -656,7 +677,12 @@ export default function ClienteDetail() {
             {cliente.notas && <Card><h3 className="font-semibold text-gray-800 mb-2">Notas internas</h3><p className="text-sm text-gray-600">{cliente.notas}</p></Card>}
           </div>
           <div>
-            <MapView lat={cliente.lat} lng={cliente.lng} nombre={cliente.nombre} ciudad={cliente.ciudad} />
+            <MapView
+              lat={cliente.lat} lng={cliente.lng}
+              nombre={cliente.nombre} ciudad={cliente.ciudad}
+              onLocalizar={handleLocalizar}
+              geoLoading={geoLoading}
+            />
           </div>
         </div>
       )}
