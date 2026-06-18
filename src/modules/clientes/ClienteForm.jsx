@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
+import CiudadInput, { CP_PROVINCIA } from '../../components/ui/CiudadInput';
 import { ESTADOS_CLIENTE } from '../../utils/constants';
 import { useAuthStore } from '../../store/authStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 import { useTiposClienteStore } from '../../store/tiposClienteStore';
+import { Loader2 } from 'lucide-react';
 
 const empty = {
   nombre: '', tipo: 'Clínica', especialidad: 'Medicina general', subespecialidad: '', cif: '',
@@ -16,6 +18,8 @@ const empty = {
 export default function ClienteForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
   const [errors, setErrors] = useState({});
+  const [cpLoading, setCpLoading] = useState(false);
+  const cpAbort = useRef(null);
 
   const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const { especialidades } = useEspecialidadesStore();
@@ -30,8 +34,33 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
       const base = initial || { ...empty, especialidad: espOptions[0] };
       setForm(base);
       setErrors({});
+      setCpLoading(false);
     }
   }, [open, initial]);
+
+  // Lookup automático al escribir un CP de 5 dígitos
+  useEffect(() => {
+    const cp = form.cp?.trim();
+    if (!cp || cp.length !== 5 || !/^\d{5}$/.test(cp)) return;
+
+    if (cpAbort.current) cpAbort.current.abort();
+    const controller = new AbortController();
+    cpAbort.current = controller;
+
+    setCpLoading(true);
+    fetch(`https://api.zippopotam.us/es/${cp}`, { signal: controller.signal })
+      .then(r => { if (!r.ok) throw new Error('not found'); return r.json(); })
+      .then(data => {
+        const place = data.places?.[0];
+        if (place) {
+          const ciudadApi = place['place name'];
+          const provincia = CP_PROVINCIA[cp.substring(0, 2)] || '';
+          setForm(f => ({ ...f, ciudad: ciudadApi, provincia }));
+        }
+      })
+      .catch(e => { if (e.name !== 'AbortError') { /* campo queda editable */ } })
+      .finally(() => setCpLoading(false));
+  }, [form.cp]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -47,6 +76,15 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
     onSave(form);
     onClose();
     setForm(empty);
+  };
+
+  const handleCiudadSelect = (ciudad, provincia, cp) => {
+    setForm(f => ({
+      ...f,
+      ciudad,
+      ...(provincia !== undefined && { provincia }),
+      ...(cp !== undefined && { cp }),
+    }));
   };
 
   const f = (k) => ({
@@ -113,15 +151,22 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Ciudad</label>
-              <input {...f('ciudad')} placeholder="Sevilla" />
+              <CiudadInput
+                value={form.ciudad}
+                onSelect={handleCiudadSelect}
+                error={!!errors.ciudad}
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Provincia</label>
               <input {...f('provincia')} placeholder="Sevilla" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Código Postal</label>
-              <input {...f('cp')} placeholder="41001" />
+              <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+                Código Postal
+                {cpLoading && <Loader2 className="w-3 h-3 text-[#3ABDD5] animate-spin" />}
+              </label>
+              <input {...f('cp')} placeholder="41001" maxLength={5} />
             </div>
           </div>
         </div>
