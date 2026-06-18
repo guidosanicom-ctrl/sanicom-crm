@@ -5,6 +5,7 @@ import { buildAuditEntries, createEntry } from '../utils/auditLog';
 import { useAuthStore } from './authStore';
 import { useActividadStore } from './actividadStore';
 import { useAgendaStore } from './agendaStore';
+import { useNotificacionesStore } from './notificacionesStore';
 import { useClientesStore } from './clientesStore';
 import { useEquiposStore } from './equiposStore';
 
@@ -54,7 +55,20 @@ export const useDemosStore = create((set, get) => ({
     const updated = [...demos, itemWithEvento];
     save(updated);
     set({ demos: updated });
-    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion: 'creó una demostración', registroId: item.id, registroLabel: numero, modulo: 'demostraciones' });
+    if (user) {
+      useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'demo', accion: 'creó una demostración', registroId: item.id, registroLabel: numero, modulo: 'demostraciones' });
+      // Notificar al responsable asignado (si es distinto al creador)
+      if (data.responsable && data.responsable !== user.id) {
+        const cliente = useClientesStore.getState().clientes.find(c => c.id === data.clienteId);
+        const equipo  = useEquiposStore.getState().equipos.find(e => e.id === data.equipoId);
+        useNotificacionesStore.getState().pushNotificacion(data.responsable, {
+          mensaje: `${user.name} te asignó una demostración: ${equipo?.nombre || 'equipo'} con ${cliente?.nombre || 'cliente'} (${data.fecha || 'sin fecha'})`,
+          tipo: 'demo',
+          modulo: 'demostraciones',
+          enlace: '/demostraciones',
+        });
+      }
+    }
     return itemWithEvento;
   },
 

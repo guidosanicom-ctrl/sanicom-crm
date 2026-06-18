@@ -4,6 +4,7 @@ import { generateId } from '../utils/formatters';
 import { buildAuditEntries, createEntry } from '../utils/auditLog';
 import { useAuthStore } from './authStore';
 import { useActividadStore } from './actividadStore';
+import { useNotificacionesStore } from './notificacionesStore';
 
 const KEY = 'sanicom_oportunidades';
 
@@ -34,7 +35,18 @@ export const useOportunidadesStore = create((set, get) => ({
     const oportunidades = [...get().oportunidades, item];
     save(oportunidades);
     set({ oportunidades });
-    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'oportunidad', accion: 'creó una oportunidad', registroId: item.id, registroLabel: item.nombre, modulo: 'pipeline' });
+    if (user) {
+      useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'oportunidad', accion: 'creó una oportunidad', registroId: item.id, registroLabel: item.nombre, modulo: 'pipeline' });
+      // Notificar al responsable asignado (si es distinto al creador)
+      if (data.responsable && data.responsable !== user.id) {
+        useNotificacionesStore.getState().pushNotificacion(data.responsable, {
+          mensaje: `${user.name} te asignó la oportunidad "${item.nombre}"`,
+          tipo: 'oportunidad',
+          modulo: 'pipeline',
+          enlace: '/pipeline',
+        });
+      }
+    }
     return item;
   },
 
@@ -55,6 +67,19 @@ export const useOportunidadesStore = create((set, get) => ({
         ? `movió la oportunidad a "${data.etapa}"`
         : 'actualizó la oportunidad';
       useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'oportunidad', accion, registroId: id, registroLabel: prev?.nombre || id, modulo: 'pipeline' });
+      const push = useNotificacionesStore.getState().pushNotificacion;
+      const nombre = prev?.nombre || id;
+      // Cambio de etapa → notificar al responsable actual
+      if (data.etapa && prev?.etapa !== data.etapa) {
+        const responsable = data.responsable || prev?.responsable;
+        if (responsable && responsable !== user.id) {
+          push(responsable, { mensaje: `La oportunidad "${nombre}" avanzó a etapa "${data.etapa}"`, tipo: 'oportunidad', modulo: 'pipeline', enlace: '/pipeline' });
+        }
+      }
+      // Cambio de responsable → notificar al nuevo responsable
+      if (data.responsable && data.responsable !== prev?.responsable && data.responsable !== user.id) {
+        push(data.responsable, { mensaje: `${user.name} te asignó la oportunidad "${nombre}"`, tipo: 'oportunidad', modulo: 'pipeline', enlace: '/pipeline' });
+      }
     }
   },
 

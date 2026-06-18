@@ -4,6 +4,7 @@ import { generateId, generateNumero } from '../utils/formatters';
 import { buildAuditEntries, createEntry } from '../utils/auditLog';
 import { useAuthStore } from './authStore';
 import { useActividadStore } from './actividadStore';
+import { useNotificacionesStore } from './notificacionesStore';
 
 const KEY = 'sanicom_servicios';
 
@@ -34,7 +35,18 @@ export const useServicioStore = create((set, get) => ({
     const updated = [...servicios, item];
     save(updated);
     set({ servicios: updated });
-    if (user) useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'servicio', accion: 'creó una orden de servicio', registroId: item.id, registroLabel: numero, modulo: 'servicio-tecnico' });
+    if (user) {
+      useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'servicio', accion: 'creó una orden de servicio', registroId: item.id, registroLabel: numero, modulo: 'servicio-tecnico' });
+      // Notificar al técnico asignado (si es distinto al creador)
+      if (data.tecnico && data.tecnico !== user.id) {
+        useNotificacionesStore.getState().pushNotificacion(data.tecnico, {
+          mensaje: `${user.name} te asignó la orden de servicio ${numero}`,
+          tipo: 'servicio',
+          modulo: 'servicio-tecnico',
+          enlace: '/servicio-tecnico',
+        });
+      }
+    }
     return item;
   },
 
@@ -54,6 +66,23 @@ export const useServicioStore = create((set, get) => ({
         ? `cambió la ${prev?.numero} a "${data.estado}"`
         : `actualizó la orden ${prev?.numero}`;
       useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'servicio', accion, registroId: id, registroLabel: prev?.numero || id, modulo: 'servicio-tecnico' });
+      // Orden completada → notificar al creador y a los usuarios de Administración
+      if (data.estado === 'Completada' && prev?.estado !== 'Completada') {
+        const push = useNotificacionesStore.getState().pushNotificacion;
+        const numero = prev?.numero || id;
+        const admins = useAuthStore.getState().users.filter(u => u.role === 'Administración').map(u => u.id);
+        const notificados = new Set([prev?.creadoPorId, ...admins].filter(Boolean));
+        notificados.forEach(targetId => {
+          if (targetId !== user.id) {
+            push(targetId, {
+              mensaje: `La orden ${numero} ha sido marcada como Completada por ${user.name}`,
+              tipo: 'servicio',
+              modulo: 'servicio-tecnico',
+              enlace: '/servicio-tecnico',
+            });
+          }
+        });
+      }
     }
   },
 

@@ -10,45 +10,46 @@ const loadNotifs = (userId) => {
   } catch { return []; }
 };
 
-const saveNotifs = (userId, notifs) => {
-  const limited = notifs.slice(0, 100);
-  localStorage.setItem(getKey(userId), JSON.stringify(limited));
-};
-
 export const useNotificacionesStore = create((set, get) => ({
   notificaciones: [],
   userId: null,
 
+  // Llamar al iniciar sesión para cargar las notificaciones del usuario autenticado
   init: (userId) => {
     const notificaciones = loadNotifs(userId);
     set({ notificaciones, userId });
   },
 
-  addNotificacion: (notif) => {
-    const { userId, notificaciones } = get();
-    if (!userId) return;
+  // Escribe una notificación en el localStorage del usuario DESTINO.
+  // Si el destino es el usuario actualmente logueado, también actualiza el estado reactivo.
+  pushNotificacion: (targetUserId, notif) => {
+    if (!targetUserId) return;
+    const existing = loadNotifs(targetUserId);
     const nueva = {
       id: generateId(),
       fechaHora: new Date().toISOString(),
       leida: false,
       ...notif,
     };
-    const updated = [nueva, ...notificaciones];
-    saveNotifs(userId, updated);
-    set({ notificaciones: updated });
+    const updated = [nueva, ...existing].slice(0, 100);
+    localStorage.setItem(getKey(targetUserId), JSON.stringify(updated));
+    // Actualizar estado solo si el destino es el usuario logueado actualmente
+    if (get().userId === targetUserId) {
+      set({ notificaciones: updated });
+    }
   },
 
   markRead: (id) => {
     const { userId, notificaciones } = get();
     const updated = notificaciones.map(n => n.id === id ? { ...n, leida: true } : n);
-    saveNotifs(userId, updated);
+    localStorage.setItem(getKey(userId), JSON.stringify(updated));
     set({ notificaciones: updated });
   },
 
   markAllRead: () => {
     const { userId, notificaciones } = get();
     const updated = notificaciones.map(n => ({ ...n, leida: true }));
-    saveNotifs(userId, updated);
+    localStorage.setItem(getKey(userId), JSON.stringify(updated));
     set({ notificaciones: updated });
   },
 
