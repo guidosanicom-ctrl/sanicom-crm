@@ -231,7 +231,7 @@ export default function ClientesPage() {
                         title="Seleccionar página"
                       />
                     </th>
-                    {['Nombre', 'Tipo', 'Especialidad', 'Teléfono', 'Email', 'Ciudad', 'Alta', 'Estado'].map(h => (
+                    {['Nombre', 'Contacto', 'Tipo', 'Especialidad', 'Teléfono', 'Email', 'Ciudad', 'Alta', 'Estado'].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -249,6 +249,7 @@ export default function ClientesPage() {
                           <input type="checkbox" className={chk} checked={isSelected} onChange={() => {}} />
                         </td>
                         <td className="px-4 py-3 font-medium text-[#1B4F8A]">{c.nombre}</td>
+                        <td className="px-4 py-3 text-gray-500">{c.contactoPrincipal || '-'}</td>
                         <td className="px-4 py-3 text-gray-600">{c.tipo}</td>
                         <td className="px-4 py-3 text-gray-500">
                           {c.especialidad

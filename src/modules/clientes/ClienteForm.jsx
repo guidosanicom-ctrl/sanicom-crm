@@ -11,7 +11,7 @@ import { useServiciosHospitalStore } from '../../store/serviciosHospitalStore';
 import { Loader2 } from 'lucide-react';
 
 const empty = {
-  nombre: '', tipo: 'Clínica', especialidad: 'Medicina general', subespecialidad: '', cif: '',
+  nombre: '', contactoPrincipal: '', tipo: 'Clínica', especialidad: 'Medicina general', subespecialidad: '', cif: '',
   direccion: '', ciudad: '', provincia: '', cp: '',
   telefono: '', email: '', website: '', estado: 'Activo', notas: '',
   // Campos exclusivos de Hospital público
@@ -142,6 +142,11 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
               <label className="block text-xs font-medium text-gray-600 mb-1">Nombre empresa *</label>
               <input {...inp('nombre')} placeholder="Hospital / Clínica..." />
               {errors.nombre && <p className="text-xs text-red-500 mt-1">{errors.nombre}</p>}
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nombre de contacto principal</label>
+              <input {...inp('contactoPrincipal')} placeholder="Ej: Juan García" />
             </div>
 
             <div>

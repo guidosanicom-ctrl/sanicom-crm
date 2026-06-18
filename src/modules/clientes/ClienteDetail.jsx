@@ -457,6 +457,7 @@ export default function ClienteDetail() {
             <Card>
               <h3 className="font-semibold text-gray-800 mb-4">Datos generales</h3>
               <div className="grid grid-cols-2 gap-y-3 text-sm">
+                <div className="text-gray-500">Contacto principal</div><div className="font-medium">{cliente.contactoPrincipal || '-'}</div>
                 <div className="text-gray-500">CIF/NIF</div><div className="font-medium">{cliente.cif || '-'}</div>
                 <div className="text-gray-500">Tipo</div><div className="font-medium">{cliente.tipo}</div>
                 <div className="text-gray-500">Especialidad</div><div className="font-medium">{cliente.especialidad || '-'}</div>
