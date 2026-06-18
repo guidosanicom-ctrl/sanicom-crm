@@ -13,6 +13,7 @@ import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import ClienteForm from './ClienteForm';
 import ImportWizard from './ImportWizard';
 import RutaModal from './RutaModal';
+import SanicomImportWizard from './SanicomImportWizard';
 import { formatDate } from '../../utils/formatters';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
@@ -39,6 +40,7 @@ export default function ClientesPage() {
   const [viewingSelected, setViewingSelected] = useState(false);
   const [delBulkOpen, setDelBulkOpen] = useState(false);
   const [rutaOpen, setRutaOpen] = useState(false);
+  const [sanicomOpen, setSanicomOpen] = useState(false);
 
   const carlos = isCarlos();
   const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
@@ -140,6 +142,11 @@ export default function ClientesPage() {
         </div>
         <div className="flex gap-2">
           {!carlos && <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>}
+          {!carlos && (
+            <Button variant="outline" size="sm" onClick={() => setSanicomOpen(true)}>
+              <Upload className="w-4 h-4" />Importar planilla Sanicom
+            </Button>
+          )}
           <Button size="sm" onClick={() => setFormOpen(true)}><Plus className="w-4 h-4" />Nuevo cliente</Button>
         </div>
       </div>
@@ -286,6 +293,14 @@ export default function ClientesPage() {
       <ClienteForm open={formOpen} onClose={() => setFormOpen(false)}
         onSave={(data) => { addCliente(data); toast.success('Cliente creado correctamente.'); setFormOpen(false); }} />
       <ImportWizard open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
+      <SanicomImportWizard
+        open={sanicomOpen}
+        onClose={() => setSanicomOpen(false)}
+        onImport={(rows, mode) => {
+          const result = importClientes(rows, mode);
+          return result;
+        }}
+      />
 
       <ConfirmDialog
         open={delBulkOpen}

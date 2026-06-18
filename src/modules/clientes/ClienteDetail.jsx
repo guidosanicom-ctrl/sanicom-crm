@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, Mail, Globe, Edit, Plus, Trash2, Pencil, Package, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Mail, Globe, Edit, Plus, Trash2, Pencil, Package, ShoppingBag, Star } from 'lucide-react';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
@@ -39,7 +39,7 @@ const inputCls = 'w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm f
 const selCls   = 'w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white';
 
 // ── Pestaña: Equipos que tiene ─────────────────────────────────────────────
-function EquiposTieneTab({ clienteId, equipos = [], onSave }) {
+function EquiposTieneTab({ clienteId, equipos = [], equiposInteres = [], onSave, onSaveInteres }) {
   const [form, setForm] = useState(null); // null = cerrado, {…} = alta/edición
   const [delId, setDelId] = useState(null);
   const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -156,6 +156,36 @@ function EquiposTieneTab({ clienteId, equipos = [], onSave }) {
         message="¿Eliminar este equipo del registro del cliente?"
         confirmText="Eliminar"
       />
+
+      {/* Sección "Equipos con interés" (importada desde planilla) */}
+      {equiposInteres.length > 0 && (
+        <div className="mt-6 pt-5 border-t border-dashed border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-cyan-100 flex items-center justify-center">
+                <Star className="w-3 h-3 text-cyan-600" />
+              </div>
+              <h4 className="text-sm font-semibold text-gray-700">Equipos con interés</h4>
+              <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">{equiposInteres.length}</span>
+            </div>
+            <p className="text-xs text-gray-400">Importado desde planilla (celdas celestes)</p>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {equiposInteres.map((eq, i) => (
+              <div key={eq.id || i} className="py-2 flex items-center justify-between">
+                <p className="text-sm text-gray-700">{eq.nombre}</p>
+                <button
+                  onClick={() => onSaveInteres(equiposInteres.filter((_, j) => j !== i))}
+                  className="p-1 rounded text-gray-300 hover:text-red-400 cursor-pointer"
+                  title="Quitar"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
@@ -333,6 +363,7 @@ export default function ClienteDetail() {
   };
 
   const saveEquiposTiene = (list) => updateCliente(id, { equiposInstalados: list });
+  const saveEquiposInteres = (list) => updateCliente(id, { equiposInteres: list });
   const saveEquiposVendidos = (list) => updateCliente(id, { equiposVendidos: list });
 
   return (
@@ -453,7 +484,9 @@ export default function ClienteDetail() {
         <EquiposTieneTab
           clienteId={id}
           equipos={cliente.equiposInstalados || []}
+          equiposInteres={cliente.equiposInteres || []}
           onSave={saveEquiposTiene}
+          onSaveInteres={saveEquiposInteres}
         />
       )}
 
