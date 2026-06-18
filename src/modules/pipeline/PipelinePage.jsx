@@ -5,10 +5,12 @@ import toast from 'react-hot-toast';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
+import { useDemosStore } from '../../store/demosStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import OportunidadForm from './OportunidadForm';
 import OportunidadDetail from './OportunidadDetail';
+import DemoForm from '../demostraciones/DemoForm';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { usePipelineStore } from '../../store/pipelineStore';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
@@ -201,6 +203,7 @@ export default function PipelinePage() {
   const { oportunidades, addOportunidad, updateOportunidad, deleteOportunidad } = useOportunidadesStore();
   const { clientes } = useClientesStore();
   const { users, canEditRecord } = useAuthStore();
+  const { addDemo, updateDemo } = useDemosStore();
   const { etapas: ETAPAS_PIPELINE } = usePipelineStore();
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -209,13 +212,34 @@ export default function PipelinePage() {
   const [viewMode, setViewMode] = useState('kanban');
   const [mobileTab, setMobileTab] = useState(() => ETAPAS_PIPELINE[0] || '');
   const [moveSheet, setMoveSheet] = useState(null);
+  const [demoFormOpen, setDemoFormOpen] = useState(false);
 
   // Sincronizar mobileTab cuando cargan las etapas
   useEffect(() => { if (!mobileTab && ETAPAS_PIPELINE.length) setMobileTab(ETAPAS_PIPELINE[0]); }, [ETAPAS_PIPELINE]);
 
   const openDetail = (opp) => { setSelected(opp); setDetailOpen(true); };
-  const openEdit = (opp) => { setSelected(opp); setDetailOpen(false); setFormOpen(true); };
-  const openNew = () => { setSelected(null); setFormOpen(true); };
+  const openEdit   = (opp) => { setSelected(opp); setDetailOpen(false); setFormOpen(true); };
+  const openNew    = () => { setSelected(null); setFormOpen(true); };
+
+  // Crear demo vinculada desde el detalle de una oportunidad
+  const handleCrearDemoDesdeOpp = () => setDemoFormOpen(true);
+
+  const handleSaveDemo = (data) => {
+    const opp = selected && oportunidades.find(o => o.id === selected.id);
+    if (!opp) return;
+    const demo = addDemo({
+      ...data,
+      clienteId: data.clienteId || opp.clienteId,
+      equipoNombre: data.equipoNombre || opp.equiposDescripcion,
+      responsable: data.responsable || opp.responsable,
+      adjuntos: [],
+    });
+    // Vínculo bidireccional
+    updateDemo(demo.id, { oportunidadId: opp.id, oportunidadNombre: opp.nombre });
+    updateOportunidad(opp.id, { demoIds: [...(opp.demoIds || []), demo.id] });
+    toast.success(`Demo ${demo.numero} creada y vinculada.`);
+    setDemoFormOpen(false);
+  };
 
   const onDragEnd = ({ source, destination, draggableId }) => {
     if (!destination) return;
@@ -394,6 +418,19 @@ export default function PipelinePage() {
         oportunidad={selected && oportunidades.find(o => o.id === selected.id)}
         onEdit={canEditRecord(selected) ? () => openEdit(selected) : null}
         onDelete={canEditRecord(selected) ? () => { setDetailOpen(false); setDelOpen(true); } : null}
+        onCrearDemo={handleCrearDemoDesdeOpp}
+      />
+
+      {/* DemoForm lanzado desde OportunidadDetail */}
+      <DemoForm
+        open={demoFormOpen}
+        onClose={() => setDemoFormOpen(false)}
+        initial={selected ? {
+          clienteId: selected.clienteId,
+          equipoNombre: selected.equiposDescripcion || '',
+          responsable: selected.responsable || '',
+        } : null}
+        onSave={handleSaveDemo}
       />
 
       <OportunidadForm

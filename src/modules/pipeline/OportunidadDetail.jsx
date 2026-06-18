@@ -9,7 +9,8 @@ import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Edit, Trash2, Phone, Mail, MapPin, User, PlaySquare } from 'lucide-react';
+import { Edit, Trash2, Phone, Mail, MapPin, User, PlaySquare,
+         CheckCircle2, Circle, Clock, Plus, Trophy } from 'lucide-react';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useDemosStore } from '../../store/demosStore';
 
@@ -44,7 +45,185 @@ function Row({ label, value }) {
   );
 }
 
-export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, onDelete }) {
+// ── Timeline de gestión ────────────────────────────────────────────────────────
+function GestionTimeline({ oportunidad, demosVinculadas, onUpdate, onCrearDemo }) {
+  const gestion = oportunidad.gestion || {};
+
+  // ── Cálculo de estados ─────────────────────────────────────────────────────
+  const demoRealizada  = demosVinculadas.some(d => d.estado === 'Realizada');
+  const demoEnCurso    = !demoRealizada && demosVinculadas.length > 0;
+  const sinDemo        = demosVinculadas.length === 0;
+
+  const demoStatus     = demoRealizada ? 'done' : demoEnCurso ? 'active' : 'pending';
+  const presupStatus   = gestion.presupuestoEnviado ? 'done' : 'pending';
+  const negocStatus    = gestion.negociando ? 'done' : 'pending';
+  const ventaStatus    = oportunidad.etapa === 'Ganado' ? 'done' : 'pending';
+
+  const toggle = (key) => {
+    onUpdate({ gestion: { ...gestion, [key]: !gestion[key] } });
+  };
+
+  const steps = [
+    {
+      key: 'demo',
+      label: 'Demo',
+      status: demoStatus,
+      auto: true,
+      sublabel: demoRealizada
+        ? `Realizada · ${demosVinculadas.find(d => d.estado === 'Realizada')?.numero || ''}`
+        : demoEnCurso
+          ? `${demosVinculadas[0]?.estado} · ${demosVinculadas[0]?.numero || ''}`
+          : 'Sin demo vinculada',
+      action: sinDemo ? (
+        <button
+          onClick={onCrearDemo}
+          className="mt-1.5 flex items-center gap-1 text-xs text-[#1B4F8A] hover:underline cursor-pointer font-medium"
+        >
+          <Plus className="w-3 h-3" />Crear demo
+        </button>
+      ) : null,
+    },
+    {
+      key: 'presupuesto',
+      label: 'Presupuesto enviado',
+      status: presupStatus,
+      auto: false,
+      sublabel: gestion.presupuestoEnviado ? 'Marcado manualmente' : 'Pendiente',
+    },
+    {
+      key: 'negociando',
+      label: 'Negociando precio',
+      status: negocStatus,
+      auto: false,
+      sublabel: gestion.negociando ? 'En negociación' : 'Pendiente',
+    },
+    {
+      key: 'venta',
+      label: 'Venta cerrada',
+      status: ventaStatus,
+      auto: true,
+      sublabel: ventaStatus === 'done' ? 'Oportunidad ganada ✓' : 'Pendiente',
+    },
+  ];
+
+  return (
+    <div className="bg-gray-50 rounded-xl p-4">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Estado de gestión</p>
+
+      {/* Desktop: horizontal */}
+      <div className="hidden sm:flex items-start">
+        {steps.map((step, i) => {
+          const isLast = i === steps.length - 1;
+          return (
+            <div key={step.key} className="flex-1 flex flex-col items-center relative">
+              {/* Línea conectora */}
+              {!isLast && (
+                <div className={`absolute top-4 left-1/2 w-full h-0.5 z-0
+                  ${steps[i + 1].status === 'done' || step.status === 'done' ? 'bg-green-300' : 'bg-gray-200'}`}
+                />
+              )}
+
+              {/* Icono */}
+              <div className="relative z-10 mb-2">
+                {step.status === 'done' ? (
+                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  </div>
+                ) : step.status === 'active' ? (
+                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center ring-2 ring-amber-300 ring-offset-1">
+                    <Clock className="w-4 h-4 text-amber-600" />
+                  </div>
+                ) : (
+                  <div
+                    className={`w-8 h-8 rounded-full bg-white border-2 flex items-center justify-center
+                      ${step.auto ? 'border-gray-200 cursor-default' : 'border-gray-300 cursor-pointer hover:border-[#1B4F8A] transition-colors'}`}
+                    onClick={!step.auto && step.key !== 'venta' ? () => toggle(step.key) : undefined}
+                    title={!step.auto ? 'Clic para marcar' : ''}
+                  >
+                    <Circle className="w-4 h-4 text-gray-300" />
+                  </div>
+                )}
+              </div>
+
+              {/* Etiqueta */}
+              <div className="text-center px-1">
+                <p className={`text-xs font-semibold ${step.status === 'done' ? 'text-green-700' : step.status === 'active' ? 'text-amber-700' : 'text-gray-500'}`}>
+                  {step.label}
+                </p>
+                <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{step.sublabel}</p>
+                {step.action}
+                {/* Checkbox para pasos manuales */}
+                {!step.auto && (
+                  <button
+                    onClick={() => toggle(step.key)}
+                    className={`mt-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full cursor-pointer transition-colors
+                      ${step.status === 'done'
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  >
+                    {step.status === 'done' ? '✓ Hecho' : 'Marcar'}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Mobile: vertical */}
+      <div className="flex sm:hidden flex-col gap-0">
+        {steps.map((step, i) => {
+          const isLast = i === steps.length - 1;
+          return (
+            <div key={step.key} className="flex gap-3">
+              {/* Columna izquierda: icono + línea */}
+              <div className="flex flex-col items-center">
+                {step.status === 'done' ? (
+                  <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  </div>
+                ) : step.status === 'active' ? (
+                  <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 ring-2 ring-amber-300 ring-offset-1">
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  </div>
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center flex-shrink-0">
+                    <Circle className="w-3.5 h-3.5 text-gray-300" />
+                  </div>
+                )}
+                {!isLast && <div className={`w-0.5 flex-1 my-1 ${step.status === 'done' ? 'bg-green-200' : 'bg-gray-200'}`} />}
+              </div>
+
+              {/* Contenido */}
+              <div className="pb-4 flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className={`text-sm font-semibold ${step.status === 'done' ? 'text-green-700' : step.status === 'active' ? 'text-amber-700' : 'text-gray-600'}`}>
+                    {step.label}
+                  </p>
+                  {!step.auto && (
+                    <button
+                      onClick={() => toggle(step.key)}
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full cursor-pointer transition-colors
+                        ${step.status === 'done'
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                    >
+                      {step.status === 'done' ? '✓ Hecho' : 'Marcar'}
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">{step.sublabel}</p>
+                {step.action}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, onDelete, onCrearDemo }) {
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
   const { users } = useAuthStore();
@@ -106,7 +285,6 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
             )}
           </div>
 
-          {/* Chips de seguimiento */}
           {(oportunidad.estadoCliente || oportunidad.financiacion) && (
             <div className="flex flex-wrap gap-2 mb-4">
               {oportunidad.estadoCliente && (
@@ -181,6 +359,14 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
             </div>
           )}
         </div>
+
+        {/* ── Timeline de gestión ── */}
+        <GestionTimeline
+          oportunidad={oportunidad}
+          demosVinculadas={demosVinculadas}
+          onUpdate={(updates) => updateOportunidad(oportunidad.id, updates)}
+          onCrearDemo={onCrearDemo}
+        />
 
         {/* Demos vinculadas */}
         {demosVinculadas.length > 0 && (
