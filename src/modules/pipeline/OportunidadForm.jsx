@@ -5,7 +5,7 @@ import ClienteSearchInput from '../../components/ui/ClienteSearchInput';
 import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
-import { ORIGENES_OPP } from '../../utils/constants';
+import { ORIGENES_OPP, REDES_SOCIALES } from '../../utils/constants';
 import { usePipelineStore } from '../../store/pipelineStore';
 
 const ESTADOS_CLIENTE = ['Evaluando opciones', 'Esperando aprobación', 'Consultando dirección', 'Silencio', 'Listo para decidir'];
@@ -113,10 +113,16 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Origen</label>
-          <select value={form.origen} onChange={e => set('origen', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
+          <select value={form.origen} onChange={e => { set('origen', e.target.value); if (e.target.value !== 'Redes sociales') set('redSocial', ''); }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
             <option value="">Selecciona origen</option>
             {ORIGENES_OPP.map(o => <option key={o}>{o}</option>)}
           </select>
+          {form.origen === 'Redes sociales' && (
+            <select value={form.redSocial || ''} onChange={e => set('redSocial', e.target.value)} className="w-full mt-2 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
+              <option value="">¿Cuál red social?</option>
+              {REDES_SOCIALES.map(r => <option key={r}>{r}</option>)}
+            </select>
+          )}
         </div>
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-2">Equipos de interés</label>

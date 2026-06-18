@@ -9,7 +9,8 @@ export const PRIORIDADES_SERVICIO = ['Baja', 'Normal', 'Alta', 'Urgente'];
 export const ESTADOS_SERVICIO = ['Pendiente', 'Programada', 'En curso', 'Completada', 'Cancelada'];
 export const ESTADOS_DEMO = ['Pendiente', 'Confirmada', 'Realizada', 'Reprogramada', 'Cancelada'];
 export const RESULTADOS_DEMO = ['Muy interesado', 'Interesado', 'Sin interés', 'Pendiente de decisión'];
-export const ORIGENES_OPP = ['Visita comercial', 'Referido', 'Web', 'Llamada entrante', 'Feria', 'Email', 'Otro'];
+export const ORIGENES_OPP = ['Visita comercial', 'Referido', 'Web', 'Llamada entrante', 'Feria', 'Email', 'Redes sociales', 'Otro'];
+export const REDES_SOCIALES = ['Instagram', 'Facebook', 'LinkedIn', 'WhatsApp', 'YouTube', 'Otra'];
 export const LUGARES_DEMO = ['Cliente', 'Sala Sanicom', 'Videollamada'];
 export const ROLES = ['Administración', 'Comercial Restringido'];
 
