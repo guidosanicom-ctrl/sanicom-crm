@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { SEED_DEMOS } from '../data/seedData';
 import { generateId, generateNumero } from '../utils/formatters';
 import { buildAuditEntries, createEntry } from '../utils/auditLog';
 import { useAuthStore } from './authStore';
@@ -38,12 +37,7 @@ export const useDemosStore = create((set, get) => ({
     if (get().initialized) return;
     const { data, error } = await supabase.from(TABLE).select('data');
     if (error) { console.error('[demosStore]', error); return; }
-    if ((data || []).length === 0) {
-      await supabase.from(TABLE).insert(SEED_DEMOS.map(d => ({ id: d.id, data: d })));
-      set({ demos: SEED_DEMOS, initialized: true });
-    } else {
-      set({ demos: data.map(r => r.data), initialized: true });
-    }
+    set({ demos: (data || []).map(r => r.data), initialized: true });
   },
 
   addDemo: (demoData) => {

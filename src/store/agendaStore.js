@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { SEED_EVENTOS } from '../data/seedData';
 import { generateId } from '../utils/formatters';
 import { useAuthStore } from './authStore';
 import { useActividadStore } from './actividadStore';
@@ -15,12 +14,7 @@ export const useAgendaStore = create((set, get) => ({
     if (get().initialized) return;
     const { data, error } = await supabase.from(TABLE).select('data');
     if (error) { console.error('[agendaStore]', error); return; }
-    if ((data || []).length === 0) {
-      await supabase.from(TABLE).insert(SEED_EVENTOS.map(e => ({ id: e.id, data: e })));
-      set({ eventos: SEED_EVENTOS, initialized: true });
-    } else {
-      set({ eventos: data.map(r => r.data), initialized: true });
-    }
+    set({ eventos: (data || []).map(r => r.data), initialized: true });
   },
 
   addEvento: (eventoData) => {

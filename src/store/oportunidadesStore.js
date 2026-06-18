@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { SEED_OPORTUNIDADES } from '../data/seedData';
 import { generateId } from '../utils/formatters';
 import { buildAuditEntries, createEntry } from '../utils/auditLog';
 import { useAuthStore } from './authStore';
@@ -20,13 +19,7 @@ export const useOportunidadesStore = create((set, get) => ({
     if (get().initialized) return;
     const { data, error } = await supabase.from(TABLE).select('data');
     if (error) { console.error('[oportunidadesStore]', error); return; }
-    if ((data || []).length === 0) {
-      const seeds = migrate(SEED_OPORTUNIDADES);
-      await supabase.from(TABLE).insert(seeds.map(o => ({ id: o.id, data: o })));
-      set({ oportunidades: seeds, initialized: true });
-    } else {
-      set({ oportunidades: migrate(data.map(r => r.data)), initialized: true });
-    }
+    set({ oportunidades: migrate((data || []).map(r => r.data)), initialized: true });
   },
 
   addOportunidad: (oportunidadData) => {

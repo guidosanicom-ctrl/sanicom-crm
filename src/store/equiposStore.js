@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { SEED_EQUIPOS } from '../data/seedData';
 import { generateId } from '../utils/formatters';
 
 const TABLE = 'equipos';
@@ -13,12 +12,7 @@ export const useEquiposStore = create((set, get) => ({
     if (get().initialized) return;
     const { data, error } = await supabase.from(TABLE).select('data');
     if (error) { console.error('[equiposStore]', error); return; }
-    if ((data || []).length === 0) {
-      await supabase.from(TABLE).insert(SEED_EQUIPOS.map(e => ({ id: e.id, data: e })));
-      set({ equipos: SEED_EQUIPOS, initialized: true });
-    } else {
-      set({ equipos: data.map(r => r.data), initialized: true });
-    }
+    set({ equipos: (data || []).map(r => r.data), initialized: true });
   },
 
   addEquipo: (equipoData) => {

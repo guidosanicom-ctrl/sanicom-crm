@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { SEED_CLIENTS } from '../data/seedData';
 import { generateId } from '../utils/formatters';
 import { useAuthStore } from './authStore';
 import { useActividadStore } from './actividadStore';
@@ -21,12 +20,7 @@ export const useClientesStore = create((set, get) => ({
     if (get().initialized) return;
     const { data, error } = await supabase.from(TABLE).select('data');
     if (error) { console.error('[clientesStore]', error); return; }
-    if ((data || []).length === 0) {
-      await supabase.from(TABLE).insert(SEED_CLIENTS.map(c => ({ id: c.id, data: c })));
-      set({ clientes: SEED_CLIENTS, initialized: true });
-    } else {
-      set({ clientes: data.map(r => r.data), initialized: true });
-    }
+    set({ clientes: (data || []).map(r => r.data), initialized: true });
   },
 
   addCliente: (clienteData) => {
