@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -5,6 +6,7 @@ import HistorialTimeline from '../../components/shared/HistorialTimeline';
 import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
+import { supabase } from '../../lib/supabase';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Edit, Trash2, Phone, Mail, MapPin, User } from 'lucide-react';
 
@@ -43,10 +45,21 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
   const { users } = useAuthStore();
+  const [clienteData, setClienteData] = useState(null);
+
+  useEffect(() => {
+    if (!open || !oportunidad?.clienteId) { setClienteData(null); return; }
+    supabase
+      .from('clientes')
+      .select('data')
+      .eq('id', oportunidad.clienteId)
+      .single()
+      .then(({ data }) => { if (data) setClienteData(data.data); });
+  }, [open, oportunidad?.clienteId]);
 
   if (!oportunidad) return null;
 
-  const cliente = clientes.find(c => c.id === oportunidad.clienteId);
+  const cliente = clienteData || clientes.find(c => c.id === oportunidad.clienteId);
   const responsable = users.find(u => u.id === oportunidad.responsable);
   const equiposNombres = (oportunidad.equipos || [])
     .map(id => equipos.find(e => e.id === id)?.nombre).filter(Boolean).join(', ');
