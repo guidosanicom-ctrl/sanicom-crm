@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, Euro, TrendingUp, LayoutGrid, List, X } from 'lucide-react';
+import { Plus, Euro, TrendingUp, LayoutGrid, List, X, ArrowLeftRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useClientesStore } from '../../store/clientesStore';
@@ -46,6 +46,108 @@ const FINANCIACION_COLOR = {
   'Subvención': 'bg-orange-50 text-orange-700',
   'Por definir': 'bg-gray-100 text-gray-500',
 };
+
+// ── Bottom sheet para mover etapa (solo móvil) ───────────────────────────────
+function MoveBottomSheet({ opp, etapas, onMove, onClose }) {
+  // Cerrar al tocar el fondo
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:hidden">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full bg-white rounded-t-2xl shadow-2xl pb-safe">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100">
+          <div>
+            <p className="text-xs text-gray-400">Mover oportunidad</p>
+            <p className="text-sm font-semibold text-gray-800 truncate max-w-[260px]">{opp.nombre}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="py-2">
+          {etapas.map(etapa => {
+            const isCurrent = etapa === opp.etapa;
+            return (
+              <button
+                key={etapa}
+                onClick={() => { if (!isCurrent) onMove(etapa); }}
+                className={`w-full flex items-center justify-between px-5 py-3.5 text-sm transition-colors
+                  ${isCurrent
+                    ? 'text-[#1B4F8A] font-semibold bg-blue-50'
+                    : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'}`}
+              >
+                <span>{etapa}</span>
+                {isCurrent && <Check className="w-4 h-4 text-[#1B4F8A]" />}
+              </button>
+            );
+          })}
+        </div>
+        <div className="h-6" />
+      </div>
+    </div>
+  );
+}
+
+// ── Tarjeta móvil con botón Mover ────────────────────────────────────────────
+function MobileOppCard({ opp, clients, users, onClick, onMove }) {
+  const client = clients.find(c => c.id === opp.clienteId);
+  const user = users.find(u => u.id === opp.responsable);
+  return (
+    <div className="bg-white rounded-xl p-3.5 shadow-sm border border-gray-100">
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <button onClick={onClick} className="text-sm font-semibold text-gray-800 leading-snug text-left flex-1">
+          {opp.nombre}
+          {opp.temperatura && <span className="ml-1">{TEMP_ICON[opp.temperatura]}</span>}
+        </button>
+      </div>
+      <p className="text-xs text-gray-500 mb-2.5">{client?.nombre || '-'}</p>
+
+      {(opp.estadoCliente || opp.financiacion) && (
+        <div className="flex flex-wrap gap-1 mb-2.5">
+          {opp.estadoCliente && (
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${ESTADO_CLIENTE_COLOR[opp.estadoCliente] || 'bg-gray-100 text-gray-500'}`}>
+              {opp.estadoCliente}
+            </span>
+          )}
+          {opp.financiacion && (
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${FINANCIACION_COLOR[opp.financiacion] || 'bg-gray-100 text-gray-500'}`}>
+              {opp.financiacion}
+            </span>
+          )}
+        </div>
+      )}
+
+      {opp.notaSeguimiento && (
+        <p className="text-[11px] text-gray-500 italic bg-gray-50 rounded px-2 py-1 mb-2.5 line-clamp-2">
+          {opp.notaSeguimiento}
+        </p>
+      )}
+
+      <div className="flex items-center justify-between mt-1">
+        <span className="text-sm font-bold text-[#1B4F8A]">{formatCurrency(opp.valor)}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400">{opp.probabilidad}%</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onMove(); }}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#1B4F8A]/10 text-[#1B4F8A] text-xs font-medium active:bg-[#1B4F8A]/20 transition-colors"
+          >
+            <ArrowLeftRight className="w-3.5 h-3.5" />
+            Mover
+          </button>
+        </div>
+      </div>
+      <div className="mt-1.5 flex items-center justify-between">
+        <span className="text-xs text-gray-400">Cierre: {formatDate(opp.fechaCierre)}</span>
+        <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">{user?.name?.split(' ')[0]}</span>
+      </div>
+    </div>
+  );
+}
 
 function OppCard({ opp, clients, users, onClick }) {
   const client = clients.find(c => c.id === opp.clienteId);
@@ -105,6 +207,11 @@ export default function PipelinePage() {
   const [selected, setSelected] = useState(null);
   const [delOpen, setDelOpen] = useState(false);
   const [viewMode, setViewMode] = useState('kanban');
+  const [mobileTab, setMobileTab] = useState(() => ETAPAS_PIPELINE[0] || '');
+  const [moveSheet, setMoveSheet] = useState(null);
+
+  // Sincronizar mobileTab cuando cargan las etapas
+  useEffect(() => { if (!mobileTab && ETAPAS_PIPELINE.length) setMobileTab(ETAPAS_PIPELINE[0]); }, [ETAPAS_PIPELINE]);
 
   const openDetail = (opp) => { setSelected(opp); setDetailOpen(true); };
   const openEdit = (opp) => { setSelected(opp); setDetailOpen(false); setFormOpen(true); };
@@ -160,9 +267,57 @@ export default function PipelinePage() {
         <Button onClick={openNew}><Plus className="w-4 h-4" />Nueva oportunidad</Button>
       </div>
 
+      {/* ── Vista móvil (< 640px) ── */}
+      {viewMode === 'kanban' && (
+        <div className="sm:hidden space-y-3">
+          {/* Tabs de etapa */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+            {ETAPAS_PIPELINE.map(etapa => {
+              const count = oportunidades.filter(o => o.etapa === etapa).length;
+              return (
+                <button
+                  key={etapa}
+                  onClick={() => setMobileTab(etapa)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors
+                    ${mobileTab === etapa
+                      ? 'bg-[#1B4F8A] text-white'
+                      : 'bg-white border border-gray-200 text-gray-600'}`}
+                >
+                  {etapa} {count > 0 && <span className={mobileTab === etapa ? 'opacity-70' : 'text-gray-400'}>({count})</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tarjetas de la etapa activa */}
+          {(() => {
+            const cards = oportunidades.filter(o => o.etapa === mobileTab);
+            if (cards.length === 0) return (
+              <div className="text-center py-10 text-gray-400 text-sm">
+                No hay oportunidades en esta etapa
+              </div>
+            );
+            return (
+              <div className="space-y-2">
+                {cards.map(opp => (
+                  <MobileOppCard
+                    key={opp.id}
+                    opp={opp}
+                    clients={clientes}
+                    users={users}
+                    onClick={() => openDetail(opp)}
+                    onMove={() => setMoveSheet(opp)}
+                  />
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
       {viewMode === 'kanban' ? (
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <div className="hidden sm:flex gap-4 overflow-x-auto pb-4">
             {ETAPAS_PIPELINE.map(stage => {
               const stageopps = oportunidades.filter(o => o.etapa === stage);
               return (
@@ -254,6 +409,20 @@ export default function PipelinePage() {
         onConfirm={() => { deleteOportunidad(selected?.id); toast.success('Oportunidad eliminada.'); setSelected(null); }}
         title="Eliminar oportunidad"
         message={`¿Eliminar "${selected?.nombre}"?`} />
+
+      {/* Bottom sheet mover etapa (móvil) */}
+      {moveSheet && (
+        <MoveBottomSheet
+          opp={moveSheet}
+          etapas={ETAPAS_PIPELINE}
+          onMove={(etapa) => {
+            updateOportunidad(moveSheet.id, { etapa });
+            toast.success(`Movido a "${etapa}"`);
+            setMoveSheet(null);
+          }}
+          onClose={() => setMoveSheet(null)}
+        />
+      )}
     </div>
   );
 }
