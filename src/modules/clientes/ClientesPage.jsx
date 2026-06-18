@@ -12,6 +12,7 @@ import EmptyState from '../../components/shared/EmptyState';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import ClienteForm from './ClienteForm';
 import ImportWizard from './ImportWizard';
+import RutaModal from './RutaModal';
 import { formatDate } from '../../utils/formatters';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
@@ -37,6 +38,7 @@ export default function ClientesPage() {
   const [selected, setSelected] = useState(new Set());
   const [viewingSelected, setViewingSelected] = useState(false);
   const [delBulkOpen, setDelBulkOpen] = useState(false);
+  const [rutaOpen, setRutaOpen] = useState(false);
 
   const carlos = isCarlos();
   const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
@@ -174,7 +176,7 @@ export default function ClientesPage() {
             </Button>
             <Button
               size="sm"
-              onClick={() => toast.success(`Ruta creada con ${selected.size} cliente${selected.size > 1 ? 's' : ''}.`)}
+              onClick={() => setRutaOpen(true)}
             >
               <Route className="w-4 h-4" />
               Crear ruta ({selected.size})
@@ -274,6 +276,12 @@ export default function ClientesPage() {
           </>
         )}
       </div>
+
+      <RutaModal
+        open={rutaOpen}
+        onClose={() => setRutaOpen(false)}
+        clientes={clientes.filter(c => selected.has(c.id))}
+      />
 
       <ClienteForm open={formOpen} onClose={() => setFormOpen(false)}
         onSave={(data) => { addCliente(data); toast.success('Cliente creado correctamente.'); setFormOpen(false); }} />
