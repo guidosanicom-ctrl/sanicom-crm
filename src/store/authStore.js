@@ -57,5 +57,5 @@ export const useAuthStore = create((set, get) => ({
     return false;
   },
 
-  CARLOS_ESPECIALIDADES: ['Fisioterapia', 'Podología', 'Veterinaria'],
+  CARLOS_ESPECIALIDADES: ['Fisioterapia', 'Podología', 'Veterinaria', 'Fisioterapia & Podología'],
 }));
