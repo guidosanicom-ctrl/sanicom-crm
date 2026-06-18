@@ -86,7 +86,7 @@ export default function ServicioForm({ open, onClose, onSave, initial }) {
           <label className="block text-xs font-medium text-gray-600 mb-1">Técnico *</label>
           <select value={form.tecnico} onChange={e => set('tecnico', e.target.value)} className={`w-full px-3 py-2 border ${err('tecnico')} rounded-lg text-sm focus:outline-none`}>
             <option value="">Selecciona técnico</option>
-            {users.filter(u => u.name === 'Rosso Guido').map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            {users.filter(u => u.email === 'guidorosso@sanicom.es').map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
           {errors.tecnico && <p className="text-xs text-red-500 mt-1">{errors.tecnico}</p>}
         </div>
