@@ -272,6 +272,7 @@ export default function ConfiguracionPage() {
       )}
 
       {activeTab === 5 && (
+        <>
         <Card className="max-w-xl">
           <div className="flex items-center justify-between mb-5">
             <div>
@@ -411,6 +412,7 @@ export default function ConfiguracionPage() {
           message={`¿Eliminar "${delSubesp}"? Los clientes que la tengan asignada no se verán afectados.`}
           confirmText="Eliminar"
         />
+        </>
       )}
 
       {activeTab === 6 && (
