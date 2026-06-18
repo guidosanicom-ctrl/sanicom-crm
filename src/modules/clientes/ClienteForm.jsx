@@ -8,6 +8,8 @@ import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 import { useTiposClienteStore } from '../../store/tiposClienteStore';
 import { useServiciosHospitalStore } from '../../store/serviciosHospitalStore';
+import { useVisitasStore } from '../../store/visitasStore';
+import { useAgendaStore } from '../../store/agendaStore';
 import { Loader2 } from 'lucide-react';
 
 const empty = {
@@ -20,13 +22,18 @@ const empty = {
 
 function genId() { return `srv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`; }
 
+const emptyVisita = { activa: false, fecha: '', hora: '', comercialId: '', objetivo: '', resultado: '' };
+
 export default function ClienteForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
   const [errors, setErrors] = useState({});
   const [cpLoading, setCpLoading] = useState(false);
+  const [primeraVisita, setPrimeraVisita] = useState(emptyVisita);
   const cpAbort = useRef(null);
 
-  const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const { isCarlos, CARLOS_ESPECIALIDADES, users } = useAuthStore();
+  const { addVisita } = useVisitasStore();
+  const addEvento = useAgendaStore(s => s.addEvento);
   const { especialidades } = useEspecialidadesStore();
   const { subespecialidades } = useSubespecialidadesStore();
   const { tipos: tiposCliente } = useTiposClienteStore();
@@ -43,6 +50,7 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
       setForm(base);
       setErrors({});
       setCpLoading(false);
+      setPrimeraVisita(emptyVisita);
     }
   }, [open, initial]);
 
@@ -99,7 +107,26 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
       }
     }
 
-    onSave(data);
+    const savedCliente = onSave(data);
+
+    // Crear primera visita si el toggle está activo y tenemos un cliente nuevo con ID
+    if (!initial && primeraVisita.activa && primeraVisita.fecha && primeraVisita.comercialId && savedCliente?.id) {
+      const comercialUser = users.find(u => u.id === primeraVisita.comercialId);
+      const visita = addVisita({
+        clienteId: savedCliente.id,
+        fecha: primeraVisita.fecha,
+        hora: primeraVisita.hora || '',
+        comercialId: primeraVisita.comercialId,
+        comercialNombre: comercialUser?.name || '',
+        estado: 'Realizada',
+        objetivo: primeraVisita.objetivo,
+        resultado: primeraVisita.resultado,
+        oportunidadId: '',
+      });
+      // No agenda event for Realizada visits
+      void visita;
+    }
+
     onClose();
     setForm(empty);
   };
@@ -267,6 +294,74 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
           <textarea {...inp('notas')} rows={3} placeholder="Observaciones..."
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
         </div>
+
+        {/* ── Primera visita (solo en creación) ── */}
+        {!initial && (
+          <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={primeraVisita.activa}
+                onChange={e => setPrimeraVisita(v => ({ ...v, activa: e.target.checked }))}
+                className="w-4 h-4 rounded border-gray-300 accent-[#1B4F8A] cursor-pointer"
+              />
+              <span className="text-sm font-semibold text-gray-700">¿Ya has visitado este cliente?</span>
+            </label>
+            {primeraVisita.activa && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de la visita *</label>
+                  <input
+                    type="date"
+                    value={primeraVisita.fecha}
+                    onChange={e => setPrimeraVisita(v => ({ ...v, fecha: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Hora (opcional)</label>
+                  <input
+                    type="time"
+                    value={primeraVisita.hora}
+                    onChange={e => setPrimeraVisita(v => ({ ...v, hora: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Comercial *</label>
+                  <select
+                    value={primeraVisita.comercialId}
+                    onChange={e => setPrimeraVisita(v => ({ ...v, comercialId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    <option value="">Seleccionar...</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Objetivo</label>
+                  <input
+                    type="text"
+                    value={primeraVisita.objetivo}
+                    onChange={e => setPrimeraVisita(v => ({ ...v, objetivo: e.target.value }))}
+                    placeholder="¿Para qué fue la visita?"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Resultado / notas</label>
+                  <textarea
+                    value={primeraVisita.resultado}
+                    onChange={e => setPrimeraVisita(v => ({ ...v, resultado: e.target.value }))}
+                    rows={2}
+                    placeholder="Resumen de lo hablado..."
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
     </Modal>

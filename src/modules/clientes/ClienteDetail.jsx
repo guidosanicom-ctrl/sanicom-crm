@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, MapPin, Phone, Mail, Globe, Edit, Plus, Trash2, Pencil,
-         Package, ShoppingBag, Star, Stethoscope, FileText, ExternalLink } from 'lucide-react';
+         Package, ShoppingBag, Star, Stethoscope, FileText, ExternalLink,
+         CalendarDays, CheckCircle2, Clock, X } from 'lucide-react';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useDemosStore } from '../../store/demosStore';
 import { useServicioStore } from '../../store/servicioStore';
+import { useVisitasStore } from '../../store/visitasStore';
+import { useAgendaStore } from '../../store/agendaStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
@@ -345,6 +348,180 @@ function EquiposVendidosTab({ equipos = [], onSave }) {
   );
 }
 
+// ── Pestaña: Visitas comerciales ───────────────────────────────────────────
+const ESTADOS_VISITA  = ['Pendiente', 'Realizada'];
+const BADGE_VISITA    = { Pendiente: 'yellow', Realizada: 'green' };
+const VISITA_EMPTY    = { fecha: '', hora: '', comercialId: '', comercialNombre: '', estado: 'Pendiente', objetivo: '', resultado: '', oportunidadId: '' };
+
+function VisitasTab({ visitas = [], clienteId, clienteNombre, clienteOpps = [] }) {
+  const { users } = useAuthStore();
+  const { addVisita, updateVisita, deleteVisita } = useVisitasStore();
+  const addEvento = useAgendaStore(s => s.addEvento);
+  const [form, setForm] = useState(null);
+  const [delId, setDelId] = useState(null);
+  const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const sorted = [...visitas].sort((a, b) => {
+    if (a.estado === b.estado) {
+      const da = new Date(`${a.fecha}T${a.hora || '00:00'}`);
+      const db2 = new Date(`${b.fecha}T${b.hora || '00:00'}`);
+      return a.estado === 'Pendiente' ? da - db2 : db2 - da;
+    }
+    return a.estado === 'Pendiente' ? -1 : 1;
+  });
+
+  const handleSave = () => {
+    if (!form?.fecha || !form?.comercialId) return;
+    const user = users.find(u => u.id === form.comercialId);
+    const visita = { ...form, clienteId, comercialNombre: user?.name || '' };
+
+    if (form.id) {
+      updateVisita(form.id, visita);
+    } else {
+      const saved = addVisita(visita);
+      if (visita.estado === 'Pendiente') {
+        const evento = addEvento({
+          tipo: 'Visita comercial',
+          titulo: `Visita a ${clienteNombre}`,
+          fecha: visita.fecha,
+          hora: visita.hora || '09:00',
+          descripcion: visita.objetivo,
+          clienteId,
+          visitaId: saved.id,
+        });
+        updateVisita(saved.id, { eventoAgendaId: evento.id });
+      }
+    }
+    setForm(null);
+  };
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="font-semibold text-gray-800">Visitas comerciales</h3>
+          <p className="text-xs text-gray-400 mt-0.5">Historial y planificación de visitas a este cliente</p>
+        </div>
+        {!form && (
+          <Button size="sm" onClick={() => setForm({ ...VISITA_EMPTY })}>
+            <Plus className="w-4 h-4" />Nueva visita
+          </Button>
+        )}
+      </div>
+
+      {form && (
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-5 space-y-3">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            {form.id ? 'Editar visita' : 'Nueva visita'}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FRow label="Fecha *">
+              <input type="date" className={inputCls} value={form.fecha} onChange={e => s('fecha', e.target.value)} />
+            </FRow>
+            <FRow label="Hora">
+              <input type="time" className={inputCls} value={form.hora} onChange={e => s('hora', e.target.value)} />
+            </FRow>
+            <FRow label="Comercial *">
+              <select className={selCls} value={form.comercialId} onChange={e => s('comercialId', e.target.value)}>
+                <option value="">Seleccionar...</option>
+                {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </FRow>
+            <FRow label="Estado">
+              <select className={selCls} value={form.estado} onChange={e => s('estado', e.target.value)}>
+                {ESTADOS_VISITA.map(st => <option key={st}>{st}</option>)}
+              </select>
+            </FRow>
+            <div className="sm:col-span-2">
+              <FRow label="Objetivo de la visita">
+                <textarea className={`${inputCls} resize-none`} rows={2} value={form.objetivo}
+                  onChange={e => s('objetivo', e.target.value)} placeholder="¿Qué se quiere conseguir con esta visita?" />
+              </FRow>
+            </div>
+            {form.estado === 'Realizada' && (
+              <div className="sm:col-span-2">
+                <FRow label="Resultado / notas">
+                  <textarea className={`${inputCls} resize-none`} rows={2} value={form.resultado}
+                    onChange={e => s('resultado', e.target.value)} placeholder="Resumen de lo hablado, acuerdos, próximos pasos..." />
+                </FRow>
+              </div>
+            )}
+            {clienteOpps.length > 0 && (
+              <div className="sm:col-span-2">
+                <FRow label="Oportunidad relacionada (opcional)">
+                  <select className={selCls} value={form.oportunidadId} onChange={e => s('oportunidadId', e.target.value)}>
+                    <option value="">Sin vincular</option>
+                    {clienteOpps.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+                  </select>
+                </FRow>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 justify-end pt-1">
+            <Button size="sm" variant="outline" onClick={() => setForm(null)}>Cancelar</Button>
+            <Button size="sm" onClick={handleSave}>Guardar</Button>
+          </div>
+        </div>
+      )}
+
+      {sorted.length === 0 && !form ? (
+        <div className="py-12 text-center">
+          <CalendarDays className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+          <p className="text-sm text-gray-400">Sin visitas registradas</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-gray-100">
+          {sorted.map(v => {
+            const opp = clienteOpps.find(o => o.id === v.oportunidadId);
+            return (
+              <div key={v.id} className="py-3 flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0
+                    ${v.estado === 'Realizada' ? 'bg-green-100' : 'bg-amber-100'}`}>
+                    {v.estado === 'Realizada'
+                      ? <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      : <Clock className="w-4 h-4 text-amber-500" />}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-gray-800">
+                        {v.fecha ? new Date(v.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                        {v.hora && ` · ${v.hora}`}
+                      </span>
+                      <Badge color={BADGE_VISITA[v.estado] || 'gray'}>{v.estado}</Badge>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{v.comercialNombre || '-'}</p>
+                    {v.objetivo && <p className="text-xs text-gray-600 mt-1">{v.objetivo}</p>}
+                    {v.resultado && <p className="text-xs text-gray-400 italic mt-0.5">Resultado: {v.resultado}</p>}
+                    {opp && <p className="text-xs text-[#1B4F8A] mt-0.5">Opp: {opp.nombre}</p>}
+                  </div>
+                </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  <button onClick={() => setForm(v)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer" title="Editar">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setDelId(v.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 cursor-pointer" title="Eliminar">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!delId}
+        onClose={() => setDelId(null)}
+        onConfirm={() => { deleteVisita(delId); setDelId(null); }}
+        title="Eliminar visita"
+        message="¿Eliminar esta visita del registro?"
+        confirmText="Eliminar"
+      />
+    </Card>
+  );
+}
+
 // ── Componente principal ───────────────────────────────────────────────────
 export default function ClienteDetail() {
   const { id } = useParams();
@@ -353,6 +530,7 @@ export default function ClienteDetail() {
   const { oportunidades } = useOportunidadesStore();
   const { demos } = useDemosStore();
   const { servicios } = useServicioStore();
+  const { visitas } = useVisitasStore();
   const [activeTab, setActiveTab] = useState('resumen');
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
@@ -386,6 +564,7 @@ export default function ClienteDetail() {
     { key: 'equipos-vendidos',  label: 'Equipos vendidos por Sanicom' },
     { key: 'oportunidades',     label: 'Oportunidades' },
     { key: 'presupuestos',      label: 'Presupuestos' },
+    { key: 'visitas',           label: 'Visitas' },
     { key: 'servicio-tecnico',  label: 'Servicio técnico' },
     { key: 'notas',             label: 'Notas & actividad' },
   ];
@@ -393,6 +572,7 @@ export default function ClienteDetail() {
   const clienteOpps     = oportunidades.filter(o => o.clienteId === id);
   const clienteServices = servicios.filter(s => s.clienteId === id);
   const clienteDemos    = demos.filter(d => d.clienteId === id);
+  const clienteVisitas  = visitas.filter(v => v.clienteId === id);
 
   // Todos los presupuestos del cliente, de opps y demos
   const todosPresupuestos = [
@@ -623,6 +803,16 @@ export default function ClienteDetail() {
             </div>
           )}
         </Card>
+      )}
+
+      {/* ── Visitas comerciales ── */}
+      {activeTab === 'visitas' && (
+        <VisitasTab
+          visitas={clienteVisitas}
+          clienteId={id}
+          clienteNombre={cliente.nombre}
+          clienteOpps={clienteOpps}
+        />
       )}
 
       {/* ── Servicio técnico ── */}
