@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { fetchAll } from '../lib/supabaseUtils';
 import { generateId } from '../utils/formatters';
 import { buildAuditEntries, createEntry } from '../utils/auditLog';
 import { useAuthStore } from './authStore';
@@ -17,7 +18,7 @@ export const useOportunidadesStore = create((set, get) => ({
 
   initialize: async () => {
     if (get().initialized) return;
-    const { data, error } = await supabase.from(TABLE).select('data');
+    const { data, error } = await fetchAll(TABLE);
     if (error) { console.error('[oportunidadesStore]', error); return; }
     set({ oportunidades: migrate((data || []).map(r => r.data)), initialized: true });
   },

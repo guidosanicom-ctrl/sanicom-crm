@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { fetchAll } from '../lib/supabaseUtils';
 import { generateId } from '../utils/formatters';
 const TABLE = 'eventos_agenda';
 
@@ -9,7 +10,7 @@ export const useAgendaStore = create((set, get) => ({
 
   initialize: async () => {
     if (get().initialized) return;
-    const { data, error } = await supabase.from(TABLE).select('data');
+    const { data, error } = await fetchAll(TABLE);
     if (error) { console.error('[agendaStore]', error); return; }
     set({ eventos: (data || []).map(r => r.data), initialized: true });
   },

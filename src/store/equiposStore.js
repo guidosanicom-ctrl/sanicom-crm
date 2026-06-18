@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { fetchAll } from '../lib/supabaseUtils';
 import { generateId } from '../utils/formatters';
 
 const TABLE = 'equipos';
@@ -10,7 +11,7 @@ export const useEquiposStore = create((set, get) => ({
 
   initialize: async () => {
     if (get().initialized) return;
-    const { data, error } = await supabase.from(TABLE).select('data');
+    const { data, error } = await fetchAll(TABLE);
     if (error) { console.error('[equiposStore]', error); return; }
     set({ equipos: (data || []).map(r => r.data), initialized: true });
   },

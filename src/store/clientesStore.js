@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { fetchAll } from '../lib/supabaseUtils';
 import { generateId } from '../utils/formatters';
 import { useAuthStore } from './authStore';
 import { useActividadStore } from './actividadStore';
@@ -18,7 +19,7 @@ export const useClientesStore = create((set, get) => ({
 
   initialize: async () => {
     if (get().initialized) return;
-    const { data, error } = await supabase.from(TABLE).select('data');
+    const { data, error } = await fetchAll(TABLE);
     if (error) { console.error('[clientesStore]', error); return; }
     set({ clientes: (data || []).map(r => r.data), initialized: true });
   },
