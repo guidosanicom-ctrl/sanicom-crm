@@ -16,7 +16,13 @@ export const useEspecialidadesStore = create((set, get) => ({
       await supabase.from(TABLE).insert(ESPECIALIDADES.map(n => ({ nombre: n })));
       set({ especialidades: ESPECIALIDADES, initialized: true });
     } else {
-      set({ especialidades: data.map(r => r.nombre), initialized: true });
+      const enBD = new Set(data.map(r => r.nombre));
+      const faltantes = ESPECIALIDADES.filter(n => !enBD.has(n));
+      if (faltantes.length > 0) {
+        await supabase.from(TABLE).insert(faltantes.map(n => ({ nombre: n })));
+      }
+      const todas = [...data.map(r => r.nombre), ...faltantes];
+      set({ especialidades: todas, initialized: true });
     }
   },
 
