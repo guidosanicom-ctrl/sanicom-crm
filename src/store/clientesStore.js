@@ -130,18 +130,46 @@ export const useClientesStore = create((set, get) => ({
     const toInsert = [], toUpdate = [];
     const updated = [...current];
 
+    // Normaliza una fila del JSON al formato interno del CRM
+    const normalizeRow = (row) => {
+      const base = { ...row };
+
+      // Formato nuevo: equipos_tiene / equipos_interes (arrays de strings)
+      if (Array.isArray(row.equipos_tiene)) {
+        base.equiposInstalados = row.equipos_tiene.map((nombre, i) => ({
+          id: `imp_${Date.now()}_${i}`, nombre, marca: '', modelo: '',
+          nSerie: '', anioInstalacion: '', distribuidor: '', estado: 'Operativo',
+        }));
+        delete base.equipos_tiene;
+      }
+      if (Array.isArray(row.equipos_interes)) {
+        base.equiposInteres = row.equipos_interes.map((nombre, i) => ({
+          id: `imp_int_${Date.now()}_${i}`, nombre,
+        }));
+        delete base.equipos_interes;
+      }
+
+      // Mapear observaciones → notas si viene del nuevo formato
+      if (row.observaciones !== undefined && row.notas === undefined) {
+        base.notas = row.observaciones;
+        delete base.observaciones;
+      }
+
+      return base;
+    };
+
     rows.forEach(row => {
       const exists = current.find(c => (row.cif && c.cif === row.cif) || c.nombre?.toLowerCase() === row.nombre?.toLowerCase());
       if (exists) {
         if (mode === 'update') {
-          const merged = { ...exists, ...row };
+          const merged = { ...exists, ...normalizeRow(row) };
           const idx = updated.findIndex(c => c.id === exists.id);
           updated[idx] = merged;
           toUpdate.push(merged);
           imported++;
         } else { skipped++; }
       } else {
-        const item = { ...row, id: generateId(), fechaAlta: new Date().toISOString().split('T')[0], contactos: [], estado: 'Activo' };
+        const item = { ...normalizeRow(row), id: generateId(), fechaAlta: new Date().toISOString().split('T')[0], contactos: [], estado: 'Activo' };
         updated.push(item);
         toInsert.push(item);
         imported++;

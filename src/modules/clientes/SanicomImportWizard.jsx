@@ -22,7 +22,8 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target.result);
-        const arr = Array.isArray(data) ? data : [data];
+        // Soporta formato nuevo { clientes: [...] } y formato antiguo [...]
+        const arr = Array.isArray(data) ? data : (Array.isArray(data?.clientes) ? data.clientes : [data]);
         if (!arr[0]?.nombre) throw new Error('El JSON no tiene el formato esperado (falta campo "nombre").');
         setClientes(arr);
         setStep(2);

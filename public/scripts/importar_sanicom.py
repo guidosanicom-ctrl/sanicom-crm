@@ -1,55 +1,71 @@
 #!/usr/bin/env python3
 """
-Importador de Planilla Sanicom (Carlos)
-========================================
-Detecta automáticamente si el Excel es la planilla de Fisioterapia o la de
-Podología leyendo los encabezados de la fila 5, y aplica la estructura correcta.
+Importador de Planilla Sanicom – Fisioterapia
+==============================================
+Genera un JSON con todos los clientes de la planilla Excel de Fisioterapia.
 
-── Planilla Fisioterapia ──────────────────────────────────────────────────────
-  Fila 5  → encabezados
-  Fila 9+ → datos (filas 6-8 son cabeceras visuales / espaciado)
+ESTRUCTURA DE HOJAS
+────────────────────
+Hojas con equipos (fila 9 → datos):
+  N. Sevilla, V.Sevillla, Málaga, Córdoba, Cádiz, Huelva, Granada, Jaén, Almería
+  · Encabezados : fila 5
+  · Primera fila de datos : fila 9  (filas 6-8 = cabeceras visuales)
+  · Col  1  Diatermia   ┐
+    Col  2  O.Choque    │  Color FF00FF00 (verde)  → equipo que TIENE
+    Col  3  ECO         │  Color FF00FFFF (celeste) → equipo con INTERÉS
+    Col  4  Magneto     │  Cualquier otro color    → IGNORAR
+    Col  5  Láser       │  Celda vacía             → IGNORAR siempre
+    Col  6  Radio       │
+    Col  7  Otros       │
+    Col  8  Otros2      │
+    Col  9  Otros3      ┘
+  · Col 10  NOMBRE        · Col 11  DIRECCION
+    Col 12  POB (ciudad)  · Col 13  PROV (provincia)
+    Col 14  CP            · Col 15  TELEFONO
+    Col 16  EMAIL         · Col 17  WEB
+    Col 18  OBSERVACIONES
 
-  Col  1  Diatermia       ┐
-  Col  2  O.Choque        │
-  Col  3  ECO             │ Columnas de equipos
-  Col  4  Magneto         │ Color de la celda indica:
-  Col  5  Láser           │   FF00FF00 (verde)  → equipo que TIENE
-  Col  6  Radio           │   FF00FFFF (celeste) → equipo con INTERÉS
-  Col  7  Otros           │   FFFFFFFF (blanco)  → ignorar
-  Col  8  Otros 2         │
-  Col  9  Otros 3         ┘
-  Col 12  NOMBRE
-  Col 13  DIRECCION
-  Col 14  POB.
-  Col 15  PROV.
-  Col 16  C.P
-  Col 17  TELEFONO
-  Col 18  E-MAIL
-  Col 19  WEB
-  Col 20  OBSERVACIONES
+Hoja Ceuta (sin equipos, datos desde fila 5):
+  · Col  1  NOMBRE   · Col 2  DIRECCION  · Col 3  POB
+    Col  4  PROV     · Col 5  CP         · Col 6  TELEFONO
+    Col  7  EMAIL
 
-── Planilla Podología ─────────────────────────────────────────────────────────
-  Fila 5  → encabezados
-  Fila 6+ → datos
+Hoja ignorada:
+  · 'Clientes Por Teléfono Redes' → se omite completamente
 
-  Col  1  Diatermia       ┐
-  Col  2  Ondas de choque │ Columnas de equipos (mismas reglas de colores)
-  Col  3  Ecógrafo        │
-  Col  4  Otros           ┘
-  Col  5  NOMBRE
-  Col  6  DIRECCION
-  Col  7  PROVINCIA
-  Col  8  LOCALIDAD
-  Col  9  C.P.
-  Col 10  TELEFONO
-  Col 11  E-MAIL
-  Col 12  WEB
-  Col 13  OBSERVACIONES
+REGLAS DE FILTRADO DE CLIENTES
+────────────────────────────────
+  · Ignorar fila si NOMBRE está vacío
+  · Ignorar fila si NOMBRE contiene (sin distinción mayúsculas):
+    'Curso', 'Catálogo', 'EN PROCESO', 'LISTA'
 
-Uso:
+FORMATO DE SALIDA
+──────────────────
+  {
+    "clientes": [
+      {
+        "nombre":       "Clínica Fisio Ejemplo",
+        "direccion":    "C/ Mayor 1",
+        "ciudad":       "Sevilla",
+        "provincia":    "Sevilla",
+        "cp":           "41001",
+        "telefono":     "955000000",
+        "email":        "info@ejemplo.es",
+        "web":          "www.ejemplo.es",
+        "especialidad": "Fisioterapia",
+        "observaciones":"...",
+        "equipos_tiene":   ["ECO: Esaote mylab X6", "Magneto: BTL"],
+        "equipos_interes": ["O.Choque: Storz"]
+      },
+      ...
+    ]
+  }
+
+USO
+────
   python importar_sanicom.py planilla.xlsx
-  python importar_sanicom.py planilla.xlsx --verbose
   python importar_sanicom.py planilla.xlsx -o salida.json
+  python importar_sanicom.py planilla.xlsx --verbose
 
 Requiere: pip install openpyxl
 """
@@ -68,135 +84,68 @@ except ImportError:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# CONFIGURACIONES POR TIPO DE PLANILLA
+# CONSTANTES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-PLANILLAS = {
-    'fisioterapia': {
-        'nombre':       'Fisioterapia',
-        'especialidad': 'Fisioterapia',
-        'fila_cabecera': 5,
-        'fila_datos':    9,
-        'cols_equipos': {
-            1: 'Diatermia',
-            2: 'O.Choque',
-            3: 'ECO',
-            4: 'Magneto',
-            5: 'Láser',
-            6: 'Radio',
-            7: 'Otros',
-            8: 'Otros 2',
-            9: 'Otros 3',
-        },
-        'col_nombre':        12,
-        'col_direccion':     13,
-        'col_ciudad':        14,   # POB.
-        'col_provincia':     15,   # PROV.
-        'col_cp':            16,
-        'col_telefono':      17,
-        'col_email':         18,
-        'col_web':           19,
-        'col_observaciones': 20,
-        # Celda detectora: col 12 contiene "NOMBRE" en la fila de cabecera
-        'detect_col':  12,
-        'detect_text': 'nombre',
-    },
-    'podologia': {
-        'nombre':       'Podología',
-        'especialidad': 'Podología',
-        'fila_cabecera': 5,
-        'fila_datos':    6,
-        'cols_equipos': {
-            1: 'Diatermia',
-            2: 'Ondas de choque',
-            3: 'Ecógrafo',
-            4: 'Otros',
-        },
-        'col_nombre':        5,
-        'col_direccion':     6,
-        'col_ciudad':        8,   # LOCALIDAD
-        'col_provincia':     7,   # PROVINCIA
-        'col_cp':            9,
-        'col_telefono':      10,
-        'col_email':         11,
-        'col_web':           12,
-        'col_observaciones': 13,
-        # Celda detectora: col 5 contiene "NOMBRE" en la fila de cabecera
-        'detect_col':  5,
-        'detect_text': 'nombre',
-    },
+# Hojas a ignorar completamente
+HOJAS_IGNORAR = {'Clientes Por Teléfono Redes'}
+
+# Hoja especial sin equipos
+HOJA_CEUTA = 'Ceuta'
+
+# Nombres de columnas de equipos (cols 1-9)
+COLS_EQUIPOS = {
+    1: 'Diatermia',
+    2: 'O.Choque',
+    3: 'ECO',
+    4: 'Magneto',
+    5: 'Láser',
+    6: 'Radio',
+    7: 'Otros',
+    8: 'Otros2',
+    9: 'Otros3',
 }
 
+# Columnas de datos del cliente – hojas normales (col 10+)
+COL_NOMBRE_NORMAL        = 10
+COL_DIRECCION_NORMAL     = 11
+COL_CIUDAD_NORMAL        = 12   # POB
+COL_PROVINCIA_NORMAL     = 13   # PROV
+COL_CP_NORMAL            = 14
+COL_TELEFONO_NORMAL      = 15
+COL_EMAIL_NORMAL         = 16
+COL_WEB_NORMAL           = 17
+COL_OBSERVACIONES_NORMAL = 18
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# COLORES EXACTOS (ARGB formato openpyxl: 8 caracteres hex AARRGGBB)
-# ═══════════════════════════════════════════════════════════════════════════════
+FILA_DATOS_NORMAL        = 9    # primera fila con datos de cliente
 
-COLOR_VERDE   = 'FF00FF00'   # Verde puro  → equipo que TIENE
-COLOR_CELESTE = 'FF00FFFF'   # Cyan puro   → equipo con INTERÉS
-COLOR_BLANCO  = 'FFFFFFFF'   # Blanco      → ignorar
-COLOR_TRANS   = '00000000'   # Transparente → ignorar
+# Columnas de datos del cliente – hoja Ceuta
+COL_NOMBRE_CEUTA         = 1
+COL_DIRECCION_CEUTA      = 2
+COL_CIUDAD_CEUTA         = 3
+COL_PROVINCIA_CEUTA      = 4
+COL_CP_CEUTA             = 5
+COL_TELEFONO_CEUTA       = 6
+COL_EMAIL_CEUTA          = 7
 
+FILA_DATOS_CEUTA         = 5
 
-def get_cell_color_type(cell):
-    """
-    Retorna 'verde', 'celeste' o None según el color ARGB exacto del relleno.
-    """
-    try:
-        fill = cell.fill
-        if fill is None or fill.fill_type in (None, 'none'):
-            return None
+# Palabras que indican que la fila NO es un cliente real
+PALABRAS_IGNORAR = ('curso', 'catálogo', 'catalogo', 'en proceso', 'lista')
 
-        argb = None
-
-        fgc = fill.fgColor
-        if fgc and fgc.type == 'rgb':
-            argb = fgc.rgb.upper()
-
-        if not argb or argb in (COLOR_BLANCO, COLOR_TRANS):
-            bgc = fill.bgColor
-            if bgc and bgc.type == 'rgb':
-                argb = bgc.rgb.upper()
-
-        if not argb or argb in (COLOR_BLANCO, COLOR_TRANS):
-            return None
-
-        if argb == COLOR_VERDE:
-            return 'verde'
-        if argb == COLOR_CELESTE:
-            return 'celeste'
-
-    except Exception:
-        pass
-
-    return None
+# Colores ARGB exactos (openpyxl devuelve AARRGGBB en mayúsculas)
+COLOR_VERDE   = 'FF00FF00'   # verde puro  → equipo que TIENE
+COLOR_CELESTE = 'FF00FFFF'   # cyan puro   → equipo con INTERÉS
+COLOR_BLANCO  = 'FFFFFFFF'
+COLOR_TRANS   = '00000000'
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# DETECCIÓN AUTOMÁTICA
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def detectar_tipo_planilla(ws):
-    """
-    Lee la fila de cabecera (fila 5) y devuelve la clave del tipo de planilla.
-    Prueba cada configuración buscando el texto esperado en la columna detectora.
-    """
-    for clave, cfg in PLANILLAS.items():
-        fila = cfg['fila_cabecera']
-        col  = cfg['detect_col']
-        val  = ws.cell(row=fila, column=col).value
-        if val and str(val).strip().lower() == cfg['detect_text']:
-            return clave
-
-    return None
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# HELPERS
+# UTILIDADES
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def normalizar(val):
-    """Devuelve el valor como string limpio, o '' si es None/vacío."""
+    """Convierte el valor de celda a string limpio; elimina '.0' en números."""
     if val is None:
         return ''
     s = str(val).strip()
@@ -209,96 +158,130 @@ def cell_val(ws, row, col):
     return normalizar(ws.cell(row=row, column=col).value)
 
 
+def get_color_equipo(cell):
+    """
+    Devuelve 'tiene', 'interes' o None según el color ARGB exacto del relleno.
+    Solo reconoce FF00FF00 y FF00FFFF. Cualquier otro → None.
+    """
+    try:
+        fill = cell.fill
+        if fill is None or fill.fill_type in (None, 'none'):
+            return None
+
+        argb = None
+        fgc = fill.fgColor
+        if fgc and fgc.type == 'rgb':
+            argb = fgc.rgb.upper()
+
+        # Si fgColor es blanco/transparente, intentar bgColor
+        if not argb or argb in (COLOR_BLANCO, COLOR_TRANS):
+            bgc = fill.bgColor
+            if bgc and bgc.type == 'rgb':
+                argb = bgc.rgb.upper()
+
+        if argb == COLOR_VERDE:
+            return 'tiene'
+        if argb == COLOR_CELESTE:
+            return 'interes'
+    except Exception:
+        pass
+    return None
+
+
+def debe_ignorar_nombre(nombre):
+    """True si el nombre indica que la fila no es un cliente real."""
+    nl = nombre.lower()
+    return any(p in nl for p in PALABRAS_IGNORAR)
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # PROCESADO
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def procesar_hoja(ws, nombre_hoja, cfg, verbose=False):
-    """Procesa una hoja según la configuración dada y devuelve lista de clientes."""
+def procesar_hoja_normal(ws, nombre_hoja, verbose=False):
+    """Procesa una hoja con equipos (cols 1-9) y datos en cols 10-18."""
     clientes = []
 
-    fila_datos        = cfg['fila_datos']
-    cols_equipos      = cfg['cols_equipos']
-    col_nombre        = cfg['col_nombre']
-    col_direccion     = cfg['col_direccion']
-    col_ciudad        = cfg['col_ciudad']
-    col_provincia     = cfg['col_provincia']
-    col_cp            = cfg['col_cp']
-    col_telefono      = cfg['col_telefono']
-    col_email         = cfg['col_email']
-    col_web           = cfg['col_web']
-    col_observaciones = cfg['col_observaciones']
-    especialidad      = cfg['especialidad']
-
-    for row_idx in range(fila_datos, ws.max_row + 1):
-        nombre = cell_val(ws, row_idx, col_nombre)
+    for row_idx in range(FILA_DATOS_NORMAL, ws.max_row + 1):
+        nombre = cell_val(ws, row_idx, COL_NOMBRE_NORMAL)
         if not nombre:
             continue
+        if debe_ignorar_nombre(nombre):
+            if verbose:
+                print(f"    [IGNORADO] fila {row_idx}: '{nombre}'")
+            continue
 
-        provincia_celda = cell_val(ws, row_idx, col_provincia)
-        cliente = {
-            'nombre':       nombre,
-            'direccion':    cell_val(ws, row_idx, col_direccion),
-            'ciudad':       cell_val(ws, row_idx, col_ciudad) or nombre_hoja,
-            'provincia':    provincia_celda or nombre_hoja,
-            'cp':           cell_val(ws, row_idx, col_cp),
-            'telefono':     cell_val(ws, row_idx, col_telefono),
-            'email':        cell_val(ws, row_idx, col_email),
-            'web':          cell_val(ws, row_idx, col_web),
-            'especialidad': especialidad,
-            'tipo':         'Clínica',
-            'estado':       'Activo',
-            'equiposInstalados': [],
-            'equiposInteres':    [],
-        }
+        equipos_tiene   = []
+        equipos_interes = []
 
-        obs = cell_val(ws, row_idx, col_observaciones)
-        if obs:
-            cliente['notas'] = obs
-
-        tiene   = []
-        interes = []
-        for col_idx, eq_nombre in cols_equipos.items():
+        for col_idx, col_nombre in COLS_EQUIPOS.items():
             cell = ws.cell(row=row_idx, column=col_idx)
+            texto = normalizar(cell.value)
+            if not texto:
+                continue   # celda vacía → siempre ignorar
 
-            val_celda = normalizar(cell.value)
-            if not val_celda:
-                continue
+            tipo_color = get_color_equipo(cell)
+            if tipo_color is None:
+                continue   # color distinto de verde/celeste → ignorar
 
-            color = get_cell_color_type(cell)
-            if color not in ('verde', 'celeste'):
-                continue
+            entrada = f"{col_nombre}: {texto}"
 
-            if val_celda.strip().lower() == eq_nombre.strip().lower():
-                continue
+            if tipo_color == 'tiene':
+                equipos_tiene.append(entrada)
+            else:
+                equipos_interes.append(entrada)
 
-            nombre_equipo = f"{eq_nombre}: {val_celda}"
-
-            if color == 'verde':
-                cliente['equiposInstalados'].append({
-                    'id':              f"imp_{row_idx}_{col_idx}",
-                    'nombre':          nombre_equipo,
-                    'marca':           '',
-                    'modelo':          '',
-                    'nSerie':          '',
-                    'anioInstalacion': '',
-                    'distribuidor':    '',
-                    'estado':          'Operativo',
-                })
-                tiene.append(nombre_equipo)
-
-            elif color == 'celeste':
-                cliente['equiposInteres'].append({
-                    'id':     f"imp_int_{row_idx}_{col_idx}",
-                    'nombre': nombre_equipo,
-                })
-                interes.append(nombre_equipo)
-
+        cliente = {
+            'nombre':           nombre,
+            'direccion':        cell_val(ws, row_idx, COL_DIRECCION_NORMAL),
+            'ciudad':           cell_val(ws, row_idx, COL_CIUDAD_NORMAL) or nombre_hoja,
+            'provincia':        cell_val(ws, row_idx, COL_PROVINCIA_NORMAL) or nombre_hoja,
+            'cp':               cell_val(ws, row_idx, COL_CP_NORMAL),
+            'telefono':         cell_val(ws, row_idx, COL_TELEFONO_NORMAL),
+            'email':            cell_val(ws, row_idx, COL_EMAIL_NORMAL),
+            'web':              cell_val(ws, row_idx, COL_WEB_NORMAL),
+            'especialidad':     'Fisioterapia',
+            'observaciones':    cell_val(ws, row_idx, COL_OBSERVACIONES_NORMAL),
+            'equipos_tiene':    equipos_tiene,
+            'equipos_interes':  equipos_interes,
+        }
         clientes.append(cliente)
 
-        if verbose and (tiene or interes):
-            print(f"    [{nombre[:35]:<35}]  "
-                  f"Tiene: {tiene or '-'}  |  Interés: {interes or '-'}")
+        if verbose and (equipos_tiene or equipos_interes):
+            print(f"    [{nombre[:40]:<40}]  "
+                  f"Tiene: {equipos_tiene or '-'}  |  Interés: {equipos_interes or '-'}")
+
+    return clientes
+
+
+def procesar_hoja_ceuta(ws, verbose=False):
+    """Procesa la hoja Ceuta: sin equipos, datos desde fila 5, cols 1-7."""
+    clientes = []
+
+    for row_idx in range(FILA_DATOS_CEUTA, ws.max_row + 1):
+        nombre = cell_val(ws, row_idx, COL_NOMBRE_CEUTA)
+        if not nombre:
+            continue
+        if debe_ignorar_nombre(nombre):
+            if verbose:
+                print(f"    [IGNORADO] fila {row_idx}: '{nombre}'")
+            continue
+
+        cliente = {
+            'nombre':          nombre,
+            'direccion':       cell_val(ws, row_idx, COL_DIRECCION_CEUTA),
+            'ciudad':          cell_val(ws, row_idx, COL_CIUDAD_CEUTA) or 'Ceuta',
+            'provincia':       cell_val(ws, row_idx, COL_PROVINCIA_CEUTA) or 'Ceuta',
+            'cp':              cell_val(ws, row_idx, COL_CP_CEUTA),
+            'telefono':        cell_val(ws, row_idx, COL_TELEFONO_CEUTA),
+            'email':           cell_val(ws, row_idx, COL_EMAIL_CEUTA),
+            'web':             '',
+            'especialidad':    'Fisioterapia',
+            'observaciones':   '',
+            'equipos_tiene':   [],
+            'equipos_interes': [],
+        }
+        clientes.append(cliente)
 
     return clientes
 
@@ -308,12 +291,17 @@ def procesar_hoja(ws, nombre_hoja, cfg, verbose=False):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def main():
-    parser = argparse.ArgumentParser(description='Importador de planilla Sanicom')
+    parser = argparse.ArgumentParser(
+        description='Importador de planilla Sanicom – Fisioterapia',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument('archivo', help='Ruta al archivo Excel (.xlsx)')
-    parser.add_argument('-o', '--output', default=None,
-                        help='Archivo JSON de salida (default: clientes_sanicom.json junto al Excel)')
+    parser.add_argument(
+        '-o', '--output', default=None,
+        help='Archivo JSON de salida (default: clientes_fisio.json junto al Excel)',
+    )
     parser.add_argument('--verbose', '-v', action='store_true',
-                        help='Muestra equipos detectados por fila')
+                        help='Muestra equipos detectados por cliente')
     args = parser.parse_args()
 
     archivo = Path(args.archivo)
@@ -323,49 +311,48 @@ def main():
 
     print(f"\n📂 Leyendo: {archivo.name}")
     wb = openpyxl.load_workbook(archivo, data_only=True)
-    print(f"   Hojas encontradas ({len(wb.sheetnames)}): {', '.join(wb.sheetnames)}")
 
-    # Detectar tipo de planilla usando la primera hoja
-    primera_hoja = wb[wb.sheetnames[0]]
-    tipo_detectado = detectar_tipo_planilla(primera_hoja)
+    hojas_todas   = wb.sheetnames
+    hojas_proceso = [h for h in hojas_todas if h not in HOJAS_IGNORAR]
+    hojas_ignor   = [h for h in hojas_todas if h in HOJAS_IGNORAR]
 
-    if tipo_detectado is None:
-        print("\nERROR: No se pudo detectar el tipo de planilla.")
-        print("  Se esperaba encontrar 'NOMBRE' en la columna 5 (Podología)")
-        print("  o en la columna 12 (Fisioterapia) de la fila 5.\n")
-        sys.exit(1)
-
-    cfg = PLANILLAS[tipo_detectado]
-    print(f"   Tipo detectado: {cfg['nombre']} ✓")
-    print(f"   Encabezados en fila {cfg['fila_cabecera']}, datos desde fila {cfg['fila_datos']}\n")
+    print(f"   Hojas encontradas  : {', '.join(hojas_todas)}")
+    if hojas_ignor:
+        print(f"   Hojas ignoradas    : {', '.join(hojas_ignor)}")
+    print(f"   Hojas a procesar   : {', '.join(hojas_proceso)}\n")
 
     todos_clientes = []
 
-    print(f"⚙️  Procesando...\n")
-    for nombre_hoja in wb.sheetnames:
+    print("⚙️  Procesando...\n")
+    for nombre_hoja in hojas_proceso:
         ws = wb[nombre_hoja]
-        clientes = procesar_hoja(ws, nombre_hoja, cfg, verbose=args.verbose)
+
+        if nombre_hoja == HOJA_CEUTA:
+            clientes = procesar_hoja_ceuta(ws, verbose=args.verbose)
+        else:
+            clientes = procesar_hoja_normal(ws, nombre_hoja, verbose=args.verbose)
+
         todos_clientes.extend(clientes)
 
-        n_verde   = sum(1 for c in clientes if c['equiposInstalados'])
-        n_celeste = sum(1 for c in clientes if c['equiposInteres'])
-        print(f"  ✔ {nombre_hoja:<22} {len(clientes):3d} clientes  "
-              f"(verde: {n_verde:3d}, celeste: {n_celeste:3d})")
+        n_tiene   = sum(1 for c in clientes if c['equipos_tiene'])
+        n_interes = sum(1 for c in clientes if c['equipos_interes'])
+        tipo_nota = '(sin equipos)' if nombre_hoja == HOJA_CEUTA else \
+                    f'(verde: {n_tiene:3d}, celeste: {n_interes:3d})'
+        print(f"  ✔ {nombre_hoja:<35} {len(clientes):3d} clientes  {tipo_nota}")
 
-    salida = Path(args.output) if args.output else archivo.parent / 'clientes_sanicom.json'
+    # Guardar JSON
+    salida = Path(args.output) if args.output else archivo.parent / 'clientes_fisio.json'
     with open(salida, 'w', encoding='utf-8') as f:
-        json.dump(todos_clientes, f, ensure_ascii=False, indent=2)
+        json.dump({'clientes': todos_clientes}, f, ensure_ascii=False, indent=2)
 
     total         = len(todos_clientes)
-    total_equipos = sum(len(c['equiposInstalados']) for c in todos_clientes)
-    total_interes = sum(len(c['equiposInteres'])    for c in todos_clientes)
+    total_tiene   = sum(len(c['equipos_tiene'])   for c in todos_clientes)
+    total_interes = sum(len(c['equipos_interes']) for c in todos_clientes)
 
-    print(f"\n{'─'*50}")
-    print(f"✅ Planilla:               {cfg['nombre']}")
-    print(f"   Especialidad asignada:  {cfg['especialidad']}")
-    print(f"   Total clientes:         {total}")
-    print(f"   Equipos que tienen:    {total_equipos}  (celdas verdes  FF00FF00)")
-    print(f"   Equipos con interés:   {total_interes}  (celdas celeste FF00FFFF)")
+    print(f"\n{'─' * 55}")
+    print(f"✅ Total clientes           : {total}")
+    print(f"   Equipos que tienen       : {total_tiene}  (celdas verdes  FF00FF00)")
+    print(f"   Equipos con interés      : {total_interes}  (celdas celeste FF00FFFF)")
     print(f"\n📄 JSON guardado en: {salida}")
     print(f"\n👉 Sube ese JSON desde el CRM:")
     print(f"   Módulo Clientes → 'Importar planilla Sanicom' → selecciona {salida.name}\n")
