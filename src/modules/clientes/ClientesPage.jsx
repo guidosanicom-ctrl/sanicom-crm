@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Upload, Trash2, Users, Route, X, Eye } from 'lucide-react';
+import { Plus, Upload, Trash2, Users, Route, X, Eye, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
@@ -14,6 +14,7 @@ import ClienteForm from './ClienteForm';
 import ImportWizard from './ImportWizard';
 import RutaModal from './RutaModal';
 import SanicomImportWizard from './SanicomImportWizard';
+import DuplicadosModal from './DuplicadosModal';
 import { formatDate } from '../../utils/formatters';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
@@ -21,7 +22,7 @@ import { useTiposClienteStore } from '../../store/tiposClienteStore';
 
 export default function ClientesPage() {
   const navigate = useNavigate();
-  const { clientes, addCliente, deleteCliente, importClientes } = useClientesStore();
+  const { clientes, addCliente, deleteCliente, deleteClientes, importClientes } = useClientesStore();
   const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const { especialidades } = useEspecialidadesStore();
   const { subespecialidades } = useSubespecialidadesStore();
@@ -41,6 +42,7 @@ export default function ClientesPage() {
   const [delBulkOpen, setDelBulkOpen] = useState(false);
   const [rutaOpen, setRutaOpen] = useState(false);
   const [sanicomOpen, setSanicomOpen] = useState(false);
+  const [dupOpen, setDupOpen] = useState(false);
 
   const carlos = isCarlos();
   const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
@@ -145,6 +147,11 @@ export default function ClientesPage() {
           {!carlos && (
             <Button variant="outline" size="sm" onClick={() => setSanicomOpen(true)}>
               <Upload className="w-4 h-4" />Importar planilla Sanicom
+            </Button>
+          )}
+          {!carlos && (
+            <Button variant="outline" size="sm" onClick={() => setDupOpen(true)}>
+              <Copy className="w-4 h-4" />Gestionar duplicados
             </Button>
           )}
           <Button size="sm" onClick={() => setFormOpen(true)}><Plus className="w-4 h-4" />Nuevo cliente</Button>
@@ -315,6 +322,16 @@ export default function ClientesPage() {
         title="Eliminar clientes seleccionados"
         message={`¿Eliminar ${selected.size} cliente${selected.size > 1 ? 's' : ''}? Esta acción no se puede deshacer.`}
         confirmText={`Eliminar ${selected.size}`}
+      />
+
+      <DuplicadosModal
+        open={dupOpen}
+        onClose={() => setDupOpen(false)}
+        clientes={clientes}
+        onEliminar={(ids) => {
+          deleteClientes(ids);
+          toast.success(`${ids.length} duplicado${ids.length !== 1 ? 's' : ''} eliminado${ids.length !== 1 ? 's' : ''}.`);
+        }}
       />
     </div>
   );
