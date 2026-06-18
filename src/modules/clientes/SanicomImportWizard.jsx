@@ -110,7 +110,12 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
               Cómo usar este importador
             </div>
             <ol className="text-sm text-blue-700 space-y-1 pl-5 list-decimal">
-              <li>Descarga el script Python desde <code className="bg-blue-100 px-1 rounded">scripts/importar_sanicom.py</code></li>
+              <li>Descarga el script Python:&nbsp;
+                <a href="/scripts/importar_sanicom.py" download="importar_sanicom.py"
+                   className="underline font-medium text-blue-800 hover:text-blue-900">
+                  importar_sanicom.py
+                </a>
+              </li>
               <li>Instala dependencias: <code className="bg-blue-100 px-1 rounded">pip install openpyxl</code></li>
               <li>Ejecuta: <code className="bg-blue-100 px-1 rounded">python importar_sanicom.py planilla.xlsx</code></li>
               <li>Se genera <code className="bg-blue-100 px-1 rounded">clientes_sanicom.json</code> — súbelo aquí</li>
