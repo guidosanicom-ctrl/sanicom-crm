@@ -87,8 +87,9 @@ export const useClientesStore = create((set, get) => ({
   },
 
   importClientes: async (rows, mode) => {
+    const BATCH = 50;   // Supabase rechaza payloads muy grandes en una sola llamada
     const current = get().clientes;
-    let imported = 0, skipped = 0;
+    let imported = 0, skipped = 0, dbErrors = 0;
     const toInsert = [], toUpdate = [];
     const updated = [...current];
 
@@ -110,10 +111,28 @@ export const useClientesStore = create((set, get) => ({
       }
     });
 
+    // Actualizar estado local inmediatamente
     set({ clientes: updated });
-    if (toInsert.length) await supabase.from(TABLE).insert(toInsert.map(c => ({ id: c.id, data: c })));
-    if (toUpdate.length) await Promise.all(toUpdate.map(c => db.update(c.id, c)));
-    return { imported, skipped };
+
+    // Insertar en lotes de BATCH para evitar límite de payload de Supabase
+    for (let i = 0; i < toInsert.length; i += BATCH) {
+      const batch = toInsert.slice(i, i + BATCH);
+      const { error } = await supabase.from(TABLE).insert(batch.map(c => ({ id: c.id, data: c })));
+      if (error) {
+        console.error(`[importClientes] Error en lote ${i}–${i + batch.length - 1}:`, error);
+        dbErrors += batch.length;
+      }
+    }
+
+    // Actualizar existentes en paralelo (cada uno es pequeño)
+    if (toUpdate.length) {
+      const results = await Promise.all(toUpdate.map(c => db.update(c.id, c)));
+      results.forEach(({ error }, i) => {
+        if (error) { console.error(`[importClientes] Error actualizando ${toUpdate[i].id}:`, error); dbErrors++; }
+      });
+    }
+
+    return { imported, skipped, dbErrors, total: rows.length };
   },
 
   getCliente: (id) => get().clientes.find(c => c.id === id),

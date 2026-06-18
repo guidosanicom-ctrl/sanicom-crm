@@ -10,9 +10,11 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
   const [mode, setMode] = useState('skip');
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
   const fileRef = useRef();
 
-  const reset = () => { setStep(1); setClientes([]); setError(''); };
+  const reset = () => { setStep(1); setClientes([]); setError(''); setImportResult(null); };
 
   const parseJson = (file) => {
     setError('');
@@ -41,9 +43,14 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
   };
 
   const handleImport = async () => {
-    const result = await onImport(clientes, mode);
-    setStep(3);
-    return result;
+    setImporting(true);
+    try {
+      const result = await onImport(clientes, mode);
+      setImportResult(result);
+      setStep(3);
+    } finally {
+      setImporting(false);
+    }
   };
 
   // Estadísticas del JSON cargado
@@ -72,8 +79,10 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
         ) :
         step === 2.5 ? (
           <>
-            <Button variant="outline" onClick={() => setStep(2)}>Atrás</Button>
-            <Button onClick={handleImport}>Importar {stats.total} clientes</Button>
+            <Button variant="outline" onClick={() => setStep(2)} disabled={importing}>Atrás</Button>
+            <Button onClick={handleImport} disabled={importing}>
+              {importing ? `Importando ${stats.total} clientes…` : `Importar ${stats.total} clientes`}
+            </Button>
           </>
         ) : (
           <Button onClick={() => { onClose(); reset(); }}>Cerrar</Button>
@@ -259,19 +268,52 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
         </div>
       )}
 
-      {/* Paso 3: Éxito */}
+      {/* Paso 3: Resultado */}
       {step === 3 && (
-        <div className="py-8 text-center space-y-3">
-          <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle className="w-8 h-8 text-green-600" />
-          </div>
-          <p className="text-lg font-semibold text-gray-800">¡Importación completada!</p>
-          <p className="text-sm text-gray-500">
-            {stats.total} clientes importados con sus equipos y equipos con interés.
+        <div className="py-6 text-center space-y-4">
+          {importResult?.dbErrors > 0 ? (
+            <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-8 h-8 text-amber-500" />
+            </div>
+          ) : (
+            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+          )}
+          <p className="text-lg font-semibold text-gray-800">
+            {importResult?.dbErrors > 0 ? 'Importación completada con advertencias' : '¡Importación completada!'}
           </p>
+
+          {/* Conteos reales de la operación */}
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="bg-green-50 rounded-xl p-3">
+              <p className="text-2xl font-bold text-green-700">
+                {importResult ? importResult.imported - (importResult.dbErrors || 0) : stats.total}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">Guardados en BD</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3">
+              <p className="text-2xl font-bold text-gray-500">{importResult?.skipped ?? 0}</p>
+              <p className="text-xs text-gray-500 mt-1">Omitidos (duplicados)</p>
+            </div>
+            <div className={`rounded-xl p-3 ${importResult?.dbErrors > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+              <p className={`text-2xl font-bold ${importResult?.dbErrors > 0 ? 'text-red-600' : 'text-gray-300'}`}>
+                {importResult?.dbErrors ?? 0}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">Errores BD</p>
+            </div>
+          </div>
+
+          {importResult?.dbErrors > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-left text-xs text-amber-800">
+              <p className="font-semibold mb-1">Algunos clientes no se guardaron en la base de datos.</p>
+              <p>Abre la consola del navegador (F12 → Console) para ver el detalle del error y contacta al administrador.</p>
+            </div>
+          )}
+
           <p className="text-xs text-gray-400">
-            Los equipos con celdas verdes aparecen en la pestaña "Equipos que tiene" de cada ficha.<br />
-            Los equipos con celdas celestes aparecen como "Equipos con interés".
+            Los equipos con celdas verdes aparecen en "Equipos que tiene" de cada ficha.<br />
+            Los equipos con celdas celestes aparecen en "Equipos con interés".
           </p>
         </div>
       )}

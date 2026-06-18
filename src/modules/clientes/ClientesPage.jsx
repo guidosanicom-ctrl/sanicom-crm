@@ -297,8 +297,13 @@ export default function ClientesPage() {
       <SanicomImportWizard
         open={sanicomOpen}
         onClose={() => setSanicomOpen(false)}
-        onImport={(rows, mode) => {
-          const result = importClientes(rows, mode);
+        onImport={async (rows, mode) => {
+          const result = await importClientes(rows, mode);
+          if (result.dbErrors > 0) {
+            toast.error(`Se guardaron ${result.imported - result.dbErrors} de ${result.imported} clientes. ${result.dbErrors} fallaron al guardar en base de datos.`);
+          } else {
+            toast.success(`${result.imported} clientes importados. ${result.skipped} omitidos por duplicado.`);
+          }
           return result;
         }}
       />
