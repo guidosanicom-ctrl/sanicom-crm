@@ -88,7 +88,7 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Hojas a ignorar completamente
-HOJAS_IGNORAR = {'Clientes Por Teléfono Redes'}
+HOJAS_IGNORAR = {'V.Sevillla', 'V.Sevillla ', 'Clientes Por Teléfono Redes'}
 
 # Hoja especial sin equipos
 HOJA_CEUTA = 'Ceuta'
