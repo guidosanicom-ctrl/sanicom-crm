@@ -188,10 +188,17 @@ def procesar_hoja(ws, nombre_hoja, verbose=False):
             cell = ws.cell(row=row_idx, column=col_idx)
             color = get_cell_color_type(cell)
 
+            if color not in ('verde', 'celeste'):
+                continue
+
+            val_celda = normalizar(cell.value)
+            # "ECO: V. Esaote mylab X6"  o solo "ECO" si la celda está vacía
+            nombre_equipo = f"{eq_nombre}: {val_celda}" if val_celda else eq_nombre
+
             if color == 'verde':
                 cliente['equiposInstalados'].append({
                     'id':              f"imp_{row_idx}_{col_idx}",
-                    'nombre':          eq_nombre,
+                    'nombre':          nombre_equipo,
                     'marca':           '',
                     'modelo':          '',
                     'nSerie':          '',
@@ -199,14 +206,14 @@ def procesar_hoja(ws, nombre_hoja, verbose=False):
                     'distribuidor':    '',
                     'estado':          'Operativo',
                 })
-                tiene.append(eq_nombre)
+                tiene.append(nombre_equipo)
 
             elif color == 'celeste':
                 cliente['equiposInteres'].append({
                     'id':     f"imp_int_{row_idx}_{col_idx}",
-                    'nombre': eq_nombre,
+                    'nombre': nombre_equipo,
                 })
-                interes.append(eq_nombre)
+                interes.append(nombre_equipo)
 
         clientes.append(cliente)
 
