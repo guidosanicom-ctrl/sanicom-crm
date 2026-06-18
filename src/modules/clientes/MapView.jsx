@@ -3,7 +3,7 @@ import { MapPin, Loader2 } from 'lucide-react';
 
 let leafletLoaded = false;
 
-export default function MapView({ lat, lng, nombre, ciudad, onLocalizar, geoLoading }) {
+export default function MapView({ lat, lng, nombre, ciudad, onLocalizar, geoLoading, tieneDir = false }) {
   const [mapReady, setMapReady] = useState(false);
   const mapRef = useRef(null);
   const instanceRef = useRef(null);
@@ -56,21 +56,26 @@ export default function MapView({ lat, lng, nombre, ciudad, onLocalizar, geoLoad
   }, [mapReady, lat, lng]);
 
   if (!lat || !lng) {
+    const sinDireccion = !tieneDir;
     return (
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col items-center justify-center h-48 text-gray-400 gap-3">
         <MapPin className="w-8 h-8" />
-        <p className="text-sm">Sin coordenadas guardadas</p>
-        {onLocalizar && (
+        <p className="text-sm text-center">
+          {geoLoading
+            ? 'Buscando ubicación…'
+            : sinDireccion
+              ? 'Sin dirección registrada'
+              : 'No se pudo localizar esta dirección'}
+        </p>
+        {onLocalizar && tieneDir && !geoLoading && (
           <button
             onClick={onLocalizar}
-            disabled={geoLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#1B4F8A] rounded-lg hover:bg-[#163f6e] disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#1B4F8A] rounded-lg hover:bg-[#163f6e] cursor-pointer transition-colors"
           >
-            {geoLoading
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Localizando…</>
-              : <><MapPin className="w-3.5 h-3.5" />Localizar en mapa</>}
+            <MapPin className="w-3.5 h-3.5" />Localizar en mapa
           </button>
         )}
+        {geoLoading && <Loader2 className="w-5 h-5 animate-spin text-[#1B4F8A]" />}
       </div>
     );
   }

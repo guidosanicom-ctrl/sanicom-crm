@@ -593,7 +593,7 @@ export default function ClienteDetail() {
     if (cliente.lat || cliente.lng) return;
     if (!cliente.direccion && !cliente.ciudad) return;
     let cancelled = false;
-    geocodificar(cliente.direccion, cliente.ciudad, cliente.provincia).then(coords => {
+    geocodificar(cliente.direccion, cliente.ciudad, cliente.provincia, cliente.cp).then(coords => {
       if (!cancelled && coords) updateCliente(id, { lat: coords.lat, lng: coords.lng });
     });
     return () => { cancelled = true; };
@@ -602,7 +602,7 @@ export default function ClienteDetail() {
   const handleLocalizar = async () => {
     if (!cliente.direccion && !cliente.ciudad) return;
     setGeoLoading(true);
-    const coords = await geocodificar(cliente.direccion, cliente.ciudad, cliente.provincia);
+    const coords = await geocodificar(cliente.direccion, cliente.ciudad, cliente.provincia, cliente.cp);
     setGeoLoading(false);
     if (coords) updateCliente(id, { lat: coords.lat, lng: coords.lng });
   };
@@ -682,6 +682,7 @@ export default function ClienteDetail() {
               nombre={cliente.nombre} ciudad={cliente.ciudad}
               onLocalizar={handleLocalizar}
               geoLoading={geoLoading}
+              tieneDir={!!(cliente.direccion || cliente.ciudad)}
             />
           </div>
         </div>

@@ -94,7 +94,7 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
     // Geocodificar si tiene dirección/ciudad y aún no tiene coordenadas guardadas
     if ((data.direccion || data.ciudad) && (!data.lat || !data.lng)) {
       setGeoLoading(true);
-      const coords = await geocodificar(data.direccion, data.ciudad, data.provincia);
+      const coords = await geocodificar(data.direccion, data.ciudad, data.provincia, data.cp);
       setGeoLoading(false);
       if (coords) { data.lat = coords.lat; data.lng = coords.lng; }
     }
