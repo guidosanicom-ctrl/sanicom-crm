@@ -180,7 +180,9 @@ export default function ServicioTecnicoPage() {
       {activeTab === 'resumen' && !isCarlos() && <ResumenMensual servicios={servicios} />}
 
       {activeTab === 'ordenes' && <>
-      <div className="flex flex-wrap gap-3 items-start justify-between">
+
+      {/* Toolbar — escritorio */}
+      <div className="hidden sm:flex flex-wrap gap-3 items-start justify-between">
         <div className="flex flex-wrap gap-2">
           <SearchBar value={search} onChange={s => { setSearch(s); setPage(1); }} placeholder="Buscar por cliente, equipo, Nº..." className="w-56" />
           <select className={sel} value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1); }}>
@@ -203,12 +205,75 @@ export default function ServicioTecnicoPage() {
         {!readOnly && <Button size="sm" onClick={() => { setSelected(null); setFormOpen(true); }}><Plus className="w-4 h-4" />Nueva orden</Button>}
       </div>
 
+      {/* Toolbar — móvil */}
+      <div className="flex sm:hidden flex-col gap-2">
+        <SearchBar value={search} onChange={s => { setSearch(s); setPage(1); }} placeholder="Buscar por cliente, equipo, Nº..." className="w-full" />
+        <div className="grid grid-cols-2 gap-2">
+          <select className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+            value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1); }}>
+            <option value="">Estado</option>
+            {ESTADOS_SERVICIO.map(s => <option key={s}>{s}</option>)}
+          </select>
+          <select className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+            value={filterTecnico} onChange={e => { setFilterTecnico(e.target.value); setPage(1); }}>
+            <option value="">Técnico</option>
+            {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+          <select className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+            value={filterPrioridad} onChange={e => { setFilterPrioridad(e.target.value); setPage(1); }}>
+            <option value="">Prioridad</option>
+            {PRIORIDADES_SERVICIO.map(p => <option key={p}>{p}</option>)}
+          </select>
+          <select className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+            value={filterTipo} onChange={e => { setFilterTipo(e.target.value); setPage(1); }}>
+            <option value="">Tipo</option>
+            {TIPOS_SERVICIO.map(t => <option key={t}>{t}</option>)}
+          </select>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {filtered.length === 0 ? (
           <EmptyState icon={Wrench} title="Sin órdenes de servicio" message="No hay órdenes con los filtros actuales." action={() => setFormOpen(true)} actionLabel="Nueva orden" />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Cards — solo móvil */}
+            <div className="sm:hidden divide-y divide-gray-100">
+              {paginated.map(s => {
+                const client = clientes.find(c => c.id === s.clienteId);
+                const equipoLabel = s.equipoNombre || equipos.find(e => e.id === s.equipoId)?.nombre;
+                const tecnico = users.find(u => u.id === s.tecnico);
+                return (
+                  <div key={s.id} className="px-4 py-3 cursor-pointer active:bg-gray-50"
+                    onClick={() => openDetail(s)}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-semibold text-[#1B4F8A]">{s.numero}</span>
+                          <Badge color={ESTADO_BADGE[s.estado] || 'gray'}>{s.estado}</Badge>
+                          <Badge color={PRIORIDAD_BADGE[s.prioridad] || 'gray'}>{s.prioridad}</Badge>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-800 mt-1 truncate">{client?.nombre || '-'}</p>
+                        {equipoLabel && <p className="text-xs text-gray-500 mt-0.5 truncate">{equipoLabel}</p>}
+                        <div className="flex items-center gap-3 mt-1 flex-wrap">
+                          {tecnico && <span className="text-xs text-gray-400">{tecnico.name}</span>}
+                          {s.fechaProgramada && <span className="text-xs text-gray-400">{formatDate(s.fechaProgramada)}</span>}
+                        </div>
+                      </div>
+                      {!readOnly && s.estado !== 'Completada' && (
+                        <button onClick={e => { e.stopPropagation(); updateServicio(s.id, { estado: 'Completada' }); toast.success('Orden completada.'); }}
+                          className="p-1.5 rounded-lg text-green-500 hover:bg-green-50 flex-shrink-0 cursor-pointer" title="Marcar completada">
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Tabla — solo escritorio */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
@@ -237,8 +302,7 @@ export default function ServicioTecnicoPage() {
                         <td className="px-3 py-3">
                           <div className="flex gap-2 items-center">
                             {!readOnly && s.estado !== 'Completada' && (
-                              <button
-                                onClick={() => { updateServicio(s.id, { estado: 'Completada' }); toast.success('Orden completada.'); }}
+                              <button onClick={() => { updateServicio(s.id, { estado: 'Completada' }); toast.success('Orden completada.'); }}
                                 className="p-1 text-green-500 hover:bg-green-50 rounded cursor-pointer" title="Marcar completada">
                                 <CheckCircle className="w-4 h-4" />
                               </button>
@@ -254,12 +318,24 @@ export default function ServicioTecnicoPage() {
                 </tbody>
               </table>
             </div>
+
             <div className="px-4 pb-4">
               <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
             </div>
           </>
         )}
       </div>
+
+      {/* FAB móvil — Nueva orden */}
+      {!readOnly && (
+        <button
+          className="sm:hidden fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-[#1B4F8A] text-white shadow-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+          onClick={() => { setSelected(null); setFormOpen(true); }}
+          aria-label="Nueva orden"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      )}
 
       </>}
 
