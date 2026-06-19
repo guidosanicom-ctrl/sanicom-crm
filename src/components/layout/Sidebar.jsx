@@ -4,7 +4,6 @@ import {
   LayoutDashboard, Users, Calendar, TrendingUp, PlaySquare,
   Wrench, Package, FolderOpen, Settings, LogOut, X
 } from 'lucide-react';
-const logo = '/minilogo.png';
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Panel de control', icon: LayoutDashboard, module: 'dashboard' },
@@ -37,7 +36,7 @@ export default function Sidebar({ open, onClose }) {
         {/* Logo */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
           <div className="flex items-center">
-            <img src={logo} alt="Sanicom Medical Systems" className="h-10 w-auto brightness-0 invert" />
+            <img src="/minilogo.png" alt="Sanicom" className="h-10 w-auto" />
           </div>
           <button onClick={onClose} className="lg:hidden text-white/70 hover:text-white cursor-pointer">
             <X className="w-5 h-5" />
