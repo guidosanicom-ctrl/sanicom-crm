@@ -226,6 +226,7 @@ export default function ClientesPage() {
   const location = useLocation();
   const { clientes, addCliente, deleteCliente, deleteClientes, importClientes } = useClientesStore();
   const { user, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const puedeCrearRuta = carlos || user?.email === 'jgovantes@sanicom.es';
   const { contactos, addContacto } = useSeguimientoStore();
   const { especialidades } = useEspecialidadesStore();
   const { subespecialidades } = useSubespecialidadesStore();
@@ -488,9 +489,11 @@ export default function ClientesPage() {
             <Button variant="outline" size="sm" onClick={clearSelection}>
               <X className="w-4 h-4" />Limpiar selección
             </Button>
-            <Button size="sm" onClick={() => setRutaOpen(true)}>
-              <Route className="w-4 h-4" />Crear ruta ({selected.size})
-            </Button>
+            {puedeCrearRuta && (
+              <Button size="sm" onClick={() => setRutaOpen(true)}>
+                <Route className="w-4 h-4" />Crear ruta ({selected.size})
+              </Button>
+            )}
             <Button variant="danger" size="sm" onClick={() => setDelBulkOpen(true)}>
               <Trash2 className="w-4 h-4" />Eliminar ({selected.size})
             </Button>
@@ -510,11 +513,13 @@ export default function ClientesPage() {
             </button>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" className="flex-1" onClick={() => setRutaOpen(true)}>
-              <Route className="w-4 h-4" />Crear ruta ({selected.size})
-            </Button>
-            <Button variant="danger" size="sm" onClick={() => setDelBulkOpen(true)}>
-              <Trash2 className="w-4 h-4" />
+            {puedeCrearRuta && (
+              <Button size="sm" className="flex-1" onClick={() => setRutaOpen(true)}>
+                <Route className="w-4 h-4" />Crear ruta ({selected.size})
+              </Button>
+            )}
+            <Button variant="danger" size="sm" className={puedeCrearRuta ? '' : 'flex-1'} onClick={() => setDelBulkOpen(true)}>
+              <Trash2 className="w-4 h-4" />{puedeCrearRuta ? '' : `Eliminar (${selected.size})`}
             </Button>
           </div>
         </div>
