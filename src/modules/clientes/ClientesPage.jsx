@@ -23,7 +23,7 @@ import { useTiposClienteStore } from '../../store/tiposClienteStore';
 export default function ClientesPage() {
   const navigate = useNavigate();
   const { clientes, addCliente, deleteCliente, deleteClientes, importClientes } = useClientesStore();
-  const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const { user, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const { especialidades } = useEspecialidadesStore();
   const { subespecialidades } = useSubespecialidadesStore();
   const { tipos: tiposCliente } = useTiposClienteStore();
@@ -46,6 +46,15 @@ export default function ClientesPage() {
 
   const carlos = isCarlos();
   const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
+
+  // Mis clientes recientes (últimos 20 creados o modificados por el usuario actual)
+  const misRecientes = useMemo(() => {
+    if (!user?.id) return [];
+    return clientes
+      .filter(c => c.creadoPorId === user.id || c.modificadoPorId === user.id)
+      .sort((a, b) => new Date(b.fechaModificacion || b.fechaAlta) - new Date(a.fechaModificacion || a.fechaAlta))
+      .slice(0, 20);
+  }, [clientes, user]);
 
   // Filtrado base (sin considerar "ver seleccionados")
   const baseFiltered = useMemo(() => {
@@ -114,6 +123,35 @@ export default function ClientesPage() {
 
   return (
     <div className="space-y-4">
+      {/* Mis clientes recientes */}
+      {misRecientes.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Mis clientes recientes
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {misRecientes.map(c => (
+              <button
+                key={c.id}
+                onClick={() => navigate(`/clientes/${c.id}`)}
+                className="flex items-start gap-3 px-4 py-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-[#1B4F8A]/30 hover:shadow-md transition-all text-left cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-full bg-[#1B4F8A]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-xs font-bold text-[#1B4F8A]">{c.nombre?.charAt(0)?.toUpperCase()}</span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate max-w-[180px]">{c.nombre}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[180px]">
+                    {[c.especialidad, c.ciudad].filter(Boolean).join(' · ')}
+                  </p>
+                  {c.telefono && <p className="text-xs text-gray-400">{c.telefono}</p>}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <div className="flex flex-wrap gap-2 flex-1 min-w-0">
@@ -238,7 +276,7 @@ export default function ClientesPage() {
                         title="Seleccionar página"
                       />
                     </th>
-                    {['Nombre', 'Contacto', 'Tipo', 'Especialidad', 'Teléfono', 'Email', 'Ciudad', 'Alta', 'Estado'].map(h => (
+                    {['Nombre', 'Contacto', 'Tipo', 'Especialidad', 'Teléfono', 'Email', 'Ciudad', 'País', 'Alta', 'Estado'].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -268,6 +306,7 @@ export default function ClientesPage() {
                         <td className="px-4 py-3 text-gray-500">{c.telefono || '-'}</td>
                         <td className="px-4 py-3 text-gray-500">{c.email || '-'}</td>
                         <td className="px-4 py-3 text-gray-500">{c.ciudad || '-'}</td>
+                        <td className="px-4 py-3 text-gray-500">{c.pais || 'España'}</td>
                         <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{formatDate(c.fechaAlta)}</td>
                         <td className="px-4 py-3">
                           <Badge color={c.estado === 'Activo' ? 'green' : 'gray'}>{c.estado}</Badge>
@@ -299,7 +338,7 @@ export default function ClientesPage() {
       />
 
       <ClienteForm open={formOpen} onClose={() => setFormOpen(false)}
-        onSave={(data) => { addCliente(data); toast.success('Cliente creado correctamente.'); setFormOpen(false); }} />
+        onSave={(data) => { const c = addCliente(data); toast.success('Cliente creado correctamente.'); setFormOpen(false); return c; }} />
       <ImportWizard open={importOpen} onClose={() => setImportOpen(false)} onImport={handleImport} />
       <SanicomImportWizard
         open={sanicomOpen}

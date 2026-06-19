@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import CiudadInput, { CP_PROVINCIA } from '../../components/ui/CiudadInput';
-import { ESTADOS_CLIENTE } from '../../utils/constants';
+import { ESTADOS_CLIENTE, PAISES, PAISES_COMUNES } from '../../utils/constants';
 import { useAuthStore } from '../../store/authStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
@@ -15,7 +15,7 @@ import { Loader2 } from 'lucide-react';
 
 const empty = {
   nombre: '', contactoPrincipal: '', tipo: 'Clínica', especialidad: 'Medicina general', subespecialidad: '', cif: '',
-  direccion: '', ciudad: '', provincia: '', cp: '',
+  direccion: '', ciudad: '', provincia: '', pais: 'España', cp: '',
   telefono: '', email: '', website: '', estado: 'Activo', notas: '',
   // Campos exclusivos de Hospital público
   servicio: '', jefeNombre: '', jefeTelefono: '', jefeEmail: '', jefeNotas: '',
@@ -272,6 +272,16 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Provincia</label>
               <input {...inp('provincia')} placeholder="Sevilla" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">País</label>
+              <select {...inp('pais')} className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors.pais ? 'border-red-400' : 'border-gray-200'}`}>
+                {PAISES.map(p => p.startsWith('───') ? (
+                  <option key={p} disabled value="">{p}</option>
+                ) : (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">

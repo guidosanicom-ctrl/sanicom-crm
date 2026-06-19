@@ -26,7 +26,8 @@ export const useClientesStore = create((set, get) => ({
 
   addCliente: (clienteData) => {
     const user = useAuthStore.getState().user;
-    const item = { ...clienteData, id: generateId(), fechaAlta: new Date().toISOString().split('T')[0], contactos: clienteData.contactos || [] };
+    const ahora = new Date().toISOString();
+    const item = { ...clienteData, id: generateId(), fechaAlta: ahora.split('T')[0], fechaModificacion: ahora, creadoPorId: user?.id, creadoPorNombre: user?.name, modificadoPorId: user?.id, contactos: clienteData.contactos || [] };
     set(s => ({ clientes: [...s.clientes, item] }));
     db.insert(item).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ clientes: s.clientes.filter(c => c.id !== item.id) })); }
@@ -38,7 +39,7 @@ export const useClientesStore = create((set, get) => ({
   updateCliente: (id, updates) => {
     const user = useAuthStore.getState().user;
     const prev = get().clientes.find(c => c.id === id);
-    const updated = { ...prev, ...updates };
+    const updated = { ...prev, ...updates, fechaModificacion: new Date().toISOString(), modificadoPorId: user?.id };
     set(s => ({ clientes: s.clientes.map(c => c.id === id ? updated : c) }));
     db.update(id, updated).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ clientes: s.clientes.map(c => c.id === id ? prev : c) })); }
@@ -158,16 +159,22 @@ export const useClientesStore = create((set, get) => ({
       return base;
     };
 
+    const normTel = s => (s || '').replace(/[\s\-().]/g, '');
+
     rows.forEach(row => {
-      const exists = current.find(c => (row.cif && c.cif === row.cif) || c.nombre?.toLowerCase() === row.nombre?.toLowerCase());
+      const rowTel = normTel(row.telefono);
+      const exists = current.find(c =>
+        (row.cif && c.cif === row.cif) ||
+        c.nombre?.toLowerCase() === row.nombre?.toLowerCase() ||
+        (rowTel.length >= 7 && normTel(c.telefono) === rowTel)
+      );
       if (exists) {
-        if (mode === 'update') {
-          const merged = { ...exists, ...normalizeRow(row) };
-          const idx = updated.findIndex(c => c.id === exists.id);
-          updated[idx] = merged;
-          toUpdate.push(merged);
-          imported++;
-        } else { skipped++; }
+        // Siempre actualizar: el registro importado (más reciente) reemplaza al existente
+        const merged = { ...exists, ...normalizeRow(row) };
+        const idx = updated.findIndex(c => c.id === exists.id);
+        updated[idx] = merged;
+        toUpdate.push(merged);
+        imported++;
       } else {
         const item = { ...normalizeRow(row), id: generateId(), fechaAlta: new Date().toISOString().split('T')[0], contactos: [], estado: 'Activo' };
         updated.push(item);
