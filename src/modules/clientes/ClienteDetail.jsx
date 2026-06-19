@@ -11,6 +11,7 @@ import { useServicioStore } from '../../store/servicioStore';
 import { useVisitasStore } from '../../store/visitasStore';
 import { useNotasStore } from '../../store/notasStore';
 import { useAgendaStore } from '../../store/agendaStore';
+import { useSeguimientoStore } from '../../store/seguimientoStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
@@ -569,6 +570,7 @@ export default function ClienteDetail() {
   const { servicios } = useServicioStore();
   const { visitas } = useVisitasStore();
   const { notas, addNota, deleteNota } = useNotasStore();
+  const { contactos: todosContactosSeg } = useSeguimientoStore();
   const [activeTab, setActiveTab] = useState('resumen');
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
@@ -576,7 +578,7 @@ export default function ClienteDetail() {
   const [note, setNote] = useState('');
   const [geoLoading, setGeoLoading] = useState(false);
 
-  const { user, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const { user, users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const carlos = isCarlos();
 
   const cliente = getCliente(id);
@@ -612,6 +614,9 @@ export default function ClienteDetail() {
   const clienteDemos    = demos.filter(d => d.clienteId === id);
   const clienteVisitas  = visitas.filter(v => v.clienteId === id);
   const clienteNotas    = notas.filter(n => n.clienteId === id);
+  const contactosSeg    = todosContactosSeg.filter(c => c.clienteId === id)
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  const estaContactado  = contactosSeg.length > 0;
 
   // Todos los presupuestos del cliente, de opps y demos
   const todosPresupuestos = [
@@ -661,10 +666,14 @@ export default function ClienteDetail() {
           </button>
           <div>
             <h2 className="text-xl font-bold text-gray-900">{cliente.nombre}</h2>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <Badge color={cliente.estado === 'Activo' ? 'green' : 'gray'}>{cliente.estado}</Badge>
               <span className="text-sm text-gray-500">{cliente.tipo}</span>
               {cliente.especialidad && <span className="text-sm text-gray-400">· {cliente.especialidad}</span>}
+              {estaContactado
+                ? <span className="inline-flex items-center gap-1 text-xs font-semibold bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">Contactado ✅</span>
+                : <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">No contactado ⏳</span>
+              }
             </div>
           </div>
         </div>
@@ -903,31 +912,76 @@ export default function ClienteDetail() {
 
       {/* ── Notas & actividad ── */}
       {activeTab === 'notas' && (
-        <Card>
-          <h3 className="font-semibold text-gray-800 mb-4">Notas & Actividad</h3>
-          <div className="flex gap-2 mb-4">
-            <input value={note} onChange={e => setNote(e.target.value)} placeholder="Añadir nota..."
-              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
-              onKeyDown={e => e.key === 'Enter' && addNote()} />
-            <Button size="sm" onClick={addNote}>Añadir</Button>
-          </div>
-          {clienteNotas.length === 0 ? <p className="text-sm text-gray-400 text-center py-8">Sin actividad registrada.</p> : (
-            <div className="space-y-3">
-              {clienteNotas.map(n => (
-                <div key={n.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-700">{n.texto}</p>
-                    <p className="text-xs text-gray-400 mt-1">{n.autorNombre && <span className="font-medium">{n.autorNombre} · </span>}{formatDate(n.fechaHora)}</p>
-                  </div>
-                  <button onClick={() => deleteNota(n.id)} className="p-1 rounded text-gray-300 hover:text-red-400 cursor-pointer flex-shrink-0">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+        <div className="space-y-5">
+          <Card>
+            <h3 className="font-semibold text-gray-800 mb-4">Notas & Actividad</h3>
+            <div className="flex gap-2 mb-4">
+              <input value={note} onChange={e => setNote(e.target.value)} placeholder="Añadir nota..."
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
+                onKeyDown={e => e.key === 'Enter' && addNote()} />
+              <Button size="sm" onClick={addNote}>Añadir</Button>
             </div>
-          )}
-        </Card>
+            {clienteNotas.length === 0 ? <p className="text-sm text-gray-400 text-center py-8">Sin notas registradas.</p> : (
+              <div className="space-y-3">
+                {clienteNotas.map(n => (
+                  <div key={n.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-700">{n.texto}</p>
+                      <p className="text-xs text-gray-400 mt-1">{n.autorNombre && <span className="font-medium">{n.autorNombre} · </span>}{formatDate(n.fechaHora)}</p>
+                    </div>
+                    <button onClick={() => deleteNota(n.id)} className="p-1 rounded text-gray-300 hover:text-red-400 cursor-pointer flex-shrink-0">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Historial de seguimiento de contactos */}
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="font-semibold text-gray-800">Historial de contactos</h3>
+              {estaContactado
+                ? <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-semibold">Contactado ✅</span>
+                : <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-semibold">No contactado ⏳</span>
+              }
+            </div>
+            {contactosSeg.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">Sin contactos registrados en seguimiento.</p>
+            ) : (
+              <div className="space-y-3">
+                {contactosSeg.map(c => {
+                  const EMOJI = { whatsapp: '💬', email: '📧', llamada: '📞' };
+                  const LABEL = { whatsapp: 'WhatsApp', email: 'Email', llamada: 'Llamada' };
+                  const COLOR = { whatsapp: 'bg-green-50 text-green-700', email: 'bg-blue-50 text-blue-700', llamada: 'bg-amber-50 text-amber-700' };
+                  return (
+                    <div key={c.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="text-lg flex-shrink-0 mt-0.5">{EMOJI[c.tipo] || '📋'}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${COLOR[c.tipo] || 'bg-gray-100 text-gray-600'}`}>
+                            {LABEL[c.tipo] || c.tipo}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {c.fecha ? new Date(c.fecha + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                          </span>
+                        </div>
+                        {c.nota && <p className="text-sm text-gray-700 mt-1">{c.nota}</p>}
+                        {c.usuarioId && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            {users.find(u => u.id === c.usuarioId)?.name || c.usuarioId}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </div>
       )}
 
       <ClienteForm open={editOpen} onClose={() => setEditOpen(false)} initial={cliente}
