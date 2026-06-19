@@ -19,6 +19,7 @@ import { useDriveStore } from './store/driveStore';
 import { usePipelineStore } from './store/pipelineStore';
 import { useVisitasStore } from './store/visitasStore';
 import { useNotasStore } from './store/notasStore';
+import { useSeguimientoStore } from './store/seguimientoStore';
 import Layout from './components/layout/Layout';
 import LoginPage from './modules/auth/LoginPage';
 import NoAccess from './modules/auth/NoAccess';
@@ -60,6 +61,7 @@ function AppInit() {
   const initPipeline      = usePipelineStore(s => s.initialize);
   const initVisitas       = useVisitasStore(s => s.initialize);
   const initNotas         = useNotasStore(s => s.initialize);
+  const initSeguimiento   = useSeguimientoStore(s => s.initialize);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -67,7 +69,7 @@ function AppInit() {
     Promise.all([
       initClientes(), initEquipos(), initOportunidades(), initDemos(),
       initServicios(), initAgenda(), initActividad(),
-      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(), initVisitas(), initNotas(),
+      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(), initVisitas(), initNotas(), initSeguimiento(),
     ]).catch(e => console.error('[AppInit]', e));
   }, [user?.id]);
 

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Upload, Trash2, Users, Route, X, Eye, Copy } from 'lucide-react';
+import { Plus, Upload, Trash2, Users, Route, X, Eye, Copy, ClipboardList, MessageCircle, Mail, Phone, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
@@ -19,11 +19,167 @@ import { formatDate } from '../../utils/formatters';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 import { useTiposClienteStore } from '../../store/tiposClienteStore';
+import { useSeguimientoStore } from '../../store/seguimientoStore';
+
+const TIPO_ICONS = { whatsapp: '💬', email: '📧', llamada: '📞' };
+const TIPO_LABELS = { whatsapp: 'WhatsApp', email: 'Email', llamada: 'Llamada' };
+
+function ContactarForm({ clienteId, usuarioId, onSave, onCancel }) {
+  const hoy = new Date().toISOString().split('T')[0];
+  const [tipo, setTipo] = useState('whatsapp');
+  const [fecha, setFecha] = useState(hoy);
+  const [nota, setNota] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave({ clienteId, usuarioId, tipo, fecha, nota });
+    setSaving(false);
+  };
+
+  return (
+    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-2">
+      <div className="flex gap-2">
+        {['whatsapp', 'email', 'llamada'].map(t => (
+          <button key={t} onClick={() => setTipo(t)}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer
+              ${tipo === t ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#1B4F8A]'}`}>
+            {TIPO_ICONS[t]} {TIPO_LABELS[t]}
+          </button>
+        ))}
+      </div>
+      <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
+        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none bg-white" />
+      <textarea value={nota} onChange={e => setNota(e.target.value)} rows={2} placeholder="Nota (opcional)..."
+        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none resize-none" />
+      <div className="flex gap-2 justify-end">
+        <button onClick={onCancel} className="px-3 py-1 text-xs text-gray-500 hover:text-gray-700 cursor-pointer">Cancelar</button>
+        <button onClick={handleSave} disabled={saving}
+          className="px-3 py-1 bg-[#1B4F8A] text-white text-xs rounded-lg hover:bg-[#1B4F8A]/90 cursor-pointer disabled:opacity-50">
+          {saving ? 'Guardando…' : 'Guardar'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ClienteSeguimientoRow({ cliente, contactosCliente, usuarioId, onContactar }) {
+  const [open, setOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const navigate = useNavigate();
+  const ultimo = contactosCliente.sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+
+  return (
+    <div className="border border-gray-100 rounded-xl bg-white p-3 space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <button onClick={() => navigate(`/clientes/${cliente.id}`)}
+          className="flex-1 text-left min-w-0">
+          <p className="text-sm font-semibold text-[#1B4F8A] truncate">{cliente.nombre}</p>
+          <p className="text-xs text-gray-400 truncate">{[cliente.especialidad, cliente.ciudad].filter(Boolean).join(' · ')}</p>
+          {ultimo && (
+            <p className="text-xs text-gray-400 mt-0.5">
+              Último: {TIPO_ICONS[ultimo.tipo]} {ultimo.fecha}{ultimo.nota && ` — ${ultimo.nota}`}
+            </p>
+          )}
+        </button>
+        <div className="flex gap-1 flex-shrink-0">
+          {contactosCliente.length > 0 && (
+            <button onClick={() => setOpen(o => !o)}
+              className="p-1.5 text-gray-400 hover:text-gray-600 cursor-pointer">
+              {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          )}
+          <button onClick={() => setFormOpen(f => !f)}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-[#1B4F8A] text-white text-xs rounded-lg hover:bg-[#1B4F8A]/90 cursor-pointer">
+            <Plus className="w-3 h-3" /> Contactar
+          </button>
+        </div>
+      </div>
+
+      {open && contactosCliente.length > 0 && (
+        <div className="mt-2 space-y-1 pl-2 border-l-2 border-gray-100">
+          {contactosCliente.sort((a, b) => b.fecha.localeCompare(a.fecha)).map(c => (
+            <p key={c.id} className="text-xs text-gray-500">
+              {TIPO_ICONS[c.tipo]} <span className="font-medium">{c.fecha}</span>{c.nota && ` — ${c.nota}`}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {formOpen && (
+        <ContactarForm
+          clienteId={cliente.id}
+          usuarioId={usuarioId}
+          onSave={async (data) => { await onContactar(data); setFormOpen(false); }}
+          onCancel={() => setFormOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function SeguimientoView({ clientes, contactos, usuarioId, onContactar }) {
+  const misContactos = contactos.filter(c => c.usuarioId === usuarioId);
+  const contactadosIds = new Set(misContactos.map(c => c.clienteId));
+
+  const noContactados = clientes
+    .filter(c => !contactadosIds.has(c.id))
+    .sort((a, b) => new Date(b.fechaAlta) - new Date(a.fechaAlta));
+
+  const contactados = clientes
+    .filter(c => contactadosIds.has(c.id))
+    .sort((a, b) => {
+      const ua = Math.max(...misContactos.filter(x => x.clienteId === a.id).map(x => new Date(x.fecha)));
+      const ub = Math.max(...misContactos.filter(x => x.clienteId === b.id).map(x => new Date(x.fecha)));
+      return ub - ua;
+    });
+
+  const getContactos = (clienteId) => misContactos.filter(c => c.clienteId === clienteId);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-base">📋</span>
+          <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">No contactados</h3>
+          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">{noContactados.length}</span>
+        </div>
+        {noContactados.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">¡Todos los clientes han sido contactados! 🎉</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {noContactados.map(c => (
+              <ClienteSeguimientoRow key={c.id} cliente={c} contactosCliente={getContactos(c.id)}
+                usuarioId={usuarioId} onContactar={onContactar} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {contactados.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">✅</span>
+            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Contactados</h3>
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">{contactados.length}</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {contactados.map(c => (
+              <ClienteSeguimientoRow key={c.id} cliente={c} contactosCliente={getContactos(c.id)}
+                usuarioId={usuarioId} onContactar={onContactar} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ClientesPage() {
   const navigate = useNavigate();
   const { clientes, addCliente, deleteCliente, deleteClientes, importClientes } = useClientesStore();
   const { user, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const { contactos, addContacto } = useSeguimientoStore();
   const { especialidades } = useEspecialidadesStore();
   const { subespecialidades } = useSubespecialidadesStore();
   const { tipos: tiposCliente } = useTiposClienteStore();
@@ -43,6 +199,7 @@ export default function ClientesPage() {
   const [rutaOpen, setRutaOpen] = useState(false);
   const [sanicomOpen, setSanicomOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
+  const [vistaSegui, setVistaSegui] = useState(false);
 
   const carlos = isCarlos();
   const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
@@ -57,6 +214,19 @@ export default function ClientesPage() {
       .sort((a, b) => new Date(b.fechaModificacion || b.fechaAlta) - new Date(a.fechaModificacion || a.fechaAlta))
       .slice(0, 20);
   }, [clientes, user, carlos]);
+
+  // Clientes accesibles para seguimiento
+  const clientesSeguimiento = useMemo(() => {
+    if (!user?.id) return [];
+    return carlos
+      ? clientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad))
+      : clientes;
+  }, [clientes, user, carlos]);
+
+  const handleContactar = async (data) => {
+    await addContacto(data);
+    toast.success('Contacto registrado.');
+  };
 
   // Filtrado base (sin considerar "ver seleccionados")
   const baseFiltered = useMemo(() => {
@@ -126,7 +296,7 @@ export default function ClientesPage() {
   return (
     <div className="space-y-4">
       {/* Mis clientes recientes */}
-      {misRecientes.length > 0 && (
+      {!vistaSegui && misRecientes.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
             Mis clientes recientes
@@ -194,9 +364,25 @@ export default function ClientesPage() {
               <Copy className="w-4 h-4" />Gestionar duplicados
             </Button>
           )}
+          <button
+            onClick={() => setVistaSegui(v => !v)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer
+              ${vistaSegui ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+            <ClipboardList className="w-4 h-4" />Seguimiento
+          </button>
           <Button size="sm" onClick={() => setFormOpen(true)}><Plus className="w-4 h-4" />Nuevo cliente</Button>
         </div>
       </div>
+
+      {/* Vista Seguimiento */}
+      {vistaSegui && (
+        <SeguimientoView
+          clientes={clientesSeguimiento}
+          contactos={contactos}
+          usuarioId={user?.id}
+          onContactar={handleContactar}
+        />
+      )}
 
       {/* Barra de selección múltiple */}
       {selected.size > 0 && (
@@ -248,7 +434,7 @@ export default function ClientesPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {vistaSegui ? null : <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {filtered.length === 0 ? (
           viewingSelected ? (
             <div className="py-16 text-center">
@@ -331,7 +517,7 @@ export default function ClientesPage() {
             </div>
           </>
         )}
-      </div>
+      </div>}
 
       <RutaModal
         open={rutaOpen}
