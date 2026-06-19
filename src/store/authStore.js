@@ -53,7 +53,7 @@ export const useAuthStore = create((set, get) => ({
     const { user } = get();
     if (!user) return false;
     if (user.role === 'Administración') return true;
-    if (user.email === 'carlosleal@sanicom.es') return record?.creadoPorId === user.id;
+    if (user.email === 'carlosleal@sanicom.es') return record?.creadoPorId === user.id || record?.responsable === user.id;
     return false;
   },
 
