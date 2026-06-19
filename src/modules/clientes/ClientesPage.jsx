@@ -51,10 +51,13 @@ export default function ClientesPage() {
   const misRecientes = useMemo(() => {
     if (!user?.id) return [];
     return clientes
-      .filter(c => c.creadoPorId === user.id || c.modificadoPorId === user.id)
+      .filter(c => {
+        if (carlos && !CARLOS_ESPECIALIDADES.includes(c.especialidad)) return false;
+        return c.creadoPorId === user.id || c.modificadoPorId === user.id;
+      })
       .sort((a, b) => new Date(b.fechaModificacion || b.fechaAlta) - new Date(a.fechaModificacion || a.fechaAlta))
       .slice(0, 20);
-  }, [clientes, user]);
+  }, [clientes, user, carlos]);
 
   // Filtrado base (sin considerar "ver seleccionados")
   const baseFiltered = useMemo(() => {
