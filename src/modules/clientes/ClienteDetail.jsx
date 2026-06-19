@@ -571,7 +571,7 @@ export default function ClienteDetail() {
   const { servicios } = useServicioStore();
   const { visitas } = useVisitasStore();
   const { notas, addNota, deleteNota } = useNotasStore();
-  const { contactos: todosContactosSeg, addContacto: addContactoSeg } = useSeguimientoStore();
+  const { contactos: todosContactosSeg, addContacto: addContactoSeg, deleteContacto: deleteContactoSeg } = useSeguimientoStore();
   const [activeTab, setActiveTab] = useState('resumen');
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
@@ -982,6 +982,10 @@ export default function ClienteDetail() {
                           </p>
                         )}
                       </div>
+                      <button onClick={() => deleteContactoSeg(c.id)}
+                        className="p-1 rounded text-gray-300 hover:text-red-400 cursor-pointer flex-shrink-0 self-start">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   );
                 })}

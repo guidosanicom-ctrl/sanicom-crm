@@ -27,4 +27,10 @@ export const useSeguimientoStore = create((set, get) => ({
     }
     return item;
   },
+
+  deleteContacto: async (id) => {
+    set(s => ({ contactos: s.contactos.filter(c => c.id !== id) }));
+    const { error } = await supabase.from(TABLE).delete().eq('id', id);
+    if (error) console.error('[seguimientoStore] Error eliminando contacto:', error);
+  },
 }));
