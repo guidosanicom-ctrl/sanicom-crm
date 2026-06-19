@@ -373,9 +373,14 @@ function VisitasTab({ visitas = [], clienteId, clienteNombre, clienteOpps = [] }
   });
 
   const handleSave = async () => {
-    if (!form?.fecha || !form?.comercialId) return;
+    console.log('[VisitasTab] handleSave llamado, form:', form);
+    if (!form?.fecha || !form?.comercialId) {
+      console.warn('[VisitasTab] Validación fallida — fecha:', form?.fecha, 'comercialId:', form?.comercialId);
+      return;
+    }
     const user = users.find(u => u.id === form.comercialId);
     const visita = { ...form, clienteId, comercialNombre: user?.name || '' };
+    console.log('[VisitasTab] Enviando visita a store:', visita);
 
     if (form.id) {
       await updateVisita(form.id, visita);

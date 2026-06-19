@@ -18,11 +18,13 @@ export const useVisitasStore = create((set, get) => ({
 
   addVisita: async (visitaData) => {
     const item = { ...visitaData, id: generateId() };
-    const { error } = await supabase.from(TABLE).insert({ id: item.id, data: item });
+    console.log('[visitasStore] Intentando INSERT visita:', item);
+    const { data, error } = await supabase.from(TABLE).insert({ id: item.id, data: item }).select();
     if (error) {
-      console.error('[visitasStore] Error guardando visita:', error);
+      console.error('[visitasStore] ERROR en INSERT:', error);
       return null;
     }
+    console.log('[visitasStore] INSERT exitoso:', data);
     set(s => ({ visitas: [...s.visitas, item] }));
     return item;
   },
