@@ -26,12 +26,29 @@ export default function RutaModal({ open, onClose, clientes }) {
   const openMaps = () => {
     if (validStops.length === 0) return;
 
-    // Construye la URL: doble barra inicial = ubicación actual como origen
     const segments = validStops.map(s => encodeURIComponent(s.address));
-    const url = `https://www.google.com/maps/dir//${segments.join('/')}`;
 
-    // En móvil, Google Maps intercepta la URL y abre la app si está instalada
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // En iOS/Android, comgooglemaps:// abre Google Maps directamente.
+    // Si no está instalada, el fallback https:// la abre en el navegador.
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+
+    if (isIOS) {
+      // Intentar abrir app nativa; si falla, redirige a web
+      const appUrl = `comgooglemaps://?waypoints=${segments.join('|')}&directionsmode=driving`;
+      const webUrl = `https://www.google.com/maps/dir//${segments.join('/')}`;
+      const start = Date.now();
+      window.location.href = appUrl;
+      // Si la app no está, el location.href no funciona y el timeout redirige a web
+      setTimeout(() => { if (Date.now() - start < 1500) window.open(webUrl, '_blank'); }, 1000);
+    } else if (isAndroid) {
+      const url = `google.navigation:q=${encodeURIComponent(validStops[validStops.length - 1].address)}&waypoints=${segments.slice(0, -1).join('|')}`;
+      const webUrl = `https://www.google.com/maps/dir//${segments.join('/')}`;
+      window.location.href = `intent://maps/dir//${segments.join('/')}#Intent;scheme=https;package=com.google.android.apps.maps;end`;
+      setTimeout(() => window.open(webUrl, '_blank'), 1200);
+    } else {
+      window.open(`https://www.google.com/maps/dir//${segments.join('/')}`, '_blank', 'noopener,noreferrer');
+    }
   };
 
   return (

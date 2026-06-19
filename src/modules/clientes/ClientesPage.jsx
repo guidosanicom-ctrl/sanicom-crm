@@ -470,50 +470,51 @@ export default function ClientesPage() {
         />
       )}
 
-      {/* Barra de selección múltiple */}
+      {/* Barra de selección múltiple — escritorio (inline) */}
       {selected.size > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl">
+        <div className="hidden sm:flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl">
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-blue-800">
               Seleccionados: {selected.size} cliente{selected.size > 1 ? 's' : ''}
             </span>
             {viewingSelected && (
-              <span className="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full font-medium">
-                Vista filtrada
-              </span>
+              <span className="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full font-medium">Vista filtrada</span>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { setViewingSelected(v => !v); setPage(1); }}
-            >
-              <Eye className="w-4 h-4" />
-              {viewingSelected ? 'Ver todos' : 'Ver seleccionados'}
+            <Button variant="outline" size="sm" onClick={() => { setViewingSelected(v => !v); setPage(1); }}>
+              <Eye className="w-4 h-4" />{viewingSelected ? 'Ver todos' : 'Ver seleccionados'}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearSelection}
-            >
+            <Button variant="outline" size="sm" onClick={clearSelection}>
+              <X className="w-4 h-4" />Limpiar selección
+            </Button>
+            <Button size="sm" onClick={() => setRutaOpen(true)}>
+              <Route className="w-4 h-4" />Crear ruta ({selected.size})
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => setDelBulkOpen(true)}>
+              <Trash2 className="w-4 h-4" />Eliminar ({selected.size})
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Barra de selección múltiple — móvil (fixed al fondo) */}
+      {selected.size > 0 && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-blue-200 px-4 py-3 shadow-xl">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-sm font-semibold text-blue-800">
+              {selected.size} cliente{selected.size > 1 ? 's' : ''} seleccionado{selected.size > 1 ? 's' : ''}
+            </span>
+            <button onClick={clearSelection} className="p-1 text-gray-400 hover:text-gray-600 cursor-pointer">
               <X className="w-4 h-4" />
-              Limpiar selección
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" className="flex-1" onClick={() => setRutaOpen(true)}>
+              <Route className="w-4 h-4" />Crear ruta ({selected.size})
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setRutaOpen(true)}
-            >
-              <Route className="w-4 h-4" />
-              Crear ruta ({selected.size})
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => setDelBulkOpen(true)}
-            >
+            <Button variant="danger" size="sm" onClick={() => setDelBulkOpen(true)}>
               <Trash2 className="w-4 h-4" />
-              Eliminar ({selected.size})
             </Button>
           </div>
         </div>
@@ -541,20 +542,31 @@ export default function ClientesPage() {
               <div className="sm:hidden divide-y divide-gray-50">
                 {paginated.map(c => {
                   const esContactado = carlos && contactos.some(x => x.clienteId === c.id);
+                  const isSelected = selected.has(c.id);
                   return (
                     <div key={c.id}
-                      className="flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-gray-50"
-                      style={esContactado ? { backgroundColor: '#DCFCE7' } : undefined}
-                      onClick={() => navigate(`/clientes/${c.id}`)}>
-                      <div className="w-9 h-9 rounded-full bg-[#1B4F8A]/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold text-[#1B4F8A]">{c.nombre?.charAt(0)?.toUpperCase()}</span>
+                      className={`flex items-center gap-3 px-4 py-3 transition-colors ${isSelected ? 'bg-blue-50' : ''}`}
+                      style={!isSelected && esContactado ? { backgroundColor: '#DCFCE7' } : undefined}>
+                      {/* Checkbox de selección */}
+                      <input
+                        type="checkbox"
+                        className={chk}
+                        checked={isSelected}
+                        onChange={e => { e.stopPropagation(); toggleOne(c.id, e); }}
+                      />
+                      {/* Toque en el contenido navega a la ficha */}
+                      <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                        onClick={() => navigate(`/clientes/${c.id}`)}>
+                        <div className="w-9 h-9 rounded-full bg-[#1B4F8A]/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold text-[#1B4F8A]">{c.nombre?.charAt(0)?.toUpperCase()}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[#1B4F8A] truncate">{c.nombre}</p>
+                          <p className="text-xs text-gray-400 truncate">{[c.especialidad, c.ciudad].filter(Boolean).join(' · ')}</p>
+                          {c.telefono && <p className="text-xs text-gray-500 mt-0.5">{c.telefono}</p>}
+                        </div>
+                        <Badge color={c.estado === 'Activo' ? 'green' : 'gray'}>{c.estado}</Badge>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#1B4F8A] truncate">{c.nombre}</p>
-                        <p className="text-xs text-gray-400 truncate">{[c.especialidad, c.ciudad].filter(Boolean).join(' · ')}</p>
-                        {c.telefono && <p className="text-xs text-gray-500 mt-0.5">{c.telefono}</p>}
-                      </div>
-                      <Badge color={c.estado === 'Activo' ? 'green' : 'gray'}>{c.estado}</Badge>
                     </div>
                   );
                 })}
@@ -623,9 +635,9 @@ export default function ClientesPage() {
         </div>
       )}
 
-      {/* FAB móvil — Nuevo cliente */}
+      {/* FAB móvil — Nuevo cliente (sube si hay barra de selección activa) */}
       <button
-        className="sm:hidden fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-[#1B4F8A] text-white shadow-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+        className={`sm:hidden fixed right-6 z-30 w-14 h-14 rounded-full bg-[#1B4F8A] text-white shadow-lg flex items-center justify-center cursor-pointer active:scale-95 transition-all ${selected.size > 0 ? 'bottom-24' : 'bottom-6'}`}
         onClick={() => setFormOpen(true)}
         aria-label="Nuevo cliente"
       >
