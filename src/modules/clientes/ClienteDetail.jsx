@@ -355,10 +355,20 @@ const ESTADOS_VISITA  = ['Pendiente', 'Realizada'];
 const BADGE_VISITA    = { Pendiente: 'yellow', Realizada: 'green' };
 const VISITA_EMPTY    = { fecha: '', hora: '', comercialId: '', comercialNombre: '', estado: 'Pendiente', objetivo: '', resultado: '', oportunidadId: '' };
 
+function buildEventoInicio(fecha, hora) {
+  return `${fecha}T${hora || '09:00'}`;
+}
+function buildEventoFin(fecha, hora) {
+  if (!fecha) return '';
+  const [h, m] = (hora || '09:00').split(':').map(Number);
+  const finH = String(Math.min(h + 1, 23)).padStart(2, '0');
+  return `${fecha}T${finH}:${String(m).padStart(2, '0')}`;
+}
+
 function VisitasTab({ visitas = [], clienteId, clienteNombre, clienteOpps = [] }) {
   const { users } = useAuthStore();
   const { addVisita, updateVisita, deleteVisita } = useVisitasStore();
-  const addEvento = useAgendaStore(s => s.addEvento);
+  const { addEvento, updateEvento, deleteEvento } = useAgendaStore();
   const [form, setForm] = useState(null);
   const [delId, setDelId] = useState(null);
   const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -373,17 +383,27 @@ function VisitasTab({ visitas = [], clienteId, clienteNombre, clienteOpps = [] }
   });
 
   const handleSave = async () => {
-    console.log('[VisitasTab] handleSave llamado, form:', form);
-    if (!form?.fecha || !form?.comercialId) {
-      console.warn('[VisitasTab] Validación fallida — fecha:', form?.fecha, 'comercialId:', form?.comercialId);
-      return;
-    }
+    if (!form?.fecha || !form?.comercialId) return;
     const user = users.find(u => u.id === form.comercialId);
     const visita = { ...form, clienteId, comercialNombre: user?.name || '' };
-    console.log('[VisitasTab] Enviando visita a store:', visita);
 
     if (form.id) {
       await updateVisita(form.id, visita);
+      // Sincronizar evento vinculado
+      if (visita.eventoAgendaId) {
+        if (visita.estado === 'Realizada') {
+          updateEvento(visita.eventoAgendaId, { completado: true });
+        } else {
+          updateEvento(visita.eventoAgendaId, {
+            titulo: `Visita: ${clienteNombre}`,
+            inicio: buildEventoInicio(visita.fecha, visita.hora),
+            fin: buildEventoFin(visita.fecha, visita.hora),
+            responsable: visita.comercialId,
+            descripcion: visita.objetivo,
+            clienteId,
+          });
+        }
+      }
     } else {
       const saved = await addVisita(visita);
       if (!saved) {
@@ -393,11 +413,12 @@ function VisitasTab({ visitas = [], clienteId, clienteNombre, clienteOpps = [] }
       if (visita.estado === 'Pendiente') {
         const evento = addEvento({
           tipo: 'Visita comercial',
-          titulo: `Visita a ${clienteNombre}`,
-          fecha: visita.fecha,
-          hora: visita.hora || '09:00',
-          descripcion: visita.objetivo,
+          titulo: `Visita: ${clienteNombre}`,
+          inicio: buildEventoInicio(visita.fecha, visita.hora),
+          fin: buildEventoFin(visita.fecha, visita.hora),
           clienteId,
+          responsable: visita.comercialId,
+          descripcion: visita.objetivo,
           visitaId: saved.id,
         });
         await updateVisita(saved.id, { eventoAgendaId: evento.id });
@@ -524,7 +545,12 @@ function VisitasTab({ visitas = [], clienteId, clienteNombre, clienteOpps = [] }
       <ConfirmDialog
         open={!!delId}
         onClose={() => setDelId(null)}
-        onConfirm={() => { deleteVisita(delId); setDelId(null); }}
+        onConfirm={() => {
+          const v = sorted.find(v => v.id === delId);
+          if (v?.eventoAgendaId) deleteEvento(v.eventoAgendaId);
+          deleteVisita(delId);
+          setDelId(null);
+        }}
         title="Eliminar visita"
         message="¿Eliminar esta visita del registro?"
         confirmText="Eliminar"

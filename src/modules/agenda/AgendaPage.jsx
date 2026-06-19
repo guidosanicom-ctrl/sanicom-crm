@@ -8,6 +8,7 @@ import {
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { useAgendaStore } from '../../store/agendaStore';
+import { useVisitasStore } from '../../store/visitasStore';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import Button from '../../components/ui/Button';
@@ -193,6 +194,7 @@ function YearView({ year, getDayEvents, today, onDayClick }) {
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function AgendaPage() {
   const { eventos, addEvento, updateEvento, deleteEvento } = useAgendaStore();
+  const { updateVisita } = useVisitasStore();
   const { clientes } = useClientesStore();
   const { users } = useAuthStore();
   const today = useMemo(() => new Date(), []);
@@ -487,8 +489,24 @@ export default function AgendaPage() {
         defaultDate={defaultDate}
         defaultHour={defaultHour}
         onSave={(data) => {
-          if (selectedEvent) { updateEvento(selectedEvent.id, data); toast.success('Evento actualizado.'); }
-          else { addEvento(data); toast.success('Evento creado.'); }
+          if (selectedEvent) {
+            updateEvento(selectedEvent.id, data);
+            // Si el evento está vinculado a una visita, propagar cambios
+            if (selectedEvent.visitaId) {
+              const fecha = data.inicio ? data.inicio.split('T')[0] : '';
+              const hora = data.inicio ? data.inicio.split('T')[1]?.slice(0, 5) : '';
+              updateVisita(selectedEvent.visitaId, {
+                fecha,
+                hora,
+                objetivo: data.descripcion,
+                comercialId: data.responsable,
+              });
+            }
+            toast.success('Evento actualizado.');
+          } else {
+            addEvento(data);
+            toast.success('Evento creado.');
+          }
         }}
       />
       <ConfirmDialog open={delOpen} onClose={() => setDelOpen(false)}
