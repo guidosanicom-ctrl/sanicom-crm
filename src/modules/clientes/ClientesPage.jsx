@@ -226,7 +226,6 @@ export default function ClientesPage() {
   const location = useLocation();
   const { clientes, addCliente, deleteCliente, deleteClientes, importClientes } = useClientesStore();
   const { user, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
-  const puedeCrearRuta = carlos || user?.email === 'jgovantes@sanicom.es';
   const { contactos, addContacto } = useSeguimientoStore();
   const { especialidades } = useEspecialidadesStore();
   const { subespecialidades } = useSubespecialidadesStore();
@@ -251,6 +250,7 @@ export default function ClientesPage() {
   useEffect(() => { setVistaSegui(false); }, [location.key]);
 
   const carlos = isCarlos();
+  const puedeCrearRuta = carlos || user?.email === 'jgovantes@sanicom.es';
   const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
 
   // Mis clientes recientes (últimos 20 clientes accesibles, ordenados por actividad reciente)
