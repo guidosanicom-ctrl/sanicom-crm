@@ -297,8 +297,8 @@ export default function AgendaPage() {
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      {/* Toolbar — escritorio */}
+      <div className="hidden sm:flex items-center justify-between flex-wrap gap-3">
         <div className="flex gap-2">
           {[['month','Mes'], ['week','Semana'], ['day','Día'], ['year','Año']].map(([v, label]) => (
             <button key={v} onClick={() => setView(v)}
@@ -324,6 +324,42 @@ export default function AgendaPage() {
           </Button>
         </div>
       </div>
+
+      {/* Toolbar — móvil */}
+      <div className="flex sm:hidden flex-col gap-2">
+        {/* Vista */}
+        <div className="grid grid-cols-4 gap-1">
+          {[['month','Mes'], ['week','Sem.'], ['day','Día'], ['year','Año']].map(([v, label]) => (
+            <button key={v} onClick={() => setView(v)}
+              className={`py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors text-center
+                ${view === v ? 'bg-[#1B4F8A] text-white' : 'bg-white border border-gray-200 text-gray-600'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {/* Filtros */}
+        <div className="grid grid-cols-2 gap-2">
+          <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)}
+            className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none bg-white w-full">
+            <option value="">Todos los tipos</option>
+            {TIPOS_EVENTO.map(t => <option key={t}>{t}</option>)}
+          </select>
+          <select value={filterResp} onChange={e => setFilterResp(e.target.value)}
+            className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none bg-white w-full">
+            <option value="">Todos</option>
+            {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* FAB móvil — Nuevo evento */}
+      <button
+        className="sm:hidden fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-[#1B4F8A] text-white shadow-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+        onClick={() => { setSelectedEvent(null); setDefaultDate(''); setDefaultHour(''); setFormOpen(true); }}
+        aria-label="Nuevo evento"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* ── Área del calendario ── */}
