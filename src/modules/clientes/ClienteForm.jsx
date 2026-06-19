@@ -10,6 +10,7 @@ import { useTiposClienteStore } from '../../store/tiposClienteStore';
 import { useServiciosHospitalStore } from '../../store/serviciosHospitalStore';
 import { useVisitasStore } from '../../store/visitasStore';
 import { useAgendaStore } from '../../store/agendaStore';
+import { useSeguimientoStore } from '../../store/seguimientoStore';
 import { geocodificar } from '../../utils/geocode';
 import { Loader2 } from 'lucide-react';
 
@@ -24,6 +25,8 @@ const empty = {
 function genId() { return `srv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`; }
 
 const emptyVisita = { activa: false, fecha: '', hora: '', comercialId: '', objetivo: '', resultado: '' };
+const hoy = new Date().toISOString().slice(0, 10);
+const emptySeguimiento = { activo: false, tipo: 'whatsapp', nota: '', fecha: hoy };
 
 export default function ClienteForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
@@ -31,9 +34,11 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
   const [cpLoading, setCpLoading] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
   const [primeraVisita, setPrimeraVisita] = useState(emptyVisita);
+  const [primerContacto, setPrimerContacto] = useState(emptySeguimiento);
   const cpAbort = useRef(null);
 
-  const { isCarlos, CARLOS_ESPECIALIDADES, users } = useAuthStore();
+  const { user, isCarlos, CARLOS_ESPECIALIDADES, users } = useAuthStore();
+  const { addContacto } = useSeguimientoStore();
   const { addVisita } = useVisitasStore();
   const addEvento = useAgendaStore(s => s.addEvento);
   const { especialidades } = useEspecialidadesStore();
@@ -53,6 +58,7 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
       setErrors({});
       setCpLoading(false);
       setPrimeraVisita(emptyVisita);
+      setPrimerContacto({ ...emptySeguimiento, fecha: new Date().toISOString().slice(0, 10) });
     }
   }, [open, initial]);
 
@@ -135,6 +141,17 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
       });
       // No agenda event for Realizada visits
       void visita;
+    }
+
+    // Crear primer contacto de seguimiento si el toggle está activo
+    if (!initial && primerContacto.activo && savedCliente?.id) {
+      await addContacto({
+        clienteId: savedCliente.id,
+        usuarioId: user.id,
+        tipo: primerContacto.tipo,
+        fecha: primerContacto.fecha,
+        nota: primerContacto.nota,
+      });
     }
 
     onClose();
@@ -318,6 +335,65 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
           <textarea {...inp('notas')} rows={3} placeholder="Observaciones..."
             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none" />
         </div>
+
+        {/* ── Primer contacto de seguimiento (solo en creación) ── */}
+        {!initial && (
+          <div className="border border-gray-100 bg-gray-50/60 rounded-xl p-4 space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={primerContacto.activo}
+                onChange={e => setPrimerContacto(v => ({ ...v, activo: e.target.checked }))}
+                className="w-4 h-4 rounded border-gray-300 accent-[#1B4F8A] cursor-pointer"
+              />
+              <span className="text-sm font-semibold text-gray-700">¿Ya has contactado a este cliente?</span>
+            </label>
+            {primerContacto.activo && (
+              <div className="space-y-3 pt-1">
+                {/* Tipo de contacto */}
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-2">Tipo de contacto</p>
+                  <div className="flex gap-2">
+                    {[
+                      { key: 'whatsapp', label: 'WhatsApp', color: '#25D366', bg: primerContacto.tipo === 'whatsapp' ? '#dcfce7' : '#f9fafb', border: primerContacto.tipo === 'whatsapp' ? '#25D366' : '#e5e7eb' },
+                      { key: 'email',    label: 'Email',    color: '#1B4F8A', bg: primerContacto.tipo === 'email'    ? '#dbeafe' : '#f9fafb', border: primerContacto.tipo === 'email'    ? '#1B4F8A' : '#e5e7eb' },
+                      { key: 'llamada',  label: 'Llamada',  color: '#f59e0b', bg: primerContacto.tipo === 'llamada'  ? '#fef9c3' : '#f9fafb', border: primerContacto.tipo === 'llamada'  ? '#f59e0b' : '#e5e7eb' },
+                    ].map(({ key, label, color, bg, border }) => (
+                      <button key={key} type="button"
+                        onClick={() => setPrimerContacto(v => ({ ...v, tipo: key }))}
+                        style={{ background: bg, borderColor: border, color }}
+                        className="flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer">
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Nota y fecha */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Nota breve</label>
+                    <input
+                      type="text"
+                      value={primerContacto.nota}
+                      onChange={e => setPrimerContacto(v => ({ ...v, nota: e.target.value }))}
+                      placeholder="¿De qué hablaste?"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
+                    <input
+                      type="date"
+                      value={primerContacto.fecha}
+                      onChange={e => setPrimerContacto(v => ({ ...v, fecha: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Primera visita (solo en creación) ── */}
         {!initial && (
