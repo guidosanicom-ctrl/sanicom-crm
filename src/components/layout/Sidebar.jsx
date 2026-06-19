@@ -44,8 +44,8 @@ export default function Sidebar({ open, onClose }) {
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        {/* Navigation — scroll solo aquí, con soporte iOS */}
+        <nav className="flex-1 px-3 py-4 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
           <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Menú principal</p>
           {NAV_ITEMS.map(({ path, label, icon: Icon, module }) => {
             const accessible = canAccess(module);
@@ -67,8 +67,8 @@ export default function Sidebar({ open, onClose }) {
           })}
         </nav>
 
-        {/* User + Logout — siempre visible en la parte inferior */}
-        <div className="px-4 py-4 border-t border-white/10 bg-[#1B4F8A]">
+        {/* User + Logout — flex-shrink-0 garantiza que nunca se comprima ni desaparezca */}
+        <div className="flex-shrink-0 px-4 py-4 border-t border-white/10 bg-[#1B4F8A]">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-9 h-9 rounded-full bg-[#3ABDD5] flex items-center justify-center flex-shrink-0">
               <span className="text-white text-sm font-bold">{user?.name?.charAt(0)}</span>

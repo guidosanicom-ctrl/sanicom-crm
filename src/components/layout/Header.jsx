@@ -1,20 +1,29 @@
-import { Menu, Bell } from 'lucide-react';
+import { Menu, Bell, LogOut } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotificacionesStore } from '../../store/notificacionesStore';
+import { useAuthStore } from '../../store/authStore';
 import { formatDateTime } from '../../utils/formatters';
 
 export default function Header({ onMenuClick, title }) {
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
   const { notificaciones, markRead, markAllRead, unreadCount } = useNotificacionesStore();
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const ref = useRef(null);
+  const userRef = useRef(null);
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setShowNotifs(false); };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setShowNotifs(false);
+      if (userRef.current && !userRef.current.contains(e.target)) setShowUserMenu(false);
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   const count = unreadCount();
   const recent = notificaciones.slice(0, 8);
@@ -28,7 +37,33 @@ export default function Header({ onMenuClick, title }) {
         <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
       </div>
 
-      <div className="flex items-center gap-3" ref={ref}>
+      <div className="flex items-center gap-2">
+        {/* Avatar con logout — solo móvil */}
+        <div className="relative lg:hidden" ref={userRef}>
+          <button
+            onClick={() => setShowUserMenu(v => !v)}
+            className="w-8 h-8 rounded-full bg-[#1B4F8A] flex items-center justify-center cursor-pointer"
+          >
+            <span className="text-white text-xs font-bold">{user?.name?.charAt(0)}</span>
+          </button>
+          {showUserMenu && (
+            <div className="absolute right-0 top-11 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="text-sm font-semibold text-gray-800 truncate">{user?.name}</p>
+                <p className="text-xs text-gray-400 truncate">{user?.role}</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 text-sm font-medium cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                Cerrar sesión
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3" ref={ref}>
         <div className="relative">
           <button
             onClick={() => setShowNotifs(!showNotifs)}
@@ -76,6 +111,7 @@ export default function Header({ onMenuClick, title }) {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
     </header>
