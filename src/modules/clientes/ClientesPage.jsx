@@ -373,8 +373,8 @@ export default function ClientesPage() {
         </div>
       )}
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-3 items-center justify-between">
+      {/* Toolbar — escritorio */}
+      <div className="hidden sm:flex flex-wrap gap-3 items-center justify-between">
         <div className="flex flex-wrap gap-2 flex-1 min-w-0">
           <SearchBar
             value={search}
@@ -403,19 +403,10 @@ export default function ClientesPage() {
         </div>
         <div className="flex gap-2">
           {!carlos && <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>}
-          {!carlos && (
-            <Button variant="outline" size="sm" onClick={() => setSanicomOpen(true)}>
-              <Upload className="w-4 h-4" />Importar planilla Sanicom
-            </Button>
-          )}
-          {!carlos && (
-            <Button variant="outline" size="sm" onClick={() => setDupOpen(true)}>
-              <Copy className="w-4 h-4" />Gestionar duplicados
-            </Button>
-          )}
+          {!carlos && <Button variant="outline" size="sm" onClick={() => setSanicomOpen(true)}><Upload className="w-4 h-4" />Importar planilla Sanicom</Button>}
+          {!carlos && <Button variant="outline" size="sm" onClick={() => setDupOpen(true)}><Copy className="w-4 h-4" />Gestionar duplicados</Button>}
           {carlos && (
-            <button
-              onClick={() => setVistaSegui(v => !v)}
+            <button onClick={() => setVistaSegui(v => !v)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer
                 ${vistaSegui ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
               <ClipboardList className="w-4 h-4" />Seguimiento
@@ -423,6 +414,50 @@ export default function ClientesPage() {
           )}
           <Button size="sm" onClick={() => setFormOpen(true)}><Plus className="w-4 h-4" />Nuevo cliente</Button>
         </div>
+      </div>
+
+      {/* Toolbar — móvil */}
+      <div className="flex sm:hidden flex-col gap-2">
+        {/* Fila 1: buscador */}
+        <SearchBar
+          value={search}
+          onChange={s => { setSearch(s); setPage(1); }}
+          placeholder="Buscar por nombre, ciudad..."
+          className="w-full"
+        />
+        {/* Fila 2: filtros scrollables */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <select className="flex-shrink-0 px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+            value={filterTipo} onChange={e => { setFilterTipo(e.target.value); setPage(1); }}>
+            <option value="">Tipo</option>
+            {tiposCliente.map(t => <option key={t}>{t}</option>)}
+          </select>
+          <select className="flex-shrink-0 px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+            value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1); }}>
+            <option value="">Estado</option>
+            <option>Activo</option><option>Inactivo</option>
+          </select>
+          <select className="flex-shrink-0 px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+            value={filterEsp} onChange={e => { setFilterEsp(e.target.value); setFilterSubesp(''); setPage(1); }}>
+            <option value="">Especialidad</option>
+            {espOptions.map(e => <option key={e}>{e}</option>)}
+          </select>
+          {filterEsp === 'Fisioterapia' && (
+            <select className="flex-shrink-0 px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+              value={filterSubesp} onChange={e => { setFilterSubesp(e.target.value); setPage(1); }}>
+              <option value="">Subespecialidad</option>
+              {subespecialidades.map(s => <option key={s}>{s}</option>)}
+            </select>
+          )}
+        </div>
+        {/* Fila 3: Seguimiento (solo Carlos) */}
+        {carlos && (
+          <button onClick={() => setVistaSegui(v => !v)}
+            className={`w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer
+              ${vistaSegui ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'bg-white text-gray-600 border-gray-200'}`}>
+            <ClipboardList className="w-4 h-4" />Seguimiento
+          </button>
+        )}
       </div>
 
       {/* Vista Seguimiento */}
@@ -484,93 +519,118 @@ export default function ClientesPage() {
         </div>
       )}
 
-      {/* Table */}
-      {vistaSegui ? null : <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {filtered.length === 0 ? (
-          viewingSelected ? (
-            <div className="py-16 text-center">
-              <Eye className="w-8 h-8 mx-auto mb-3 text-gray-300" />
-              <p className="text-sm text-gray-500 font-medium">No hay clientes seleccionados visibles</p>
-              <p className="text-xs text-gray-400 mt-1">Cambia los filtros o selecciona clientes en la lista</p>
-              <button onClick={() => setViewingSelected(false)} className="mt-3 text-xs text-[#1B4F8A] hover:underline cursor-pointer">
-                Volver a la lista completa
-              </button>
-            </div>
+      {/* Lista de clientes */}
+      {vistaSegui ? null : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          {filtered.length === 0 ? (
+            viewingSelected ? (
+              <div className="py-16 text-center">
+                <Eye className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm text-gray-500 font-medium">No hay clientes seleccionados visibles</p>
+                <p className="text-xs text-gray-400 mt-1">Cambia los filtros o selecciona clientes en la lista</p>
+                <button onClick={() => setViewingSelected(false)} className="mt-3 text-xs text-[#1B4F8A] hover:underline cursor-pointer">
+                  Volver a la lista completa
+                </button>
+              </div>
+            ) : (
+              <EmptyState icon={Users} title="Sin clientes" message="No se encontraron clientes con los filtros actuales." action={() => setFormOpen(true)} actionLabel="Nuevo cliente" />
+            )
           ) : (
-            <EmptyState icon={Users} title="Sin clientes" message="No se encontraron clientes con los filtros actuales." action={() => setFormOpen(true)} actionLabel="Nuevo cliente" />
-          )
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className="px-4 py-3 w-10">
-                      <input
-                        type="checkbox"
-                        className={chk}
-                        checked={allPageSelected}
-                        ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }}
-                        onChange={togglePage}
-                        title="Seleccionar página"
-                      />
-                    </th>
-                    {['Nombre', 'Contacto', 'Tipo', 'Especialidad', 'Teléfono', 'Email', 'Ciudad', 'País', 'Alta', 'Estado'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {paginated.map(c => {
-                    const isSelected = selected.has(c.id);
-                    const esContactado = carlos && contactos.some(x => x.clienteId === c.id);
-                    return (
-                      <tr
-                        key={c.id}
-                        className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/60 hover:bg-blue-100/60' : esContactado ? 'hover:bg-green-100/40' : 'hover:bg-gray-50'}`}
-                        style={!isSelected && esContactado ? { backgroundColor: '#DCFCE7' } : undefined}
-                        onClick={() => navigate(`/clientes/${c.id}`)}
-                      >
-                        <td className="px-4 py-3 w-10" onClick={e => toggleOne(c.id, e)}>
-                          <input type="checkbox" className={chk} checked={isSelected} onChange={() => {}} />
-                        </td>
-                        <td className="px-4 py-3 font-medium text-[#1B4F8A]">{c.nombre}</td>
-                        <td className="px-4 py-3 text-gray-500">{c.contactoPrincipal || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600">{c.tipo}</td>
-                        <td className="px-4 py-3 text-gray-500">
-                          {c.especialidad
-                            ? c.subespecialidad
-                              ? `${c.especialidad} (${c.subespecialidad})`
-                              : c.especialidad
-                            : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-gray-500">{c.telefono || '-'}</td>
-                        <td className="px-4 py-3 text-gray-500">{c.email || '-'}</td>
-                        <td className="px-4 py-3 text-gray-500">{c.ciudad || '-'}</td>
-                        <td className="px-4 py-3 text-gray-500">{c.pais || 'España'}</td>
-                        <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{formatDate(c.fechaAlta)}</td>
-                        <td className="px-4 py-3">
-                          <Badge color={c.estado === 'Activo' ? 'green' : 'gray'}>{c.estado}</Badge>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-4 pb-4">
-              <Pagination
-                page={page}
-                total={filtered.length}
-                perPage={perPage}
-                onChange={p => setPage(p)}
-                onPerPageChange={n => { setPerPage(n); setPage(1); }}
-                perPageOptions={[25, 50, 100]}
-              />
-            </div>
-          </>
-        )}
-      </div>}
+            <>
+              {/* Cards — solo móvil */}
+              <div className="sm:hidden divide-y divide-gray-50">
+                {paginated.map(c => {
+                  const esContactado = carlos && contactos.some(x => x.clienteId === c.id);
+                  return (
+                    <div key={c.id}
+                      className="flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-gray-50"
+                      style={esContactado ? { backgroundColor: '#DCFCE7' } : undefined}
+                      onClick={() => navigate(`/clientes/${c.id}`)}>
+                      <div className="w-9 h-9 rounded-full bg-[#1B4F8A]/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-[#1B4F8A]">{c.nombre?.charAt(0)?.toUpperCase()}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#1B4F8A] truncate">{c.nombre}</p>
+                        <p className="text-xs text-gray-400 truncate">{[c.especialidad, c.ciudad].filter(Boolean).join(' · ')}</p>
+                        {c.telefono && <p className="text-xs text-gray-500 mt-0.5">{c.telefono}</p>}
+                      </div>
+                      <Badge color={c.estado === 'Activo' ? 'green' : 'gray'}>{c.estado}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Tabla — escritorio */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="px-4 py-3 w-10">
+                        <input type="checkbox" className={chk} checked={allPageSelected}
+                          ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }}
+                          onChange={togglePage} title="Seleccionar página" />
+                      </th>
+                      {['Nombre', 'Contacto', 'Tipo', 'Especialidad', 'Teléfono', 'Email', 'Ciudad', 'País', 'Alta', 'Estado'].map(h => (
+                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {paginated.map(c => {
+                      const isSelected = selected.has(c.id);
+                      const esContactado = carlos && contactos.some(x => x.clienteId === c.id);
+                      return (
+                        <tr key={c.id}
+                          className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/60 hover:bg-blue-100/60' : esContactado ? 'hover:bg-green-100/40' : 'hover:bg-gray-50'}`}
+                          style={!isSelected && esContactado ? { backgroundColor: '#DCFCE7' } : undefined}
+                          onClick={() => navigate(`/clientes/${c.id}`)}>
+                          <td className="px-4 py-3 w-10" onClick={e => toggleOne(c.id, e)}>
+                            <input type="checkbox" className={chk} checked={isSelected} onChange={() => {}} />
+                          </td>
+                          <td className="px-4 py-3 font-medium text-[#1B4F8A]">{c.nombre}</td>
+                          <td className="px-4 py-3 text-gray-500">{c.contactoPrincipal || '-'}</td>
+                          <td className="px-4 py-3 text-gray-600">{c.tipo}</td>
+                          <td className="px-4 py-3 text-gray-500">
+                            {c.especialidad ? (c.subespecialidad ? `${c.especialidad} (${c.subespecialidad})` : c.especialidad) : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-gray-500">{c.telefono || '-'}</td>
+                          <td className="px-4 py-3 text-gray-500">{c.email || '-'}</td>
+                          <td className="px-4 py-3 text-gray-500">{c.ciudad || '-'}</td>
+                          <td className="px-4 py-3 text-gray-500">{c.pais || 'España'}</td>
+                          <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{formatDate(c.fechaAlta)}</td>
+                          <td className="px-4 py-3">
+                            <Badge color={c.estado === 'Activo' ? 'green' : 'gray'}>{c.estado}</Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="px-4 pb-4">
+                <Pagination
+                  page={page}
+                  total={filtered.length}
+                  perPage={perPage}
+                  onChange={p => setPage(p)}
+                  onPerPageChange={n => { setPerPage(n); setPage(1); }}
+                  perPageOptions={[25, 50, 100]}
+                />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* FAB móvil — Nuevo cliente */}
+      <button
+        className="sm:hidden fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-[#1B4F8A] text-white shadow-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+        onClick={() => setFormOpen(true)}
+        aria-label="Nuevo cliente"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
 
       <RutaModal
         open={rutaOpen}
