@@ -294,24 +294,30 @@ export default function PipelinePage() {
       {/* ── Vista móvil (< 640px) ── */}
       {viewMode === 'kanban' && (
         <div className="sm:hidden space-y-3">
-          {/* Tabs de etapa */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-            {ETAPAS_PIPELINE.map(etapa => {
-              const count = oportunidades.filter(o => o.etapa === etapa).length;
-              return (
-                <button
-                  key={etapa}
-                  onClick={() => setMobileTab(etapa)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors
-                    ${mobileTab === etapa
-                      ? 'bg-[#1B4F8A] text-white'
-                      : 'bg-white border border-gray-200 text-gray-600'}`}
-                >
-                  {etapa} {count > 0 && <span className={mobileTab === etapa ? 'opacity-70' : 'text-gray-400'}>({count})</span>}
-                </button>
-              );
-            })}
-          </div>
+          {/* Tabs de etapa — cuadrícula 2×3 */}
+          {(() => {
+            const ETAPA_SHORT = {
+              'Prospecto': 'Prospecto', 'Interesado': 'Interesado',
+              'Propuesta enviada': 'Oferta', 'Negociación': 'Negoc.',
+              'Ganado': 'Ganado', 'Perdido': 'Perdido',
+            };
+            return (
+              <div className="grid grid-cols-3 gap-1.5">
+                {ETAPAS_PIPELINE.map(etapa => {
+                  const count = oportunidades.filter(o => o.etapa === etapa).length;
+                  const active = mobileTab === etapa;
+                  return (
+                    <button key={etapa} onClick={() => setMobileTab(etapa)}
+                      className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg text-xs font-medium transition-colors cursor-pointer
+                        ${active ? 'bg-[#1B4F8A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                      <span>{ETAPA_SHORT[etapa] ?? etapa}</span>
+                      <span className={`text-xs font-bold mt-0.5 ${active ? 'text-white/80' : 'text-gray-400'}`}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Tarjetas de la etapa activa */}
           {(() => {
