@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDemosStore } from '../../store/demosStore';
 import { useClientesStore } from '../../store/clientesStore';
@@ -128,7 +128,8 @@ export default function DemostracionesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-3 items-center justify-between">
+      {/* Toolbar — escritorio */}
+      <div className="hidden sm:flex flex-wrap gap-3 items-center justify-between">
         <div className="flex flex-wrap gap-2">
           <SearchBar value={search} onChange={s => { setSearch(s); setPage(1); }} placeholder="Buscar cliente, equipo..." className="w-56" />
           <select className={sel} value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1); }}>
@@ -143,12 +144,63 @@ export default function DemostracionesPage() {
         <Button size="sm" onClick={() => { setSelected(null); setFormOpen(true); }}><Plus className="w-4 h-4" />Nueva demo</Button>
       </div>
 
+      {/* Toolbar — móvil */}
+      <div className="flex sm:hidden flex-col gap-2">
+        <SearchBar value={search} onChange={s => { setSearch(s); setPage(1); }} placeholder="Buscar cliente, equipo..." className="w-full" />
+        <div className="grid grid-cols-2 gap-2">
+          <select className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+            value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1); }}>
+            <option value="">Todos los estados</option>
+            {ESTADOS_DEMO.map(s => <option key={s}>{s}</option>)}
+          </select>
+          <select className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+            value={filterResp} onChange={e => { setFilterResp(e.target.value); setPage(1); }}>
+            <option value="">Responsable</option>
+            {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+          </select>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {filtered.length === 0 ? (
           <EmptyState icon={PlaySquare} title="Sin demostraciones" message="No hay demostraciones con los filtros actuales." action={() => setFormOpen(true)} actionLabel="Nueva demo" />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Cards — solo móvil */}
+            <div className="sm:hidden divide-y divide-gray-100">
+              {paginated.map(d => {
+                const client = clientes.find(c => c.id === d.clienteId);
+                const equipoLabel = d.equipoNombre || equipos.find(e => e.id === d.equipoId)?.nombre;
+                const resp = users.find(u => u.id === d.responsable);
+                return (
+                  <div key={d.id} className="px-4 py-3 cursor-pointer active:bg-gray-50" onClick={() => openDetail(d)}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-semibold text-[#1B4F8A]">{d.numero}</span>
+                          <Badge color={BADGE_MAP[d.estado] || 'gray'}>{d.estado}</Badge>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-800 mt-1 truncate">{client?.nombre || '-'}</p>
+                        {equipoLabel && <p className="text-xs text-gray-500 mt-0.5 truncate">{equipoLabel}</p>}
+                        <div className="flex items-center gap-3 mt-1 flex-wrap">
+                          {resp && <span className="text-xs text-gray-400">{resp.name}</span>}
+                          {d.fecha && <span className="text-xs text-gray-400">{formatDate(d.fecha)}{d.hora ? ` · ${d.hora}` : ''}</span>}
+                        </div>
+                      </div>
+                      {canEditRecord(d) && (
+                        <button onClick={e => { e.stopPropagation(); openEdit(d); }}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 flex-shrink-0 cursor-pointer">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Tabla — solo escritorio */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
@@ -183,12 +235,22 @@ export default function DemostracionesPage() {
                 </tbody>
               </table>
             </div>
+
             <div className="px-4 pb-4">
               <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
             </div>
           </>
         )}
       </div>
+
+      {/* FAB móvil — Nueva demo */}
+      <button
+        className="sm:hidden fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-[#1B4F8A] text-white shadow-lg flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+        onClick={() => { setSelected(null); setFormOpen(true); }}
+        aria-label="Nueva demo"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
 
       {/* Detail modal */}
       <DemoDetail
