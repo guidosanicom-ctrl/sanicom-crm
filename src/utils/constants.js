@@ -14,6 +14,32 @@ export const ORIGENES_OPP = ['Visita comercial', 'Referido', 'Web', 'Llamada ent
 export const REDES_SOCIALES = ['Instagram', 'Facebook', 'LinkedIn', 'WhatsApp', 'YouTube', 'Otra'];
 export const LUGARES_DEMO = ['Cliente', 'Sala Sanicom', 'Videollamada'];
 export const ROLES = ['Administración', 'Comercial Restringido'];
+
+export const PAISES_COMUNES = ['España', 'Argentina', 'Portugal', 'Francia', 'Italia', 'Alemania', 'Reino Unido', 'Estados Unidos', 'México'];
+export const PAISES_RESTO = [
+  'Afganistán','Albania','Algeria','Andorra','Angola','Antigua y Barbuda','Arabia Saudí','Armenia','Australia','Austria',
+  'Azerbaiyán','Bahamas','Baréin','Bangladés','Barbados','Bélgica','Belice','Benín','Bielorrusia','Bolivia',
+  'Bosnia y Herzegovina','Botsuana','Brasil','Brunéi','Bulgaria','Burkina Faso','Burundi','Bután','Cabo Verde',
+  'Camboya','Camerún','Canadá','Catar','Chad','Chile','China','Chipre','Colombia','Comoras',
+  'Congo','Corea del Norte','Corea del Sur','Costa de Marfil','Costa Rica','Croacia','Cuba','Dinamarca','Dominica',
+  'Ecuador','Egipto','El Salvador','Emiratos Árabes Unidos','Eritrea','Eslovaquia','Eslovenia','Estonia','Esuatini',
+  'Etiopía','Filipinas','Finlandia','Fiyi','Gabón','Gambia','Georgia','Ghana','Granada','Grecia',
+  'Guatemala','Guinea','Guinea-Bisáu','Guinea Ecuatorial','Guyana','Haití','Honduras','Hungría','India','Indonesia',
+  'Irak','Irán','Irlanda','Islandia','Islas Marshall','Islas Salomón','Israel','Jamaica','Japón','Jordania',
+  'Kazajistán','Kenia','Kirguistán','Kiribati','Kuwait','Laos','Lesoto','Letonia','Líbano','Liberia',
+  'Libia','Liechtenstein','Lituania','Luxemburgo','Macedonia del Norte','Madagascar','Malasia','Malaui','Maldivas',
+  'Malí','Malta','Marruecos','Mauricio','Mauritania','Micronesia','Moldavia','Mónaco','Mongolia','Montenegro',
+  'Mozambique','Namibia','Nauru','Nepal','Nicaragua','Níger','Nigeria','Noruega','Nueva Zelanda','Omán',
+  'Países Bajos','Pakistán','Palaos','Palestina','Panamá','Papúa Nueva Guinea','Paraguay','Perú','Polonia',
+  'República Centroafricana','República Checa','República del Congo','República Democrática del Congo','República Dominicana',
+  'Ruanda','Rumanía','Rusia','Samoa','San Cristóbal y Nieves','San Marino','San Vicente y las Granadinas',
+  'Santa Lucía','Santo Tomé y Príncipe','Senegal','Serbia','Seychelles','Sierra Leona','Singapur','Siria',
+  'Somalia','Sri Lanka','Sudáfrica','Sudán','Sudán del Sur','Suecia','Suiza','Surinam','Tailandia',
+  'Tanzania','Tayikistán','Timor Oriental','Togo','Tonga','Trinidad y Tobago','Túnez','Turkmenistán','Turquía',
+  'Tuvalu','Ucrania','Uganda','Uruguay','Uzbekistán','Vanuatu','Venezuela','Vietnam','Yemen','Yibuti',
+  'Zambia','Zimbabue',
+];
+export const PAISES = [...PAISES_COMUNES, '───────────────', ...PAISES_RESTO];
 export const SERVICIOS_HOSPITAL_DEFAULT = [
   'Cardiología', 'Urgencias', 'UCI / Cuidados intensivos', 'Cirugía', 'Traumatología',
   'Pediatría', 'Ginecología', 'Oncología', 'Neurología', 'Radiología',
