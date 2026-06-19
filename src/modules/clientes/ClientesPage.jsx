@@ -521,10 +521,12 @@ export default function ClientesPage() {
                 <tbody className="divide-y divide-gray-50">
                   {paginated.map(c => {
                     const isSelected = selected.has(c.id);
+                    const esContactado = carlos && contactos.some(x => x.clienteId === c.id);
                     return (
                       <tr
                         key={c.id}
-                        className={`hover:bg-gray-50 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/60' : ''}`}
+                        className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/60 hover:bg-blue-100/60' : esContactado ? 'hover:bg-green-100/40' : 'hover:bg-gray-50'}`}
+                        style={!isSelected && esContactado ? { backgroundColor: '#F0FFF4' } : undefined}
                         onClick={() => navigate(`/clientes/${c.id}`)}
                       >
                         <td className="px-4 py-3 w-10" onClick={e => toggleOne(c.id, e)}>
