@@ -12,6 +12,7 @@ import { useVisitasStore } from '../../store/visitasStore';
 import { useNotasStore } from '../../store/notasStore';
 import { useAgendaStore } from '../../store/agendaStore';
 import { useSeguimientoStore } from '../../store/seguimientoStore';
+import { MessageCircle } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
@@ -570,13 +571,14 @@ export default function ClienteDetail() {
   const { servicios } = useServicioStore();
   const { visitas } = useVisitasStore();
   const { notas, addNota, deleteNota } = useNotasStore();
-  const { contactos: todosContactosSeg } = useSeguimientoStore();
+  const { contactos: todosContactosSeg, addContacto: addContactoSeg } = useSeguimientoStore();
   const [activeTab, setActiveTab] = useState('resumen');
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
   const [contactoForm, setContactoForm] = useState(null);
   const [note, setNote] = useState('');
   const [geoLoading, setGeoLoading] = useState(false);
+  const [contactoSegForm, setContactoSegForm] = useState(null);
 
   const { user, users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const carlos = isCarlos();
@@ -677,7 +679,12 @@ export default function ClienteDetail() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {carlos && (
+            <Button size="sm" onClick={() => setContactoSegForm({ tipo: 'whatsapp', fecha: new Date().toISOString().slice(0,10), nota: '' })}>
+              <MessageCircle className="w-4 h-4" />Registrar contacto
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}><Edit className="w-4 h-4" />Editar</Button>
           <Button variant="danger" size="sm" onClick={() => setDelOpen(true)}><Trash2 className="w-4 h-4" />Eliminar</Button>
         </div>
@@ -981,6 +988,75 @@ export default function ClienteDetail() {
               </div>
             )}
           </Card>
+        </div>
+      )}
+
+      {/* Mini formulario rápido de seguimiento */}
+      {contactoSegForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setContactoSegForm(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-800">Registrar contacto</h3>
+              <button onClick={() => setContactoSegForm(null)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Tipo */}
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-2">Tipo de contacto</p>
+              <div className="flex gap-2">
+                {[
+                  { key: 'whatsapp', label: '💬 WhatsApp', color: '#25D366', selBg: '#dcfce7', selBorder: '#25D366' },
+                  { key: 'email',    label: '📧 Email',    color: '#1B4F8A', selBg: '#dbeafe', selBorder: '#1B4F8A' },
+                  { key: 'llamada',  label: '📞 Llamada',  color: '#f59e0b', selBg: '#fef9c3', selBorder: '#f59e0b' },
+                ].map(({ key, label, color, selBg, selBorder }) => {
+                  const sel = contactoSegForm.tipo === key;
+                  return (
+                    <button key={key} type="button"
+                      onClick={() => setContactoSegForm(f => ({ ...f, tipo: key }))}
+                      style={sel ? { background: selBg, borderColor: selBorder, color } : {}}
+                      className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer
+                        ${sel ? '' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Fecha */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
+              <input type="date" value={contactoSegForm.fecha}
+                onChange={e => setContactoSegForm(f => ({ ...f, fecha: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+            </div>
+
+            {/* Nota */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nota breve</label>
+              <input type="text" value={contactoSegForm.nota}
+                onChange={e => setContactoSegForm(f => ({ ...f, nota: e.target.value }))}
+                placeholder="¿De qué hablaste?"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                onKeyDown={async e => {
+                  if (e.key === 'Enter') {
+                    await addContactoSeg({ clienteId: id, usuarioId: user.id, tipo: contactoSegForm.tipo, fecha: contactoSegForm.fecha, nota: contactoSegForm.nota });
+                    setContactoSegForm(null);
+                  }
+                }}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end pt-1">
+              <Button variant="outline" size="sm" onClick={() => setContactoSegForm(null)}>Cancelar</Button>
+              <Button size="sm" onClick={async () => {
+                await addContactoSeg({ clienteId: id, usuarioId: user.id, tipo: contactoSegForm.tipo, fecha: contactoSegForm.fecha, nota: contactoSegForm.nota });
+                setContactoSegForm(null);
+              }}>Guardar</Button>
+            </div>
+          </div>
         </div>
       )}
 
