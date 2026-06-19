@@ -21,8 +21,30 @@ import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 import { useTiposClienteStore } from '../../store/tiposClienteStore';
 import { useSeguimientoStore } from '../../store/seguimientoStore';
 
-const TIPO_ICONS = { whatsapp: '💬', email: '📧', llamada: '📞' };
-const TIPO_LABELS = { whatsapp: 'WhatsApp', email: 'Email', llamada: 'Llamada' };
+const TIPO_CONFIG = {
+  whatsapp: { label: 'WhatsApp', color: '#25D366', bg: '#dcfce7', border: '#86efac', icon: '●' },
+  email:    { label: 'Email',    color: '#1B4F8A', bg: '#eff6ff', border: '#93c5fd', icon: '●' },
+  llamada:  { label: 'Llamada',  color: '#f59e0b', bg: '#fffbeb', border: '#fcd34d', icon: '●' },
+};
+const TIPO_EMOJI = { whatsapp: '💬', email: '📧', llamada: '📞' };
+
+function TipoBtn({ tipo, active, onClick }) {
+  const cfg = TIPO_CONFIG[tipo];
+  return (
+    <button onClick={onClick}
+      style={active ? { backgroundColor: cfg.color, borderColor: cfg.color, color: '#fff' } : {}}
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer
+        ${active ? '' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}>
+      {tipo === 'whatsapp'
+        ? <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 flex-shrink-0" fill={active ? '#fff' : '#25D366'}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.558 4.114 1.528 5.836L.057 23.856a.498.498 0 0 0 .609.609l6.088-1.461A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.877 9.877 0 0 1-5.047-1.381l-.361-.214-3.747.898.931-3.651-.235-.374A9.859 9.859 0 0 1 2.106 12C2.106 6.533 6.533 2.106 12 2.106S21.894 6.533 21.894 12 17.467 21.894 12 21.894z"/></svg>
+        : tipo === 'email'
+          ? <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+          : <Phone className="w-3.5 h-3.5 flex-shrink-0" />
+      }
+      {cfg.label}
+    </button>
+  );
+}
 
 function ContactarForm({ clienteId, usuarioId, onSave, onCancel }) {
   const hoy = new Date().toISOString().split('T')[0];
@@ -39,13 +61,9 @@ function ContactarForm({ clienteId, usuarioId, onSave, onCancel }) {
 
   return (
     <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-2">
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {['whatsapp', 'email', 'llamada'].map(t => (
-          <button key={t} onClick={() => setTipo(t)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer
-              ${tipo === t ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#1B4F8A]'}`}>
-            {TIPO_ICONS[t]} {TIPO_LABELS[t]}
-          </button>
+          <TipoBtn key={t} tipo={t} active={tipo === t} onClick={() => setTipo(t)} />
         ))}
       </div>
       <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
@@ -78,7 +96,7 @@ function ClienteSeguimientoRow({ cliente, contactosCliente, usuarioId, onContact
           <p className="text-xs text-gray-400 truncate">{[cliente.especialidad, cliente.ciudad].filter(Boolean).join(' · ')}</p>
           {ultimo && (
             <p className="text-xs text-gray-400 mt-0.5">
-              Último: {TIPO_ICONS[ultimo.tipo]} {ultimo.fecha}{ultimo.nota && ` — ${ultimo.nota}`}
+              Último: {TIPO_EMOJI[ultimo.tipo]} {ultimo.fecha}{ultimo.nota && ` — ${ultimo.nota}`}
             </p>
           )}
         </button>
@@ -100,7 +118,7 @@ function ClienteSeguimientoRow({ cliente, contactosCliente, usuarioId, onContact
         <div className="mt-2 space-y-1 pl-2 border-l-2 border-gray-100">
           {contactosCliente.sort((a, b) => b.fecha.localeCompare(a.fecha)).map(c => (
             <p key={c.id} className="text-xs text-gray-500">
-              {TIPO_ICONS[c.tipo]} <span className="font-medium">{c.fecha}</span>{c.nota && ` — ${c.nota}`}
+              {TIPO_EMOJI[c.tipo]} <span className="font-medium">{c.fecha}</span>{c.nota && ` — ${c.nota}`}
             </p>
           ))}
         </div>
@@ -119,6 +137,7 @@ function ClienteSeguimientoRow({ cliente, contactosCliente, usuarioId, onContact
 }
 
 function SeguimientoView({ clientes, contactos, usuarioId, onContactar }) {
+  const [tabMovil, setTabMovil] = useState('no');
   const misContactos = contactos.filter(c => c.usuarioId === usuarioId);
   const contactadosIds = new Set(misContactos.map(c => c.clienteId));
 
@@ -136,41 +155,68 @@ function SeguimientoView({ clientes, contactos, usuarioId, onContactar }) {
 
   const getContactos = (clienteId) => misContactos.filter(c => c.clienteId === clienteId);
 
+  const colNoCont = (
+    <div className="space-y-2">
+      {noContactados.length === 0
+        ? <p className="text-sm text-gray-400 text-center py-6">¡Todos contactados! 🎉</p>
+        : noContactados.map(c => (
+            <ClienteSeguimientoRow key={c.id} cliente={c} contactosCliente={getContactos(c.id)}
+              usuarioId={usuarioId} onContactar={onContactar} />
+          ))
+      }
+    </div>
+  );
+
+  const colCont = (
+    <div className="space-y-2">
+      {contactados.length === 0
+        ? <p className="text-sm text-gray-400 text-center py-6">Sin contactados aún.</p>
+        : contactados.map(c => (
+            <ClienteSeguimientoRow key={c.id} cliente={c} contactosCliente={getContactos(c.id)}
+              usuarioId={usuarioId} onContactar={onContactar} />
+          ))
+      }
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-base">📋</span>
-          <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">No contactados</h3>
-          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">{noContactados.length}</span>
-        </div>
-        {noContactados.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">¡Todos los clientes han sido contactados! 🎉</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {noContactados.map(c => (
-              <ClienteSeguimientoRow key={c.id} cliente={c} contactosCliente={getContactos(c.id)}
-                usuarioId={usuarioId} onContactar={onContactar} />
-            ))}
-          </div>
-        )}
+    <div>
+      {/* Tabs móvil (< md) */}
+      <div className="flex md:hidden border-b border-gray-200 mb-4">
+        {[
+          { key: 'no', label: '📋 No contactados', count: noContactados.length, active: 'bg-amber-50 text-amber-700 border-amber-400' },
+          { key: 'si', label: '✅ Contactados',    count: contactados.length,   active: 'bg-green-50 text-green-700 border-green-400' },
+        ].map(tab => (
+          <button key={tab.key} onClick={() => setTabMovil(tab.key)}
+            className={`flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors cursor-pointer
+              ${tabMovil === tab.key ? tab.active : 'border-transparent text-gray-500'}`}>
+            {tab.label} <span className="ml-1 font-bold">({tab.count})</span>
+          </button>
+        ))}
+      </div>
+      <div className="block md:hidden">
+        {tabMovil === 'no' ? colNoCont : colCont}
       </div>
 
-      {contactados.length > 0 && (
+      {/* Columnas escritorio (≥ md) */}
+      <div className="hidden md:grid md:grid-cols-2 gap-6">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-base">✅</span>
+            <span>📋</span>
+            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">No contactados</h3>
+            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">{noContactados.length}</span>
+          </div>
+          {colNoCont}
+        </div>
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <span>✅</span>
             <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Contactados</h3>
             <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">{contactados.length}</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {contactados.map(c => (
-              <ClienteSeguimientoRow key={c.id} cliente={c} contactosCliente={getContactos(c.id)}
-                usuarioId={usuarioId} onContactar={onContactar} />
-            ))}
-          </div>
+          {colCont}
         </div>
-      )}
+      </div>
     </div>
   );
 }
