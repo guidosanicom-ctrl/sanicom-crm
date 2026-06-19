@@ -47,18 +47,15 @@ export default function ClientesPage() {
   const carlos = isCarlos();
   const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
 
-  // Mis clientes recientes (últimos 20 creados o modificados por el usuario actual)
+  // Mis clientes recientes (últimos 20 clientes accesibles, ordenados por actividad reciente)
   const misRecientes = useMemo(() => {
     if (!user?.id) return [];
-    const porEsp = carlos ? clientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : clientes;
-    const muestra = porEsp.slice(0, 3).map(c => ({ nombre: c.nombre, creadoPorId: c.creadoPorId, modificadoPorId: c.modificadoPorId }));
-    console.log(`[misRecientes] user.id=${user.id} carlos=${carlos} total=${clientes.length} porEsp=${porEsp.length} muestra:`, muestra);
-    const result = porEsp
-      .filter(c => c.creadoPorId === user.id || c.modificadoPorId === user.id)
+    const accesibles = carlos
+      ? clientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad))
+      : clientes.filter(c => c.creadoPorId === user.id || c.modificadoPorId === user.id);
+    return accesibles
       .sort((a, b) => new Date(b.fechaModificacion || b.fechaAlta) - new Date(a.fechaModificacion || a.fechaAlta))
       .slice(0, 20);
-    console.log(`[misRecientes] resultado final: ${result.length} clientes`, result.map(c => c.nombre));
-    return result;
   }, [clientes, user, carlos]);
 
   // Filtrado base (sin considerar "ver seleccionados")
