@@ -410,12 +410,14 @@ export default function ClientesPage() {
               <Copy className="w-4 h-4" />Gestionar duplicados
             </Button>
           )}
-          <button
-            onClick={() => setVistaSegui(v => !v)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer
-              ${vistaSegui ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
-            <ClipboardList className="w-4 h-4" />Seguimiento
-          </button>
+          {carlos && (
+            <button
+              onClick={() => setVistaSegui(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer
+                ${vistaSegui ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+              <ClipboardList className="w-4 h-4" />Seguimiento
+            </button>
+          )}
           <Button size="sm" onClick={() => setFormOpen(true)}><Plus className="w-4 h-4" />Nuevo cliente</Button>
         </div>
       </div>
