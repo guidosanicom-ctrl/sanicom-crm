@@ -67,20 +67,20 @@ export default function Sidebar({ open, onClose }) {
           })}
         </nav>
 
-        {/* User + Logout */}
-        <div className="px-4 py-4 border-t border-white/10">
+        {/* User + Logout — siempre visible en la parte inferior */}
+        <div className="px-4 py-4 border-t border-white/10 bg-[#1B4F8A]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-[#3ABDD5] flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-xs font-bold">{user?.name?.charAt(0)}</span>
+            <div className="w-9 h-9 rounded-full bg-[#3ABDD5] flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-sm font-bold">{user?.name?.charAt(0)}</span>
             </div>
             <div className="min-w-0">
-              <p className="text-white text-sm font-medium truncate">{user?.name}</p>
+              <p className="text-white text-sm font-semibold truncate">{user?.name}</p>
               <p className="text-white/50 text-xs truncate">{user?.role}</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg text-sm transition-colors cursor-pointer"
+            className="w-full flex items-center gap-2 px-3 py-2.5 bg-red-500/15 hover:bg-red-500/25 text-red-300 hover:text-red-200 rounded-lg text-sm font-medium transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             Cerrar sesión
