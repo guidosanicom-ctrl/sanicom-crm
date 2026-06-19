@@ -16,12 +16,15 @@ export const useVisitasStore = create((set, get) => ({
     set({ visitas: (data || []).map(r => r.data), initialized: true });
   },
 
-  addVisita: (visitaData) => {
+  addVisita: async (visitaData) => {
     const item = { ...visitaData, id: generateId() };
     set(s => ({ visitas: [...s.visitas, item] }));
-    supabase.from(TABLE).insert({ id: item.id, data: item }).then(({ error }) => {
-      if (error) { console.error(error); set(s => ({ visitas: s.visitas.filter(v => v.id !== item.id) })); }
-    });
+    const { error } = await supabase.from(TABLE).insert({ id: item.id, data: item });
+    if (error) {
+      console.error('[visitasStore] Error guardando visita:', error);
+      set(s => ({ visitas: s.visitas.filter(v => v.id !== item.id) }));
+      return null;
+    }
     return item;
   },
 
@@ -30,7 +33,7 @@ export const useVisitasStore = create((set, get) => ({
     const updated = { ...prev, ...updates };
     set(s => ({ visitas: s.visitas.map(v => v.id === id ? updated : v) }));
     supabase.from(TABLE).update({ data: updated }).eq('id', id).then(({ error }) => {
-      if (error) { console.error(error); set(s => ({ visitas: s.visitas.map(v => v.id === id ? prev : v) })); }
+      if (error) { console.error('[visitasStore] Error actualizando visita:', error); set(s => ({ visitas: s.visitas.map(v => v.id === id ? prev : v) })); }
     });
   },
 

@@ -9,6 +9,7 @@ import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useDemosStore } from '../../store/demosStore';
 import { useServicioStore } from '../../store/servicioStore';
 import { useVisitasStore } from '../../store/visitasStore';
+import { useNotasStore } from '../../store/notasStore';
 import { useAgendaStore } from '../../store/agendaStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -371,7 +372,7 @@ function VisitasTab({ visitas = [], clienteId, clienteNombre, clienteOpps = [] }
     return a.estado === 'Pendiente' ? -1 : 1;
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form?.fecha || !form?.comercialId) return;
     const user = users.find(u => u.id === form.comercialId);
     const visita = { ...form, clienteId, comercialNombre: user?.name || '' };
@@ -379,7 +380,11 @@ function VisitasTab({ visitas = [], clienteId, clienteNombre, clienteOpps = [] }
     if (form.id) {
       updateVisita(form.id, visita);
     } else {
-      const saved = addVisita(visita);
+      const saved = await addVisita(visita);
+      if (!saved) {
+        console.error('[VisitasTab] Error al guardar visita en Supabase');
+        return;
+      }
       if (visita.estado === 'Pendiente') {
         const evento = addEvento({
           tipo: 'Visita comercial',
@@ -532,15 +537,15 @@ export default function ClienteDetail() {
   const { demos } = useDemosStore();
   const { servicios } = useServicioStore();
   const { visitas } = useVisitasStore();
+  const { notas, addNota, deleteNota } = useNotasStore();
   const [activeTab, setActiveTab] = useState('resumen');
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
   const [contactoForm, setContactoForm] = useState(null);
   const [note, setNote] = useState('');
-  const [notes, setNotes] = useState([]);
   const [geoLoading, setGeoLoading] = useState(false);
 
-  const { isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const { user, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const carlos = isCarlos();
 
   const cliente = getCliente(id);
@@ -575,6 +580,7 @@ export default function ClienteDetail() {
   const clienteServices = servicios.filter(s => s.clienteId === id);
   const clienteDemos    = demos.filter(d => d.clienteId === id);
   const clienteVisitas  = visitas.filter(v => v.clienteId === id);
+  const clienteNotas    = notas.filter(n => n.clienteId === id);
 
   // Todos los presupuestos del cliente, de opps y demos
   const todosPresupuestos = [
@@ -582,10 +588,12 @@ export default function ClienteDetail() {
     ...clienteDemos.flatMap(d => (d.presupuestos || []).map(p => ({ ...p, origen: 'Demo', origenNombre: `Demo ${d.numero}` }))),
   ].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-  const addNote = () => {
+  const addNote = async () => {
     if (!note.trim()) return;
-    setNotes(n => [{ text: note, date: new Date().toISOString() }, ...n]);
+    const text = note;
     setNote('');
+    const result = await addNota({ clienteId: id, texto: text, autorId: user?.id, autorNombre: user?.name });
+    if (!result) console.error('[ClienteDetail] No se pudo guardar la nota en Supabase');
   };
 
   // Auto-geocodificar al abrir la ficha si tiene dirección pero no coordenadas
@@ -671,7 +679,7 @@ export default function ClienteDetail() {
                 {cliente.telefono && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-gray-400" />{cliente.telefono}</div>}
                 {cliente.email && <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-gray-400" />{cliente.email}</div>}
                 {cliente.website && <div className="flex items-center gap-2 text-sm"><Globe className="w-4 h-4 text-gray-400" />{cliente.website}</div>}
-                {cliente.direccion && <div className="flex items-center gap-2 text-sm"><MapPin className="w-4 h-4 text-gray-400" />{cliente.direccion}, {cliente.ciudad} {cliente.cp}</div>}
+                {cliente.direccion && <div className="flex items-center gap-2 text-sm"><MapPin className="w-4 h-4 text-gray-400" />{cliente.direccion}, {cliente.ciudad} {cliente.cp}{cliente.pais && cliente.pais !== 'España' ? `, ${cliente.pais}` : ''}</div>}
               </div>
             </Card>
             {cliente.notas && <Card><h3 className="font-semibold text-gray-800 mb-2">Notas internas</h3><p className="text-sm text-gray-600">{cliente.notas}</p></Card>}
@@ -872,15 +880,18 @@ export default function ClienteDetail() {
               onKeyDown={e => e.key === 'Enter' && addNote()} />
             <Button size="sm" onClick={addNote}>Añadir</Button>
           </div>
-          {notes.length === 0 ? <p className="text-sm text-gray-400 text-center py-8">Sin actividad registrada.</p> : (
+          {clienteNotas.length === 0 ? <p className="text-sm text-gray-400 text-center py-8">Sin actividad registrada.</p> : (
             <div className="space-y-3">
-              {notes.map((n, i) => (
-                <div key={i} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
+              {clienteNotas.map(n => (
+                <div key={n.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm text-gray-700">{n.text}</p>
-                    <p className="text-xs text-gray-400 mt-1">{formatDate(n.date)}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-700">{n.texto}</p>
+                    <p className="text-xs text-gray-400 mt-1">{n.autorNombre && <span className="font-medium">{n.autorNombre} · </span>}{formatDate(n.fechaHora)}</p>
                   </div>
+                  <button onClick={() => deleteNota(n.id)} className="p-1 rounded text-gray-300 hover:text-red-400 cursor-pointer flex-shrink-0">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ))}
             </div>
