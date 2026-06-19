@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, Calendar, TrendingUp, PlaySquare,
   Wrench, Package, FolderOpen, Settings, LogOut, X
 } from 'lucide-react';
-import logo from '../../assets/sanicom_logo.png';
+const logo = '/minilogo.png';
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Panel de control', icon: LayoutDashboard, module: 'dashboard' },
