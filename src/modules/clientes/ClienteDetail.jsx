@@ -378,7 +378,7 @@ function VisitasTab({ visitas = [], clienteId, clienteNombre, clienteOpps = [] }
     const visita = { ...form, clienteId, comercialNombre: user?.name || '' };
 
     if (form.id) {
-      updateVisita(form.id, visita);
+      await updateVisita(form.id, visita);
     } else {
       const saved = await addVisita(visita);
       if (!saved) {
@@ -395,7 +395,7 @@ function VisitasTab({ visitas = [], clienteId, clienteNombre, clienteOpps = [] }
           clienteId,
           visitaId: saved.id,
         });
-        updateVisita(saved.id, { eventoAgendaId: evento.id });
+        await updateVisita(saved.id, { eventoAgendaId: evento.id });
       }
     }
     setForm(null);

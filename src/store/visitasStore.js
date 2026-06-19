@@ -18,30 +18,31 @@ export const useVisitasStore = create((set, get) => ({
 
   addVisita: async (visitaData) => {
     const item = { ...visitaData, id: generateId() };
-    set(s => ({ visitas: [...s.visitas, item] }));
     const { error } = await supabase.from(TABLE).insert({ id: item.id, data: item });
     if (error) {
       console.error('[visitasStore] Error guardando visita:', error);
-      set(s => ({ visitas: s.visitas.filter(v => v.id !== item.id) }));
       return null;
     }
+    set(s => ({ visitas: [...s.visitas, item] }));
     return item;
   },
 
-  updateVisita: (id, updates) => {
+  updateVisita: async (id, updates) => {
     const prev = get().visitas.find(v => v.id === id);
     const updated = { ...prev, ...updates };
+    const { error } = await supabase.from(TABLE).update({ data: updated }).eq('id', id);
+    if (error) {
+      console.error('[visitasStore] Error actualizando visita:', error);
+      return;
+    }
     set(s => ({ visitas: s.visitas.map(v => v.id === id ? updated : v) }));
-    supabase.from(TABLE).update({ data: updated }).eq('id', id).then(({ error }) => {
-      if (error) { console.error('[visitasStore] Error actualizando visita:', error); set(s => ({ visitas: s.visitas.map(v => v.id === id ? prev : v) })); }
-    });
   },
 
   deleteVisita: (id) => {
     const prev = get().visitas;
     set(s => ({ visitas: s.visitas.filter(v => v.id !== id) }));
     supabase.from(TABLE).delete().eq('id', id).then(({ error }) => {
-      if (error) { console.error(error); set({ visitas: prev }); }
+      if (error) { console.error('[visitasStore] Error eliminando visita:', error); set({ visitas: prev }); }
     });
   },
 }));
