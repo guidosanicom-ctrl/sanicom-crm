@@ -528,7 +528,7 @@ export default function ClientesPage() {
                       <tr
                         key={c.id}
                         className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/60 hover:bg-blue-100/60' : esContactado ? 'hover:bg-green-100/40' : 'hover:bg-gray-50'}`}
-                        style={!isSelected && esContactado ? { backgroundColor: '#F0FFF4' } : undefined}
+                        style={!isSelected && esContactado ? { backgroundColor: '#DCFCE7' } : undefined}
                         onClick={() => navigate(`/clientes/${c.id}`)}
                       >
                         <td className="px-4 py-3 w-10" onClick={e => toggleOne(c.id, e)}>
