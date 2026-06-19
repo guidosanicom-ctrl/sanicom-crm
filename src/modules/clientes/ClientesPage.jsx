@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Upload, Trash2, Users, Route, X, Eye, Copy, ClipboardList, MessageCircle, Mail, Phone, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useClientesStore } from '../../store/clientesStore';
@@ -223,6 +223,7 @@ function SeguimientoView({ clientes, contactos, usuarioId, onContactar }) {
 
 export default function ClientesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { clientes, addCliente, deleteCliente, deleteClientes, importClientes } = useClientesStore();
   const { user, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const { contactos, addContacto } = useSeguimientoStore();
@@ -246,6 +247,7 @@ export default function ClientesPage() {
   const [sanicomOpen, setSanicomOpen] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
   const [vistaSegui, setVistaSegui] = useState(false);
+  useEffect(() => { setVistaSegui(false); }, [location.key]);
 
   const carlos = isCarlos();
   const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
