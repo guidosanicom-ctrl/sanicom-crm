@@ -11,6 +11,7 @@ import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useServicioStore } from '../../store/servicioStore';
 import { useAgendaStore } from '../../store/agendaStore';
 import { useActividadStore } from '../../store/actividadStore';
+import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/formatters';
 import { usePipelineStore } from '../../store/pipelineStore';
 
@@ -54,6 +55,7 @@ function KpiCard({ icon: Icon, label, value, sub, color = '#1B4F8A', to }) {
 }
 
 export default function DashboardPage() {
+  const { users } = useAuthStore();
   const { clientes } = useClientesStore();
   const { oportunidades } = useOportunidadesStore();
   const { servicios } = useServicioStore();
@@ -98,7 +100,12 @@ export default function DashboardPage() {
     return { activeClients, openOpps: openOpps.length, totalPipeline, pendingServices, upcomingEvents, closeRate, byStage, months };
   }, [clientes, oportunidades, servicios, eventos, ETAPAS_PIPELINE]);
 
-  const feed = useMemo(() => actividad.slice(0, 20), [actividad]);
+  const feed = useMemo(() =>
+    actividad.slice(0, 20).map(item => ({
+      ...item,
+      userName: (item.userId ? users.find(u => u.id === item.userId)?.name : null) || item.userName,
+    })),
+  [actividad, users]);
 
   return (
     <div className="space-y-6">
