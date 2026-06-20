@@ -123,14 +123,29 @@ export default function DashboardPage() {
       .map(s => ({ ...s, clienteNombre: clienteNombre(s.clienteId) }));
     const urgentOTs = activeOTs.filter(s => s.prioridad === 'Urgente').length;
 
-    // Demos
+    // Demos — próximos 7 días (incluye hoy), estados no terminados
+    const nextWeek = new Date(today); nextWeek.setDate(today.getDate() + 7);
+    const DEMO_ESTADOS_EXCLUIDOS = ['Realizada', 'Cancelada'];
+    const tempPorCliente = (clienteId) => {
+      const opp = oportunidades
+        .filter(o => o.clienteId === clienteId && !['Ganado', 'Perdido'].includes(o.etapa))
+        .sort((a, b) => (b.fechaCreacion || '').localeCompare(a.fechaCreacion || ''))[0];
+      return opp?.temperatura || null;
+    };
     const upcomingDemos = demos
       .filter(d => {
-        if (d.estado !== 'Programada') return false;
-        try { return isAfter(parseISO(d.fecha), today); } catch { return false; }
+        if (DEMO_ESTADOS_EXCLUIDOS.includes(d.estado)) return false;
+        try {
+          const fd = parseISO(d.fecha);
+          return fd >= today && fd <= nextWeek;
+        } catch { return false; }
       })
       .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''))
-      .map(d => ({ ...d, clienteNombre: clienteNombre(d.clienteId) }));
+      .map(d => ({
+        ...d,
+        clienteNombre: clienteNombre(d.clienteId),
+        temperatura: tempPorCliente(d.clienteId),
+      }));
 
     // Eventos hoy/mañana
     const upcomingEvents = eventos.filter(e => {
@@ -321,23 +336,35 @@ export default function DashboardPage() {
 
         {/* Próximas demos */}
         <Card>
-          <SectionTitle icon={PlaySquare} label="Próximas demos" action="Ver todas" onAction={() => navigate('/demostraciones')} />
+          <SectionTitle icon={PlaySquare} label="Próximas demos (7 días)" action="Ver todas" onAction={() => navigate('/demostraciones')} />
           {stats.upcomingDemos.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-6">Sin demostraciones próximas</p>
+            <p className="text-sm text-gray-400 text-center py-6">Sin demos programadas esta semana</p>
           ) : (
             <div className="space-y-2">
-              {stats.upcomingDemos.slice(0, 5).map(demo => (
-                <div key={demo.id} className="flex items-start gap-2 p-2 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors" onClick={() => navigate('/demostraciones')}>
-                  <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <PlaySquare className="w-4 h-4 text-purple-600" />
+              {stats.upcomingDemos.slice(0, 5).map(demo => {
+                const TEMP_MAP = { frio: { icon: '❄️', label: 'Frío', cls: 'bg-blue-50 text-blue-500' }, tibio: { icon: '🌤', label: 'Tibio', cls: 'bg-amber-50 text-amber-600' }, caliente: { icon: '🔥', label: 'Caliente', cls: 'bg-red-50 text-red-500' } };
+                const temp = demo.temperatura ? TEMP_MAP[demo.temperatura] : null;
+                let diaMes = '—';
+                try { diaMes = format(parseISO(demo.fecha), "d MMM", { locale: es }); } catch {}
+                return (
+                  <div key={demo.id} className="flex items-start gap-2 p-2 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors" onClick={() => navigate('/demostraciones')}>
+                    {/* Fecha */}
+                    <div className="w-10 flex-shrink-0 flex flex-col items-center justify-center bg-purple-100 rounded-lg py-1.5">
+                      <span className="text-[11px] font-bold text-purple-700 leading-none uppercase">{diaMes.split(' ')[1] || ''}</span>
+                      <span className="text-base font-bold text-purple-800 leading-none">{diaMes.split(' ')[0] || ''}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-gray-800 truncate">{demo.equipoNombre || demo.numero}</p>
+                      <p className="text-[11px] text-gray-500 truncate">{demo.clienteNombre}</p>
+                      {temp && (
+                        <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full mt-0.5 ${temp.cls}`}>
+                          {temp.icon} {temp.label}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-gray-800 truncate">{demo.numero}</p>
-                    <p className="text-[11px] text-gray-500 truncate">{demo.clienteNombre || demo.clienteId || '—'}</p>
-                    <p className="text-[11px] text-purple-600 font-medium">{demo.fecha || '—'}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {stats.upcomingDemos.length > 5 && (
                 <p className="text-xs text-center text-gray-400 pt-1">+{stats.upcomingDemos.length - 5} más</p>
               )}
