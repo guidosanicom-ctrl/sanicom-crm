@@ -71,17 +71,17 @@ function KpiCard({ icon: Icon, label, value, trend, trendIcon: TrendIcon, accent
     >
       {/* Acento vertical */}
       <div className="w-1 flex-shrink-0" style={{ backgroundColor: accent }} />
-      <div className="flex-1 p-4 flex items-start gap-3">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: accent + '18' }}>
-          <Icon className="w-5 h-5" style={{ color: accent }} />
+      <div className="flex-1 p-3 sm:p-4 flex items-start gap-2 sm:gap-3 min-w-0">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: accent + '18' }}>
+          <Icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: accent }} />
         </div>
-        <div className="min-w-0">
-          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide leading-none mb-1">{label}</p>
-          <p className="text-2xl font-bold text-gray-900 leading-none">{value}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] sm:text-xs text-gray-500 font-medium uppercase tracking-wide leading-none mb-1 truncate">{label}</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900 leading-none">{value}</p>
           {trend && (
-            <p className="text-xs mt-1.5 flex items-center gap-0.5" style={{ color: accent }}>
-              {TrendIcon && <TrendIcon className="w-3 h-3" />}
-              {trend}
+            <p className="text-[10px] sm:text-xs mt-1 sm:mt-1.5 flex items-center gap-0.5 truncate" style={{ color: accent }}>
+              {TrendIcon && <TrendIcon className="w-3 h-3 flex-shrink-0" />}
+              <span className="truncate">{trend}</span>
             </p>
           )}
         </div>
@@ -266,9 +266,29 @@ export default function DashboardPage() {
         <Card>
           <SectionTitle icon={TrendingUp} label="Embudo de pipeline" action="Ver todas" onAction={() => navigate('/pipeline')} />
 
-          {/* Flechas — scroll horizontal en móvil */}
-          <div className="overflow-x-auto -mx-1 px-1 pb-1">
-            <div className="flex items-stretch min-w-[520px]" style={{ height: 110 }}>
+          {/* Móvil: lista vertical */}
+          <div className="sm:hidden space-y-1">
+            {FUNNEL_CONFIG.map(({ etapa, label, bg, textColor }) => {
+              const stage = stats.funnelStages.find(s => s.etapa === etapa) || { count: 0, valor: 0 };
+              return (
+                <div
+                  key={etapa}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: bg }}
+                  onClick={() => navigate('/pipeline')}
+                >
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: textColor === '#ffffff' ? 'rgba(255,255,255,0.6)' : textColor }} />
+                  <span className="text-sm font-semibold flex-1 truncate" style={{ color: textColor }}>{label}</span>
+                  <span className="text-lg font-bold leading-none" style={{ color: textColor }}>{stage.count}</span>
+                  <span className="text-xs font-medium ml-2" style={{ color: textColor, opacity: 0.8 }}>{formatCurrency(stage.valor)}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Escritorio: flechas horizontales */}
+          <div className="hidden sm:block">
+            <div className="flex items-stretch" style={{ height: 110 }}>
               {FUNNEL_CONFIG.map(({ etapa, label, bg, textColor }, i) => {
                 const stage = stats.funnelStages.find(s => s.etapa === etapa) || { count: 0, valor: 0 };
                 const isFirst = i === 0;
