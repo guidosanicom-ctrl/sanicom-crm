@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, TrendingUp, Wrench, Calendar, PlaySquare, Briefcase,
@@ -192,6 +192,15 @@ export default function DashboardPage() {
     };
   }, [clientes, oportunidades, servicios, eventos, demos]);
 
+  const [hoy, setHoy] = useState(() => new Date());
+  useEffect(() => {
+    // Refresca a medianoche para que la fecha siempre sea correcta
+    const ahora = new Date();
+    const msSiguienteDia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 1) - ahora;
+    const t = setTimeout(() => { setHoy(new Date()); }, msSiguienteDia);
+    return () => clearTimeout(t);
+  }, [hoy]);
+
   const feed = useMemo(() =>
     actividad.slice(0, 15).map(item => ({
       ...item,
@@ -201,6 +210,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Subtítulo ────────────────────────────────────────── */}
+      <p className="text-sm text-gray-400">
+        Sanicom Medical Systems S.L &nbsp;·&nbsp;{' '}
+        <span className="capitalize">{format(hoy, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}</span>
+      </p>
 
       {/* ── KPIs ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
