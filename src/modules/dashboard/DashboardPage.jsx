@@ -32,11 +32,11 @@ const TIPO_COLOR = {
 };
 
 const FUNNEL_CONFIG = [
-  { etapa: 'Prospecto',         label: 'Prospecto',      bg: '#E6F1FB', textColor: '#1e3a5f' },
-  { etapa: 'Interesado',        label: 'Interesado',     bg: '#B5D4F4', textColor: '#1e3a5f' },
-  { etapa: 'Propuesta enviada', label: 'Oferta enviada', bg: '#85B7EB', textColor: '#1e3a5f' },
-  { etapa: 'Negociación',       label: 'Negociación',    bg: '#378ADD', textColor: '#ffffff' },
-  { etapa: 'Ganado',            label: 'Ganado',         bg: '#639922', textColor: '#ffffff' },
+  { etapa: 'Prospecto',         label: 'Prospecto',      bg: '#E6F1FB', textColor: '#1e3a5f', dot: '#38BDF8' },
+  { etapa: 'Interesado',        label: 'Interesado',     bg: '#B5D4F4', textColor: '#1e3a5f', dot: '#3B82F6' },
+  { etapa: 'Propuesta enviada', label: 'Oferta enviada', bg: '#85B7EB', textColor: '#1e3a5f', dot: '#1B4F8A' },
+  { etapa: 'Negociación',       label: 'Negociación',    bg: '#378ADD', textColor: '#ffffff',  dot: '#F59E0B' },
+  { etapa: 'Ganado',            label: 'Ganado',         bg: '#639922', textColor: '#ffffff',  dot: '#16A34A' },
 ];
 
 const ESPECIALIDADES = ['Fisioterapia', 'Podología', 'Veterinaria'];
@@ -268,7 +268,7 @@ export default function DashboardPage() {
 
           {/* Móvil: lista vertical */}
           <div className="sm:hidden space-y-1">
-            {FUNNEL_CONFIG.map(({ etapa, label, bg, textColor }) => {
+            {FUNNEL_CONFIG.map(({ etapa, label, bg, textColor, dot }) => {
               const stage = stats.funnelStages.find(s => s.etapa === etapa) || { count: 0, valor: 0 };
               return (
                 <div
@@ -277,7 +277,7 @@ export default function DashboardPage() {
                   style={{ backgroundColor: bg }}
                   onClick={() => navigate('/pipeline')}
                 >
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: textColor === '#ffffff' ? 'rgba(255,255,255,0.6)' : textColor }} />
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: dot }} />
                   <span className="text-sm font-semibold flex-1 truncate" style={{ color: textColor }}>{label}</span>
                   <span className="text-lg font-bold leading-none" style={{ color: textColor }}>{stage.count}</span>
                   <span className="text-xs font-medium ml-2" style={{ color: textColor, opacity: 0.8 }}>{formatCurrency(stage.valor)}</span>
@@ -322,20 +322,27 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Barra resumen */}
-          <div className="mt-3 flex items-center gap-4 pt-3 border-t border-gray-100">
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Total pipeline</p>
-              <p className="text-base font-bold text-gray-900">{formatCurrency(stats.totalPipeline)}</p>
-            </div>
-            <div className="w-px h-8 bg-gray-200" />
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Valor ponderado</p>
-              <p className="text-base font-bold text-[#1B4F8A]">{formatCurrency(stats.valorPonderado)}</p>
-            </div>
-            <div className="ml-auto text-right">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Oportunidades</p>
-              <p className="text-base font-bold text-gray-900">{stats.openOpps}</p>
+          {/* Barra resumen — 2×2 en móvil, fila en escritorio */}
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:flex sm:items-center sm:gap-4">
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Total pipeline</p>
+                <p className="text-sm sm:text-base font-bold text-gray-900">{formatCurrency(stats.totalPipeline)}</p>
+              </div>
+              <div className="sm:hidden w-px h-6 bg-gray-200 hidden" />
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Oportunidades</p>
+                <p className="text-sm sm:text-base font-bold text-gray-900">{stats.openOpps}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Valor ponderado</p>
+                <p className="text-sm sm:text-base font-bold text-[#1B4F8A]">{formatCurrency(stats.valorPonderado)}</p>
+              </div>
+              <div className="hidden sm:block w-px h-8 bg-gray-200" />
+              <div className="sm:ml-auto sm:text-right">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Tasa de cierre</p>
+                <p className="text-sm sm:text-base font-bold text-[#16A34A]">{stats.closeRate}%</p>
+              </div>
             </div>
           </div>
         </Card>
