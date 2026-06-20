@@ -4,7 +4,6 @@ import {
   Users, TrendingUp, Wrench, Calendar, PlaySquare, Briefcase,
   Clock, Percent, ArrowUpRight, AlertCircle, ChevronRight,
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, parseISO, formatDistanceToNow, isAfter, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../../components/ui/Card';
@@ -177,24 +176,19 @@ export default function DashboardPage() {
       pct: Math.round((e.count / total) * 100),
     }));
 
-    // Nuevos clientes últimos 6 meses
-    const months = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(); d.setMonth(d.getMonth() - i);
-      const key = format(d, 'yyyy-MM');
-      months.push({
-        name: format(d, 'MMM', { locale: es }),
-        value: clientes.filter(c => c.fechaAlta?.startsWith(key)).length,
-      });
-    }
+    // Clientes nuevos esta semana
+    const sevenDaysAgo = new Date(today); sevenDaysAgo.setDate(today.getDate() - 7);
+    const newThisWeek = clientes.filter(c => {
+      try { return parseISO(c.fechaAlta) >= sevenDaysAgo; } catch { return false; }
+    }).length;
 
     return {
-      activeClients, newThisMonth,
+      activeClients, newThisMonth, newThisWeek,
       openOpps: openOpps.length, totalPipeline,
       activeOTs, urgentOTs,
       upcomingDemos, upcomingEvents,
       closeRate, won, closed,
-      byStage, especData, months,
+      byStage, especData,
     };
   }, [clientes, oportunidades, servicios, eventos, demos]);
 
@@ -267,18 +261,25 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        {/* Nuevos clientes por mes */}
+        {/* Clientes nuevos */}
         <Card>
-          <SectionTitle icon={Users} label="Nuevos clientes (últimos 6 meses)" action="Ver clientes" onAction={() => navigate('/clientes')} />
-          <ResponsiveContainer width="100%" height={190}>
-            <LineChart data={stats.months} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-              <Tooltip />
-              <Line type="monotone" dataKey="value" stroke="#1B4F8A" strokeWidth={2} dot={{ r: 4, fill: '#1B4F8A' }} name="Clientes" />
-            </LineChart>
-          </ResponsiveContainer>
+          <SectionTitle icon={Users} label="Clientes nuevos" action="Ver clientes" onAction={() => navigate('/clientes')} />
+          <div className="grid grid-cols-2 gap-3 mt-1">
+            <div className="rounded-xl p-4 flex flex-col gap-2" style={{ backgroundColor: '#F0FDF4' }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#16A34A18' }}>
+                <ArrowUpRight className="w-4 h-4" style={{ color: '#16A34A' }} />
+              </div>
+              <p className="text-3xl font-bold text-gray-900 leading-none">{stats.newThisMonth}</p>
+              <p className="text-xs font-medium" style={{ color: '#16A34A' }}>Este mes</p>
+            </div>
+            <div className="rounded-xl p-4 flex flex-col gap-2" style={{ backgroundColor: '#EFF6FF' }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#1B4F8A18' }}>
+                <ArrowUpRight className="w-4 h-4" style={{ color: '#1B4F8A' }} />
+              </div>
+              <p className="text-3xl font-bold text-gray-900 leading-none">{stats.newThisWeek}</p>
+              <p className="text-xs font-medium" style={{ color: '#1B4F8A' }}>Esta semana</p>
+            </div>
+          </div>
         </Card>
       </div>
 
