@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotificacionesStore } from '../../store/notificacionesStore';
 import { useAuthStore } from '../../store/authStore';
+import UserAvatar from '../ui/UserAvatar';
 import { formatDateTime } from '../../utils/formatters';
 
 export default function Header({ onMenuClick, title }) {
@@ -40,11 +41,8 @@ export default function Header({ onMenuClick, title }) {
       <div className="flex items-center gap-2">
         {/* Avatar con logout — solo móvil */}
         <div className="relative lg:hidden" ref={userRef}>
-          <button
-            onClick={() => setShowUserMenu(v => !v)}
-            className="w-8 h-8 rounded-full bg-[#1B4F8A] flex items-center justify-center cursor-pointer"
-          >
-            <span className="text-white text-xs font-bold">{user?.name?.charAt(0)}</span>
+          <button onClick={() => setShowUserMenu(v => !v)} className="cursor-pointer">
+            <UserAvatar user={user} size="sm" />
           </button>
           {showUserMenu && (
             <div className="absolute right-0 top-11 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">

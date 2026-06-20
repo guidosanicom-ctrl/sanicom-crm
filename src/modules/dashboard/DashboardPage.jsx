@@ -5,6 +5,7 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../../components/ui/Card';
+import UserAvatar from '../../components/ui/UserAvatar';
 import { useClientesStore } from '../../store/clientesStore';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useServicioStore } from '../../store/servicioStore';
@@ -23,14 +24,6 @@ const TIPO_COLOR = {
   agenda: 'bg-green-100 text-green-600',
 };
 
-function Avatar({ name }) {
-  const initials = name ? name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : '?';
-  return (
-    <div className="w-8 h-8 rounded-full bg-[#1B4F8A] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-      {initials}
-    </div>
-  );
-}
 
 function TimeAgo({ dateStr }) {
   try {
@@ -165,7 +158,7 @@ export default function DashboardPage() {
               const colorCls = TIPO_COLOR[item.tipo] || 'bg-gray-100 text-gray-500';
               return (
                 <div key={item.id || i} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Avatar name={item.userName} />
+                  <UserAvatar name={item.userName} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-sm font-semibold text-gray-800">{item.userName}</span>
