@@ -31,14 +31,13 @@ const TIPO_COLOR = {
   agenda: 'bg-green-100 text-green-600',
 };
 
-const ETAPA_CONFIG = {
-  'Prospecto':          { color: '#38BDF8', bg: '#F0F9FF', border: '#38BDF8' },
-  'Interesado':         { color: '#3B82F6', bg: '#EFF6FF', border: '#3B82F6' },
-  'Propuesta enviada':  { color: '#6366F1', bg: '#EEF2FF', border: '#6366F1' },
-  'Negociación':        { color: '#1B4F8A', bg: '#EFF6FF', border: '#1B4F8A' },
-  'Ganado':             { color: '#16A34A', bg: '#F0FDF4', border: '#16A34A' },
-  'Perdido':            { color: '#6B7280', bg: '#F9FAFB', border: '#6B7280' },
-};
+const FUNNEL_CONFIG = [
+  { etapa: 'Prospecto',         label: 'Prospecto',      bg: '#E6F1FB', textColor: '#1e3a5f' },
+  { etapa: 'Interesado',        label: 'Interesado',     bg: '#B5D4F4', textColor: '#1e3a5f' },
+  { etapa: 'Propuesta enviada', label: 'Oferta enviada', bg: '#85B7EB', textColor: '#1e3a5f' },
+  { etapa: 'Negociación',       label: 'Negociación',    bg: '#378ADD', textColor: '#ffffff' },
+  { etapa: 'Ganado',            label: 'Ganado',         bg: '#639922', textColor: '#ffffff' },
+];
 
 const ESPECIALIDADES = ['Fisioterapia', 'Podología', 'Veterinaria'];
 const BAR_COLORS = ['#1B4F8A', '#3ABDD5', '#0F766E', '#94A3B8'];
@@ -156,13 +155,20 @@ export default function DashboardPage() {
     const closed = oportunidades.filter(o => ['Ganado', 'Perdido'].includes(o.etapa)).length;
     const closeRate = closed > 0 ? Math.round((won / closed) * 100) : 0;
 
-    // Pipeline por etapa
-    const etapaKeys = Object.keys(ETAPA_CONFIG);
-    const byStage = etapaKeys.map(etapa => ({
-      etapa,
-      count: oportunidades.filter(o => o.etapa === etapa).length,
-      valor: oportunidades.filter(o => o.etapa === etapa).reduce((s, o) => s + (o.valor || 0), 0),
-    }));
+    // Embudo pipeline (5 etapas activas, excluye Perdido)
+    const FUNNEL_ETAPAS = ['Prospecto', 'Interesado', 'Propuesta enviada', 'Negociación', 'Ganado'];
+    const PROB_DEFAULT = { Prospecto: 10, Interesado: 25, 'Propuesta enviada': 50, Negociación: 75, Ganado: 100 };
+    const funnelStages = FUNNEL_ETAPAS.map(etapa => {
+      const opps = oportunidades.filter(o => o.etapa === etapa);
+      return {
+        etapa,
+        count: opps.length,
+        valor: opps.reduce((s, o) => s + (o.valor || 0), 0),
+      };
+    });
+    const valorPonderado = oportunidades
+      .filter(o => !['Perdido'].includes(o.etapa))
+      .reduce((s, o) => s + (o.valor || 0) * ((o.probabilidad ?? PROB_DEFAULT[o.etapa] ?? 50) / 100), 0);
 
     // Clientes por especialidad
     const total = clientes.length || 1;
@@ -188,7 +194,7 @@ export default function DashboardPage() {
       activeOTs, urgentOTs,
       upcomingDemos, upcomingEvents,
       closeRate, won, closed,
-      byStage, especData,
+      funnelStages, valorPonderado, especData,
     };
   }, [clientes, oportunidades, servicios, eventos, demos]);
 
@@ -251,28 +257,64 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* ── Pipeline por etapa + Clientes por mes ────────────── */}
+      {/* ── Embudo pipeline + Clientes nuevos ───────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
-        {/* Pipeline etapas 3x2 */}
+        {/* Embudo pipeline */}
         <Card>
-          <SectionTitle icon={TrendingUp} label="Pipeline por etapa" action="Ver todas" onAction={() => navigate('/pipeline')} />
-          <div className="grid grid-cols-3 gap-2">
-            {stats.byStage.map(({ etapa, count, valor }) => {
-              const cfg = ETAPA_CONFIG[etapa] || { color: '#6B7280', bg: '#F9FAFB', border: '#6B7280' };
-              return (
-                <div
-                  key={etapa}
-                  className="rounded-lg p-3 border-l-4 cursor-pointer hover:shadow-sm transition-shadow"
-                  style={{ backgroundColor: cfg.bg, borderLeftColor: cfg.border }}
-                  onClick={() => navigate('/pipeline')}
-                >
-                  <p className="text-[10px] font-semibold uppercase tracking-wide truncate" style={{ color: cfg.color }}>{etapa}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1 leading-none">{count}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">{formatCurrency(valor)}</p>
-                </div>
-              );
-            })}
+          <SectionTitle icon={TrendingUp} label="Embudo de pipeline" action="Ver todas" onAction={() => navigate('/pipeline')} />
+
+          {/* Flechas — scroll horizontal en móvil */}
+          <div className="overflow-x-auto -mx-1 px-1 pb-1">
+            <div className="flex items-stretch min-w-[520px]" style={{ height: 110 }}>
+              {FUNNEL_CONFIG.map(({ etapa, label, bg, textColor }, i) => {
+                const stage = stats.funnelStages.find(s => s.etapa === etapa) || { count: 0, valor: 0 };
+                const isFirst = i === 0;
+                const isLast = i === FUNNEL_CONFIG.length - 1;
+                const NOTCH = 18;
+                const clipPath = isLast
+                  ? 'none'
+                  : isFirst
+                    ? `polygon(0% 0%, calc(100% - ${NOTCH}px) 0%, 100% 50%, calc(100% - ${NOTCH}px) 100%, 0% 100%)`
+                    : `polygon(0% 0%, calc(100% - ${NOTCH}px) 0%, 100% 50%, calc(100% - ${NOTCH}px) 100%, 0% 100%, ${NOTCH}px 50%)`;
+                return (
+                  <div
+                    key={etapa}
+                    className="flex-1 flex flex-col items-center justify-center cursor-pointer transition-opacity hover:opacity-90"
+                    style={{
+                      backgroundColor: bg,
+                      clipPath,
+                      marginRight: isLast ? 0 : `-${NOTCH - 1}px`,
+                      zIndex: FUNNEL_CONFIG.length - i,
+                      paddingLeft: isFirst ? 8 : NOTCH + 4,
+                      paddingRight: isLast ? 8 : NOTCH + 4,
+                    }}
+                    onClick={() => navigate('/pipeline')}
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-center leading-tight" style={{ color: textColor, opacity: 0.75 }}>{label}</p>
+                    <p className="text-2xl font-bold leading-none mt-1" style={{ color: textColor }}>{stage.count}</p>
+                    <p className="text-[10px] font-medium mt-1 text-center" style={{ color: textColor, opacity: 0.8 }}>{formatCurrency(stage.valor)}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Barra resumen */}
+          <div className="mt-3 flex items-center gap-4 pt-3 border-t border-gray-100">
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Total pipeline</p>
+              <p className="text-base font-bold text-gray-900">{formatCurrency(stats.totalPipeline)}</p>
+            </div>
+            <div className="w-px h-8 bg-gray-200" />
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Valor ponderado</p>
+              <p className="text-base font-bold text-[#1B4F8A]">{formatCurrency(stats.valorPonderado)}</p>
+            </div>
+            <div className="ml-auto text-right">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Oportunidades</p>
+              <p className="text-base font-bold text-gray-900">{stats.openOpps}</p>
+            </div>
           </div>
         </Card>
 
