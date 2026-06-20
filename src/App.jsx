@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from './store/authStore';
@@ -76,11 +76,18 @@ function AppInit() {
   return null;
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
 export default function App() {
   const { user } = useAuthStore();
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AppInit />
       <Toaster
         position="top-right"
