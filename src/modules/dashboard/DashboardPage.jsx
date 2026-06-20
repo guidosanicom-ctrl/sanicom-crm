@@ -219,8 +219,7 @@ export default function DashboardPage() {
 
       {/* ── Encabezado ───────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 leading-tight">Panel de control</h1>
-        <p className="text-base font-semibold text-gray-700 mt-0.5">Sanicom Medical Systems S.L</p>
+        <p className="text-2xl font-bold text-gray-900 leading-tight">Sanicom Medical Systems S.L</p>
         <p className="text-sm text-gray-400 mt-0.5 capitalize">
           {format(hoy, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
         </p>
