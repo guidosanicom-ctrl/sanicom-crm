@@ -31,7 +31,7 @@ export const useAuthStore = create((set, get) => ({
   canAccess: (module) => {
     const { user } = get();
     if (!user) return false;
-    if (user.role === 'Administración') return true;
+    if (user.role === 'Administración' || user.role === 'Técnico') return true;
     if (user.role === 'Comercial Restringido') {
       const forbidden = ['configuracion'];
       return !forbidden.includes(module);
@@ -52,7 +52,7 @@ export const useAuthStore = create((set, get) => ({
   canEditRecord: (record) => {
     const { user } = get();
     if (!user) return false;
-    if (user.role === 'Administración') return true;
+    if (user.role === 'Administración' || user.role === 'Técnico') return true;
     if (user.email === 'carlosleal@sanicom.es') return record?.creadoPorId === user.id || record?.responsable === user.id;
     return false;
   },

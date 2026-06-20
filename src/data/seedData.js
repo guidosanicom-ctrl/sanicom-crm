@@ -2,7 +2,7 @@ export const USERS = [
   { id: 'u1', name: 'Julieta Govantes', email: 'administracion@sanicom.es', password: 'sanicom2024', role: 'Administración', active: true, avatarBg: '#7C3AED' },
   { id: 'u2', name: 'Javier Govantes', email: 'jgovantes@sanicom.es', password: 'sanicom2024', role: 'Administración', active: true, avatarBg: '#1B4F8A' },
   { id: 'u3', name: 'Carlos Leal', email: 'carlosleal@sanicom.es', password: 'sanicom2024', role: 'Comercial Restringido', active: true, avatarBg: '#0F766E' },
-  { id: 'u4', name: 'Guido Rosso', email: 'guidorosso@sanicom.es', password: 'sanicom2024', role: 'Administración', active: true, avatarBg: '#B45309' },
+  { id: 'u4', name: 'Guido Rosso', email: 'guidorosso@sanicom.es', password: 'sanicom2024', role: 'Técnico', active: true, avatarBg: '#B45309' },
 ];
 
 export const SEED_CLIENTS = [
