@@ -296,8 +296,7 @@ export default function ClientesPage() {
   // Si "Ver seleccionados" está activo, filtra sobre la lista base
   const filtered = useMemo(() => {
     const base = viewingSelected ? clientes.filter(c => selected.has(c.id)) : baseFiltered;
-    if (carlos) return [...base].sort((a, b) => new Date(b.fechaAlta) - new Date(a.fechaAlta));
-    return base;
+    return [...base].sort((a, b) => new Date(b.fechaAlta) - new Date(a.fechaAlta));
   }, [baseFiltered, viewingSelected, selected, clientes, carlos]);
 
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
