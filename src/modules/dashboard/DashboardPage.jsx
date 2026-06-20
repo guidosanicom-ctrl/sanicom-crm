@@ -217,11 +217,14 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
 
-      {/* ── Subtítulo ────────────────────────────────────────── */}
-      <p className="text-sm text-gray-400">
-        Sanicom Medical Systems S.L &nbsp;·&nbsp;{' '}
-        <span className="capitalize">{format(hoy, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}</span>
-      </p>
+      {/* ── Encabezado ───────────────────────────────────────── */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 leading-tight">Panel de control</h1>
+        <p className="text-base font-semibold text-gray-700 mt-0.5">Sanicom Medical Systems S.L</p>
+        <p className="text-sm text-gray-400 mt-0.5 capitalize">
+          {format(hoy, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+        </p>
+      </div>
 
       {/* ── KPIs ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
