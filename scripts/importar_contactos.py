@@ -113,6 +113,7 @@ HOJAS_IGNORAR = {'Ceuta', 'V.Sevillla', 'V.Sevillla ', 'Clientes Por Teléfono R
 ESTRUCTURA_HOJAS = {
     'N. Sevilla': {
         'col_nombre': 17,
+        'col_telefono': 22,
         'contactos': [
             (13, 'whatsapp', ' (información)'),
             (14, 'whatsapp', ' (contactado)'),
@@ -121,14 +122,14 @@ ESTRUCTURA_HOJAS = {
         ],
     },
     # Grupo Málaga / Córdoba / Almería
-    'Málaga':  {'col_nombre': 15, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
-    'Córdoba': {'col_nombre': 15, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
-    'Almería': {'col_nombre': 15, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
+    'Málaga':  {'col_nombre': 15, 'col_telefono': 20, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
+    'Córdoba': {'col_nombre': 15, 'col_telefono': 20, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
+    'Almería': {'col_nombre': 15, 'col_telefono': 20, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
     # Grupo Cádiz / Huelva / Granada / Jaén
-    'Cádiz':   {'col_nombre': 15, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
-    'Huelva':  {'col_nombre': 15, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
-    'Granada': {'col_nombre': 15, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
-    'Jaén':    {'col_nombre': 15, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
+    'Cádiz':   {'col_nombre': 15, 'col_telefono': 20, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
+    'Huelva':  {'col_nombre': 15, 'col_telefono': 20, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
+    'Granada': {'col_nombre': 15, 'col_telefono': 20, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
+    'Jaén':    {'col_nombre': 15, 'col_telefono': 20, 'contactos': [(12, 'whatsapp', ' (información)'), (13, 'whatsapp', ' (contactado)'), (14, 'email', '')]},
 }
 
 
@@ -150,6 +151,14 @@ def cell_val(ws, row, col):
     return normalizar(ws.cell(row=row, column=col).value)
 
 
+def limpiar_telefono(val):
+    """Quita espacios, guiones y prefijo +34/0034; devuelve solo dígitos."""
+    import re
+    s = re.sub(r'[\s\-\.\(\)]', '', normalizar(val))
+    s = re.sub(r'^(\+34|0034)', '', s)
+    return s
+
+
 def generate_id():
     return str(uuid.uuid4())
 
@@ -160,30 +169,40 @@ def generate_id():
 
 def cargar_clientes(sb, verbose=False):
     """
-    Carga todos los clientes de Supabase y devuelve un dict nombre→id (lowercase).
-    Usa paginación para obtener todos los registros.
+    Carga todos los clientes de Supabase.
+    Devuelve (por_nombre, por_telefono):
+      por_nombre    : dict nombre_lower → id
+      por_telefono  : dict telefono_limpio → id  (solo dígitos, sin +34)
     """
     if verbose:
         print("  Cargando clientes desde Supabase...")
 
-    clientes = {}
+    por_nombre   = {}
+    por_telefono = {}
     page_size = 1000
     offset = 0
 
     while True:
-        res = sb.table(TABLA_CLIENTES).select('id, data->>nombre').range(offset, offset + page_size - 1).execute()
+        res = (sb.table(TABLA_CLIENTES)
+               .select('id, data->>nombre, data->>telefono')
+               .range(offset, offset + page_size - 1)
+               .execute())
         rows = res.data or []
         for row in rows:
+            rid    = row['id']
             nombre = (row.get('nombre') or '').strip()
+            tel    = limpiar_telefono(row.get('telefono') or '')
             if nombre:
-                clientes[nombre.lower()] = row['id']
+                por_nombre[nombre.lower()] = rid
+            if tel:
+                por_telefono[tel] = rid
         if len(rows) < page_size:
             break
         offset += page_size
 
     if verbose:
-        print(f"  → {len(clientes)} clientes cargados")
-    return clientes
+        print(f"  → {len(por_nombre)} clientes cargados ({len(por_telefono)} con teléfono)")
+    return por_nombre, por_telefono
 
 
 def cargar_contactos_existentes(sb, verbose=False):
@@ -223,11 +242,13 @@ def cargar_contactos_existentes(sb, verbose=False):
 # LECTURA DE LA PLANILLA
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def procesar_hoja(ws, estructura, clientes_map, existentes, hoy_str, dry_run, verbose):
+def procesar_hoja(ws, estructura, por_nombre, por_telefono, existentes, hoy_str, dry_run, verbose):
     """
     Recorre las filas de una hoja y devuelve la lista de registros a insertar.
+    Busca el cliente primero por teléfono, luego por nombre exacto.
     """
-    col_nombre = estructura['col_nombre']
+    col_nombre    = estructura['col_nombre']
+    col_telefono  = estructura.get('col_telefono')
     cols_contacto = estructura['contactos']
     nuevos = []
     no_encontrados = []
@@ -238,7 +259,17 @@ def procesar_hoja(ws, estructura, clientes_map, existentes, hoy_str, dry_run, ve
         if not nombre:
             continue
 
-        cliente_id = clientes_map.get(nombre.lower())
+        # 1) Buscar por teléfono
+        cliente_id = None
+        if col_telefono:
+            tel = limpiar_telefono(cell_val(ws, row_idx, col_telefono))
+            if tel:
+                cliente_id = por_telefono.get(tel)
+
+        # 2) Si no encontró, buscar por nombre exacto
+        if not cliente_id:
+            cliente_id = por_nombre.get(nombre.lower())
+
         if not cliente_id:
             no_encontrados.append(nombre)
             if verbose:
@@ -335,8 +366,8 @@ def main():
         print(f"ERROR conectando a Supabase: {e}")
         sys.exit(1)
 
-    clientes_map = cargar_clientes(sb, verbose=args.verbose)
-    existentes   = cargar_contactos_existentes(sb, verbose=args.verbose)
+    por_nombre, por_telefono = cargar_clientes(sb, verbose=args.verbose)
+    existentes               = cargar_contactos_existentes(sb, verbose=args.verbose)
     print()
 
     # ── Abrir Excel ─────────────────────────────────────────────────────────
@@ -371,7 +402,7 @@ def main():
         print(f"📋 Procesando hoja: {nombre_hoja}")
 
         nuevos, no_enc, dupes = procesar_hoja(
-            ws, estructura, clientes_map, existentes,
+            ws, estructura, por_nombre, por_telefono, existentes,
             hoy_str, args.dry_run, args.verbose
         )
 
