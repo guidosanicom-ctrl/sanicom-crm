@@ -341,7 +341,7 @@ def main():
 
     # ── Abrir Excel ─────────────────────────────────────────────────────────
     try:
-        wb = openpyxl.load_workbook(xlsx_path, read_only=True, data_only=True)
+        wb = openpyxl.load_workbook(xlsx_path, read_only=False, data_only=True)
     except Exception as e:
         print(f"ERROR abriendo Excel: {e}")
         sys.exit(1)
