@@ -138,29 +138,83 @@ function ClienteSeguimientoRow({ cliente, contactosCliente, usuarioId, onContact
   );
 }
 
+const DIAS_OPTS = [
+  { label: 'Últimos 30 días', value: 30 },
+  { label: 'Últimos 60 días', value: 60 },
+  { label: 'Últimos 90 días', value: 90 },
+  { label: 'Todos',           value: 0  },
+];
+
+function diasAtras(dias) {
+  if (!dias) return null;
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+const selStyle = 'text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-600 focus:outline-none cursor-pointer';
+
 function SeguimientoView({ clientes, contactos, usuarioId, onContactar }) {
   const [tabMovil, setTabMovil] = useState('no');
-  const misContactos = contactos.filter(c => c.usuarioId === usuarioId);
+  const [diasNoContactados, setDiasNoContactados] = useState(30);
+  const [diasContactados,   setDiasContactados]   = useState(7);
+
+  const misContactos   = contactos.filter(c => c.usuarioId === usuarioId);
   const contactadosIds = new Set(misContactos.map(c => c.clienteId));
 
+  // No contactados: creados dentro del rango, sin ningún contacto
+  const limiteNoCont = diasAtras(diasNoContactados);
   const noContactados = clientes
-    .filter(c => !contactadosIds.has(c.id))
+    .filter(c => {
+      if (contactadosIds.has(c.id)) return false;
+      if (!limiteNoCont) return true;
+      try { return new Date(c.fechaAlta) >= limiteNoCont; } catch { return false; }
+    })
     .sort((a, b) => new Date(b.fechaAlta) - new Date(a.fechaAlta));
 
+  // Contactados: que tengan al menos un contacto dentro del rango
+  const limiteCont = diasAtras(diasContactados);
   const contactados = clientes
-    .filter(c => contactadosIds.has(c.id))
+    .filter(c => {
+      if (!contactadosIds.has(c.id)) return false;
+      if (!limiteCont) return true;
+      const contactosCliente = misContactos.filter(x => x.clienteId === c.id);
+      return contactosCliente.some(x => { try { return new Date(x.fecha) >= limiteCont; } catch { return false; } });
+    })
     .sort((a, b) => {
-      const ua = Math.max(...misContactos.filter(x => x.clienteId === a.id).map(x => new Date(x.fecha)));
-      const ub = Math.max(...misContactos.filter(x => x.clienteId === b.id).map(x => new Date(x.fecha)));
-      return ub - ua;
+      const fechaMax = (id) => Math.max(...misContactos.filter(x => x.clienteId === id).map(x => new Date(x.fecha)));
+      return fechaMax(b.id) - fechaMax(a.id);
     });
 
   const getContactos = (clienteId) => misContactos.filter(c => c.clienteId === clienteId);
 
+  const headerNoCont = (
+    <div className="flex items-center gap-2 mb-3 flex-wrap">
+      <span>📋</span>
+      <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">No contactados</h3>
+      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">{noContactados.length}</span>
+      <select value={diasNoContactados} onChange={e => setDiasNoContactados(Number(e.target.value))} className={`ml-auto ${selStyle}`}>
+        {DIAS_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+
+  const headerCont = (
+    <div className="flex items-center gap-2 mb-3 flex-wrap">
+      <span>✅</span>
+      <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Contactados</h3>
+      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">{contactados.length}</span>
+      <select value={diasContactados} onChange={e => setDiasContactados(Number(e.target.value))} className={`ml-auto ${selStyle}`}>
+        {[{ label: 'Últimos 7 días', value: 7 }, ...DIAS_OPTS].map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+
   const colNoCont = (
     <div className="space-y-2">
       {noContactados.length === 0
-        ? <p className="text-sm text-gray-400 text-center py-6">¡Todos contactados! 🎉</p>
+        ? <p className="text-sm text-gray-400 text-center py-6">¡Todos contactados en este período! 🎉</p>
         : noContactados.map(c => (
             <ClienteSeguimientoRow key={c.id} cliente={c} contactosCliente={getContactos(c.id)}
               usuarioId={usuarioId} onContactar={onContactar} />
@@ -172,7 +226,7 @@ function SeguimientoView({ clientes, contactos, usuarioId, onContactar }) {
   const colCont = (
     <div className="space-y-2">
       {contactados.length === 0
-        ? <p className="text-sm text-gray-400 text-center py-6">Sin contactados aún.</p>
+        ? <p className="text-sm text-gray-400 text-center py-6">Sin contactados en este período.</p>
         : contactados.map(c => (
             <ClienteSeguimientoRow key={c.id} cliente={c} contactosCliente={getContactos(c.id)}
               usuarioId={usuarioId} onContactar={onContactar} />
@@ -197,27 +251,13 @@ function SeguimientoView({ clientes, contactos, usuarioId, onContactar }) {
         ))}
       </div>
       <div className="block md:hidden">
-        {tabMovil === 'no' ? colNoCont : colCont}
+        {tabMovil === 'no' ? <>{headerNoCont}{colNoCont}</> : <>{headerCont}{colCont}</>}
       </div>
 
       {/* Columnas escritorio (≥ md) */}
       <div className="hidden md:grid md:grid-cols-2 gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span>📋</span>
-            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">No contactados</h3>
-            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">{noContactados.length}</span>
-          </div>
-          {colNoCont}
-        </div>
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span>✅</span>
-            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Contactados</h3>
-            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">{contactados.length}</span>
-          </div>
-          {colCont}
-        </div>
+        <div>{headerNoCont}{colNoCont}</div>
+        <div>{headerCont}{colCont}</div>
       </div>
     </div>
   );
