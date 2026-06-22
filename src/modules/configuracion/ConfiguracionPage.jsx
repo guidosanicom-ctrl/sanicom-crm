@@ -14,8 +14,10 @@ import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import toast from 'react-hot-toast';
 import { ROLES } from '../../utils/constants';
 import { Pencil, Trash2, Plus, Check, X } from 'lucide-react';
+import CopiaSeguridad from './CopiaSeguridad';
 
-const TABS = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos', 'Tipos de cliente', 'Servicios hospitalarios', 'Enlace Google Drive'];
+const TABS_BASE = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos', 'Tipos de cliente', 'Servicios hospitalarios', 'Enlace Google Drive'];
+const EMAILS_BACKUP = ['administracion@sanicom.es', 'jgovantes@sanicom.es', 'guidorosso@sanicom.es'];
 
 const EMPRESA_INIT = { nombre: 'Sanicom S.L.', cif: 'B12345678', direccion: 'C/ Ejemplo, 1, Sevilla', telefono: '954 000 000' };
 
@@ -28,6 +30,8 @@ export default function ConfiguracionPage() {
   const { tipos: tiposCliente, addTipo, updateTipo, deleteTipo } = useTiposClienteStore();
   const { servicios: serviciosHospital, addServicio, updateServicio, deleteServicio } = useServiciosHospitalStore();
   const { driveUrl, saveDriveUrl } = useDriveStore();
+  const canBackup = EMAILS_BACKUP.includes(user?.email);
+  const TABS = canBackup ? [...TABS_BASE, 'Copia de seguridad'] : TABS_BASE;
   const [activeTab, setActiveTab] = useState(0);
 
   // Pipeline state — copia local editable, se guarda al pulsar "Guardar"
@@ -754,6 +758,8 @@ export default function ConfiguracionPage() {
           </div>
         </Card>
       )}
+
+      {activeTab === 10 && canBackup && <CopiaSeguridad />}
     </div>
   );
 }

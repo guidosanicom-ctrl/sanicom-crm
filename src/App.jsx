@@ -18,6 +18,7 @@ import { useServiciosHospitalStore } from './store/serviciosHospitalStore';
 import { useDriveStore } from './store/driveStore';
 import { usePipelineStore } from './store/pipelineStore';
 import { useVisitasStore } from './store/visitasStore';
+import { useAppBadge } from './hooks/useAppBadge';
 import { useNotasStore } from './store/notasStore';
 import { useSeguimientoStore } from './store/seguimientoStore';
 import Layout from './components/layout/Layout';
@@ -62,6 +63,8 @@ function AppInit() {
   const initVisitas       = useVisitasStore(s => s.initialize);
   const initNotas         = useNotasStore(s => s.initialize);
   const initSeguimiento   = useSeguimientoStore(s => s.initialize);
+
+  useAppBadge();
 
   useEffect(() => {
     if (!user?.id) return;

@@ -7,7 +7,7 @@ import Badge from '../../components/ui/Badge';
 export default function SanicomImportWizard({ open, onClose, onImport }) {
   const [step, setStep] = useState(1);
   const [clientes, setClientes] = useState([]);
-  const [mode, setMode] = useState('skip');
+
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -46,7 +46,7 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
   const handleImport = async () => {
     setImporting(true);
     try {
-      const result = await onImport(clientes, mode);
+      const result = await onImport(clientes, 'update');
       setImportResult(result);
       setStep(3);
     } finally {
@@ -74,13 +74,7 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
         step === 1 ? null :
         step === 2 ? (
           <>
-            <Button variant="outline" onClick={() => setStep(1)}>Atrás</Button>
-            <Button onClick={() => setStep(2.5)}>Ver opciones →</Button>
-          </>
-        ) :
-        step === 2.5 ? (
-          <>
-            <Button variant="outline" onClick={() => setStep(2)} disabled={importing}>Atrás</Button>
+            <Button variant="outline" onClick={() => setStep(1)} disabled={importing}>Atrás</Button>
             <Button onClick={handleImport} disabled={importing}>
               {importing ? `Importando ${stats.total} clientes…` : `Importar ${stats.total} clientes`}
             </Button>
@@ -93,9 +87,9 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
       {/* Indicador de pasos */}
       {step !== 3 && (
         <div className="flex items-center mb-6">
-          {['Archivo', 'Preview', 'Opciones'].map((s, i) => {
+          {['Archivo', 'Preview'].map((s, i) => {
             const num = i + 1;
-            const cur = step < 2 ? 1 : step < 2.5 ? 2 : 3;
+            const cur = step < 2 ? 1 : 2;
             return (
               <div key={i} className="flex items-center">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
@@ -103,7 +97,7 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
                   {cur > num ? <CheckCircle className="w-4 h-4" /> : num}
                 </div>
                 <span className={`ml-2 text-sm ${cur === num ? 'font-semibold text-gray-800' : 'text-gray-400'}`}>{s}</span>
-                {i < 2 && <div className="w-8 h-px bg-gray-200 mx-3" />}
+                {i < 1 && <div className="w-8 h-px bg-gray-200 mx-3" />}
               </div>
             );
           })}
@@ -236,39 +230,6 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
         </div>
       )}
 
-      {/* Paso 2.5: Opciones de importación */}
-      {step === 2.5 && (
-        <div className="space-y-4">
-          <div className="bg-blue-50 rounded-xl p-4">
-            <p className="text-sm font-semibold text-blue-800">Resumen</p>
-            <ul className="text-sm text-blue-700 mt-2 space-y-1">
-              <li>• {stats.total} clientes a importar</li>
-              <li>• {stats.totalEquipos} equipos que tienen (celdas verdes)</li>
-              <li>• {stats.totalInteres} equipos con interés (celdas celestes)</li>
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Si el cliente ya existe (mismo nombre):</p>
-            <div className="space-y-2">
-              {[
-                { value: 'skip', label: 'Saltar duplicados', desc: 'No modifica clientes que ya existen en el CRM' },
-                { value: 'update', label: 'Actualizar existentes', desc: 'Sobreescribe los datos con los de la planilla (equipos incluidos)' },
-              ].map(o => (
-                <label key={o.value} className="flex items-start gap-3 cursor-pointer p-3 border border-gray-100 rounded-xl hover:bg-gray-50">
-                  <input type="radio" name="mode" value={o.value} checked={mode === o.value}
-                    onChange={() => setMode(o.value)} className="mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">{o.label}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{o.desc}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Paso 3: Resultado */}
       {step === 3 && (
         <div className="py-6 text-center space-y-4">
@@ -295,7 +256,7 @@ export default function SanicomImportWizard({ open, onClose, onImport }) {
             </div>
             <div className="bg-gray-50 rounded-xl p-3">
               <p className="text-2xl font-bold text-gray-500">{importResult?.skipped ?? 0}</p>
-              <p className="text-xs text-gray-500 mt-1">Omitidos (duplicados)</p>
+              <p className="text-xs text-gray-500 mt-1">Actualizados</p>
             </div>
             <div className={`rounded-xl p-3 ${importResult?.dbErrors > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
               <p className={`text-2xl font-bold ${importResult?.dbErrors > 0 ? 'text-red-600' : 'text-gray-300'}`}>

@@ -1,0 +1,17 @@
+{
+  "name": "Sanicom CRM",
+  "short_name": "Sanicom",
+  "description": "CRM de gestión técnica y comercial Sanicom",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#1B4F8A",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/minilogo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

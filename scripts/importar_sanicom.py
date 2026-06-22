@@ -71,6 +71,7 @@ Requiere: pip install openpyxl
 """
 
 import json
+import re
 import sys
 import argparse
 from pathlib import Path
@@ -340,6 +341,33 @@ def main():
                     f'(verde: {n_tiene:3d}, celeste: {n_interes:3d})'
         print(f"  ✔ {nombre_hoja:<35} {len(clientes):3d} clientes  {tipo_nota}")
 
+    # Deduplicar: si el mismo nombre o teléfono aparece varias veces (en distintas hojas),
+    # se conserva la ÚLTIMA ocurrencia (la más reciente importada).
+    seen_nombre = {}   # nombre normalizado → índice en deduped
+    seen_tel    = {}   # teléfono normalizado → índice en deduped
+    deduped     = []
+
+    for c in todos_clientes:
+        n = c['nombre'].lower().strip()
+        t = re.sub(r'[\s\-().]', '', c.get('telefono', '') or '')
+        t = t if len(t) >= 7 else ''
+
+        dup_idx = seen_nombre.get(n)
+        if dup_idx is None and t:
+            dup_idx = seen_tel.get(t)
+
+        if dup_idx is not None:
+            deduped[dup_idx] = c          # reemplaza con la ocurrencia más reciente
+        else:
+            idx = len(deduped)
+            deduped.append(c)
+            seen_nombre[n] = idx
+            if t:
+                seen_tel[t] = idx
+
+    duplicados_eliminados = len(todos_clientes) - len(deduped)
+    todos_clientes = deduped
+
     # Guardar JSON
     salida = Path(args.output) if args.output else archivo.parent / 'clientes_fisio.json'
     with open(salida, 'w', encoding='utf-8') as f:
@@ -350,6 +378,8 @@ def main():
     total_interes = sum(len(c['equipos_interes']) for c in todos_clientes)
 
     print(f"\n{'─' * 55}")
+    if duplicados_eliminados:
+        print(f"🔁 Duplicados eliminados     : {duplicados_eliminados}  (se conservó la última ocurrencia)")
     print(f"✅ Total clientes           : {total}")
     print(f"   Equipos que tienen       : {total_tiene}  (celdas verdes  FF00FF00)")
     print(f"   Equipos con interés      : {total_interes}  (celdas celeste FF00FFFF)")
