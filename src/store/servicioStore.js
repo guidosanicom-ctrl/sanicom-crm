@@ -6,8 +6,26 @@ import { buildAuditEntries, createEntry } from '../utils/auditLog';
 import { useAuthStore } from './authStore';
 import { useActividadStore } from './actividadStore';
 import { useNotificacionesStore } from './notificacionesStore';
+import { useAgendaStore } from './agendaStore';
+import { useClientesStore } from './clientesStore';
 
 const TABLE = 'ordenes_servicio';
+
+const buildEventoData = (servicio) => {
+  const clientes = useClientesStore.getState().clientes;
+  const cliente = clientes.find(c => c.id === servicio.clienteId);
+  const clienteNombre = cliente?.nombre || '';
+  const desc = servicio.descripcion ? servicio.descripcion.slice(0, 40) : servicio.tipo;
+  return {
+    titulo: `OT: ${desc} - ${clienteNombre}`,
+    tipo: 'Reparación/Servicio técnico',
+    inicio: `${servicio.fechaProgramada}T09:00`,
+    fin: `${servicio.fechaProgramada}T10:00`,
+    clienteId: servicio.clienteId,
+    responsable: servicio.tecnico,
+    descripcion: `${servicio.tipo}${servicio.descripcion ? ' — ' + servicio.descripcion : ''}`,
+  };
+};
 
 export const useServicioStore = create((set, get) => ({
   servicios: [],
@@ -31,6 +49,14 @@ export const useServicioStore = create((set, get) => ({
       acciones: [], materiales: [], historial,
       creadoPorId: user?.id || null,
     };
+    // Crear evento en Agenda si se solicitó
+    if (servicioData._agendarEvento && item.fechaProgramada) {
+      const eventoData = buildEventoData(item);
+      const evento = useAgendaStore.getState().addEvento(eventoData);
+      if (evento?.id) {
+        item.eventoId = evento.id;
+      }
+    }
     set(s => ({ servicios: [...s.servicios, item] }));
     supabase.from(TABLE).insert({ id: item.id, data: item }).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ servicios: s.servicios.filter(s => s.id !== item.id) })); }
@@ -52,6 +78,10 @@ export const useServicioStore = create((set, get) => ({
     const prev = get().servicios.find(s => s.id === id);
     const entries = user ? buildAuditEntries(prev, { ...prev, ...updates }, user) : [];
     const updated = { ...prev, ...updates, historial: [...(prev?.historial || []), ...entries] };
+    // Actualizar evento de agenda si existe y se solicitó
+    if (updates._agendarEvento && updated.eventoId && updated.fechaProgramada) {
+      useAgendaStore.getState().updateEvento(updated.eventoId, buildEventoData(updated));
+    }
     set(s => ({ servicios: s.servicios.map(s => s.id === id ? updated : s) }));
     supabase.from(TABLE).update({ data: updated }).eq('id', id).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ servicios: s.servicios.map(s => s.id === id ? prev : s) })); }
@@ -75,6 +105,10 @@ export const useServicioStore = create((set, get) => ({
     const user = useAuthStore.getState().user;
     const target = get().servicios.find(s => s.id === id);
     const prev = get().servicios;
+    // Eliminar evento de agenda vinculado
+    if (target?.eventoId) {
+      useAgendaStore.getState().deleteEvento(target.eventoId);
+    }
     set(s => ({ servicios: s.servicios.filter(s => s.id !== id) }));
     supabase.from(TABLE).delete().eq('id', id).then(({ error }) => {
       if (error) { console.error(error); set({ servicios: prev }); }

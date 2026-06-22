@@ -7,15 +7,19 @@ import { useAuthStore } from '../../store/authStore';
 import { TIPOS_SERVICIO, PRIORIDADES_SERVICIO, ESTADOS_SERVICIO } from '../../utils/constants';
 
 const empty = { clienteId: '', equipoNombre: '', tipo: 'Mantenimiento preventivo', prioridad: 'Normal', fechaProgramada: '', tecnico: '', descripcion: '', nSerie: '', resultado: '', estado: 'Pendiente', confirmacionCliente: false };
+const inp = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none';
 
 export default function ServicioForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial || empty);
   const [errors, setErrors] = useState({});
+  const [agendarEvento, setAgendarEvento] = useState(true);
 
   useEffect(() => {
     if (open) {
       setForm(initial || empty);
       setErrors({});
+      // Si ya tiene evento vinculado al editar, el toggle arranca activado
+      setAgendarEvento(true);
     }
   }, [open, initial]);
 
@@ -37,7 +41,7 @@ export default function ServicioForm({ open, onClose, onSave, initial }) {
 
   const handleSave = () => {
     if (!validate()) return;
-    onSave(form);
+    onSave({ ...form, _agendarEvento: agendarEvento });
     onClose();
     setForm(empty);
   };
@@ -114,6 +118,26 @@ export default function ServicioForm({ open, onClose, onSave, initial }) {
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.confirmacionCliente} onChange={e => set('confirmacionCliente', e.target.checked)} />
             <span className="text-sm text-gray-700">Confirmación del cliente recibida</span>
+          </label>
+        </div>
+
+        {/* Toggle agenda */}
+        <div className="md:col-span-2 pt-2 border-t border-gray-100">
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div
+              onClick={() => setAgendarEvento(v => !v)}
+              className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${agendarEvento ? 'bg-[#1B4F8A]' : 'bg-gray-200'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${agendarEvento ? 'translate-x-5' : ''}`} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700">Programar en Agenda</p>
+              <p className="text-xs text-gray-400">
+                {initial?.eventoId
+                  ? 'Actualizar el evento de agenda vinculado'
+                  : 'Crear evento en Agenda con la fecha programada'}
+              </p>
+            </div>
           </label>
         </div>
       </div>
