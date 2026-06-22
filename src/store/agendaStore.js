@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { fetchAll } from '../lib/supabaseUtils';
 import { generateId } from '../utils/formatters';
+import { useAuthStore } from './authStore';
+import { useNotificacionesStore } from './notificacionesStore';
 const TABLE = 'eventos_agenda';
 
 export const useAgendaStore = create((set, get) => ({
@@ -16,11 +18,22 @@ export const useAgendaStore = create((set, get) => ({
   },
 
   addEvento: (eventoData) => {
-    const item = { ...eventoData, id: generateId() };
+    // _skipNotif: true cuando el evento viene de OT o Demo (esos ya notifican por su cuenta)
+    const { _skipNotif, ...data } = eventoData;
+    const item = { ...data, id: generateId() };
     set(s => ({ eventos: [...s.eventos, item] }));
     supabase.from(TABLE).insert({ id: item.id, data: item }).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ eventos: s.eventos.filter(e => e.id !== item.id) })); }
     });
+    if (!_skipNotif && item.responsable) {
+      const user = useAuthStore.getState().user;
+      if (user && item.responsable !== user.id) {
+        useNotificacionesStore.getState().pushNotificacion(item.responsable, {
+          mensaje: `${user.name} te creó un evento en la agenda: "${item.titulo}"`,
+          tipo: 'agenda', modulo: 'agenda', enlace: '/agenda',
+        });
+      }
+    }
     return item;
   },
 

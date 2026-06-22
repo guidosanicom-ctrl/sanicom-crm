@@ -37,6 +37,16 @@ export const useNotificacionesStore = create((set, get) => ({
     supabase.from(TABLE)
       .insert({ id: nueva.id, user_id: targetUserId, data: nueva })
       .then(({ error }) => { if (error) console.error('[notificacionesStore.push]', error); });
+
+    // Enviar push nativa al dispositivo del usuario destino
+    supabase.functions.invoke('send-push', {
+      body: {
+        targetUserId,
+        title: 'Sanicom CRM',
+        body: notif.mensaje || '',
+        url: `${window.location.origin}${notif.enlace || '/'}`,
+      },
+    }).catch((e) => console.warn('[push-web]', e));
   },
 
   markRead: (id) => {

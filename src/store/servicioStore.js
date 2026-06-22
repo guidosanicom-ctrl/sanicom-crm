@@ -52,7 +52,7 @@ export const useServicioStore = create((set, get) => ({
     // Crear evento en Agenda si se solicitó
     if (servicioData._agendarEvento && item.fechaProgramada) {
       const eventoData = buildEventoData(item);
-      const evento = useAgendaStore.getState().addEvento(eventoData);
+      const evento = useAgendaStore.getState().addEvento({ ...eventoData, _skipNotif: true });
       if (evento?.id) {
         item.eventoId = evento.id;
       }

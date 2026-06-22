@@ -48,7 +48,7 @@ export const useDemosStore = create((set, get) => ({
     const historial = user ? [createEntry('creó esta demostración', user)] : [];
     const item = { ...demoData, id: generateId(), numero, creadoPorId: user?.id || null, historial };
     // Crear evento en agenda vinculado
-    const evento = useAgendaStore.getState().addEvento({ ...buildEventoFromDemo(demoData), demoId: item.id });
+    const evento = useAgendaStore.getState().addEvento({ ...buildEventoFromDemo(demoData), demoId: item.id, _skipNotif: true });
     const itemWithEvento = { ...item, eventoId: evento.id };
     set(s => ({ demos: [...s.demos, itemWithEvento] }));
     supabase.from(TABLE).insert({ id: itemWithEvento.id, data: itemWithEvento }).then(({ error }) => {

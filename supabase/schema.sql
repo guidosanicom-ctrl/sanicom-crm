@@ -98,3 +98,15 @@ begin
     );
   end loop;
 end $$;
+
+-- Tabla de suscripciones push (Web Push API)
+create table if not exists push_subscriptions (
+  id text primary key,
+  user_id text not null,
+  subscription jsonb not null,
+  created_at timestamptz default now()
+);
+alter table push_subscriptions enable row level security;
+drop policy if exists "allow_all_anon" on push_subscriptions;
+create policy "allow_all_anon" on push_subscriptions
+  for all to anon using (true) with check (true);

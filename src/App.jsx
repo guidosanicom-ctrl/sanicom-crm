@@ -19,6 +19,7 @@ import { useDriveStore } from './store/driveStore';
 import { usePipelineStore } from './store/pipelineStore';
 import { useVisitasStore } from './store/visitasStore';
 import { useAppBadge } from './hooks/useAppBadge';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import { useNotasStore } from './store/notasStore';
 import { useSeguimientoStore } from './store/seguimientoStore';
 import Layout from './components/layout/Layout';
@@ -65,6 +66,7 @@ function AppInit() {
   const initSeguimiento   = useSeguimientoStore(s => s.initialize);
 
   useAppBadge();
+  usePushNotifications();
 
   useEffect(() => {
     if (!user?.id) return;
