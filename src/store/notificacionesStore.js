@@ -46,7 +46,10 @@ export const useNotificacionesStore = create((set, get) => ({
         body: notif.mensaje || '',
         url: `${window.location.origin}${notif.enlace || '/'}`,
       },
-    }).catch((e) => console.warn('[push-web]', e));
+    }).then(({ data, error }) => {
+      if (error) console.error('[push-web] error invocando send-push:', error);
+      else console.log('[push-web] send-push respuesta:', data);
+    }).catch((e) => console.error('[push-web] excepción:', e));
   },
 
   markRead: (id) => {

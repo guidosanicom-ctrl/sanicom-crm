@@ -759,7 +759,7 @@ export default function ConfiguracionPage() {
         </Card>
       )}
 
-      {activeTab === 10 && canBackup && <CopiaSeguridad />}
+      {activeTab === TABS.indexOf('Copia de seguridad') && canBackup && <CopiaSeguridad />}
     </div>
   );
 }

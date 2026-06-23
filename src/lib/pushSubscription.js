@@ -28,7 +28,9 @@ export async function registerPushSubscription(userId) {
   const subJson = subscription.toJSON();
   const id = `${userId}_${btoa(subJson.endpoint).slice(-20).replace(/[^a-zA-Z0-9]/g, '')}`;
 
-  await supabase.from('push_subscriptions').upsert({ id, user_id: userId, subscription: subJson });
+  const { error: upsertError } = await supabase.from('push_subscriptions').upsert({ id, user_id: userId, subscription: subJson });
+  if (upsertError) console.error('[push] error guardando suscripción:', upsertError);
+  else console.log('[push] suscripción guardada OK, id:', id, 'userId:', userId);
 }
 
 export async function unregisterPushSubscription(userId) {

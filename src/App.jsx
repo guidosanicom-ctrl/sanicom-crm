@@ -20,6 +20,7 @@ import { usePipelineStore } from './store/pipelineStore';
 import { useVisitasStore } from './store/visitasStore';
 import { useAppBadge } from './hooks/useAppBadge';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { useRealtimeSync } from './hooks/useRealtimeSync';
 import { useNotasStore } from './store/notasStore';
 import { useSeguimientoStore } from './store/seguimientoStore';
 import Layout from './components/layout/Layout';
@@ -67,6 +68,7 @@ function AppInit() {
 
   useAppBadge();
   usePushNotifications();
+  useRealtimeSync(user?.id);
 
   useEffect(() => {
     if (!user?.id) return;
