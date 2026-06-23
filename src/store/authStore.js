@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { USERS } from '../data/seedData';
+import { unregisterPushSubscription } from '../lib/pushSubscription';
 
 const SESSION_KEY = 'sanicom_session';
 
@@ -24,6 +25,7 @@ export const useAuthStore = create((set, get) => ({
   },
 
   logout: () => {
+    unregisterPushSubscription().catch((e) => console.warn('[push] error al desregistrar en logout:', e));
     localStorage.removeItem(SESSION_KEY);
     set({ user: null });
   },

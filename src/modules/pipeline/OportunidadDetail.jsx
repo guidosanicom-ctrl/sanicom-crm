@@ -84,7 +84,7 @@ function GestionTimeline({ oportunidad, demosVinculadas, onUpdate, onCrearDemo }
       ) : null,
     },
     {
-      key: 'presupuesto',
+      key: 'presupuestoEnviado',
       label: 'Presupuesto enviado',
       status: presupStatus,
       auto: false,

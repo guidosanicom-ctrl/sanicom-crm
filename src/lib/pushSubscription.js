@@ -26,20 +26,38 @@ export async function registerPushSubscription(userId) {
   });
 
   const subJson = subscription.toJSON();
-  const id = `${userId}_${btoa(subJson.endpoint).slice(-20).replace(/[^a-zA-Z0-9]/g, '')}`;
+  const endpoint = subJson.endpoint;
 
-  const { error: upsertError } = await supabase.from('push_subscriptions').upsert({ id, user_id: userId, subscription: subJson });
-  if (upsertError) console.error('[push] error guardando suscripción:', upsertError);
-  else console.log('[push] suscripción guardada OK, id:', id, 'userId:', userId);
+  // Eliminar cualquier suscripción previa de este dispositivo (de cualquier usuario)
+  // antes de registrar la nueva, para evitar que otro usuario siga recibiendo notificaciones
+  await supabase
+    .from('push_subscriptions')
+    .delete()
+    .eq('subscription->>endpoint', endpoint);
+
+  const id = `${userId}_${btoa(endpoint).slice(-20).replace(/[^a-zA-Z0-9]/g, '')}`;
+  const { error: insertError } = await supabase
+    .from('push_subscriptions')
+    .insert({ id, user_id: userId, subscription: subJson });
+
+  if (insertError) console.error('[push] error guardando suscripción:', insertError);
+  else console.log('[push] suscripción registrada OK, id:', id, 'userId:', userId);
 }
 
-export async function unregisterPushSubscription(userId) {
+// Llamar al hacer logout: desuscribe el SW y elimina la fila en Supabase
+export async function unregisterPushSubscription() {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.getRegistration('/');
   if (!reg) return;
   const sub = await reg.pushManager.getSubscription();
   if (!sub) return;
-  await sub.unsubscribe();
+
   const endpoint = sub.endpoint;
-  await supabase.from('push_subscriptions').delete().eq('user_id', userId).like('subscription->>endpoint', endpoint);
+  await sub.unsubscribe();
+  await supabase
+    .from('push_subscriptions')
+    .delete()
+    .eq('subscription->>endpoint', endpoint);
+
+  console.log('[push] suscripción eliminada al cerrar sesión');
 }
