@@ -358,6 +358,29 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
               <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{oportunidad.descripcion}</p>
             </div>
           )}
+
+          {/* ── En pausa ── */}
+          <div className="mt-4 flex items-start gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50">
+            <button
+              onClick={() => updateOportunidad(oportunidad.id, {
+                enPausa: !oportunidad.enPausa,
+                ...(oportunidad.enPausa ? { pausaMotivo: null, pausaNota: null, pausaRecordatorio: null } : {}),
+              })}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors mt-0.5 ${oportunidad.enPausa ? 'bg-gray-400' : 'bg-gray-200'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ${oportunidad.enPausa ? 'translate-x-4' : 'translate-x-0'}`} />
+            </button>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-700">⏸️ En pausa</p>
+              {oportunidad.enPausa && (
+                <div className="mt-2 space-y-1 text-xs text-gray-500">
+                  {oportunidad.pausaMotivo && <p><span className="font-medium">Motivo:</span> {oportunidad.pausaMotivo}</p>}
+                  {oportunidad.pausaNota && <p className="italic">"{oportunidad.pausaNota}"</p>}
+                  {oportunidad.pausaRecordatorio && <p><span className="font-medium">Recordatorio:</span> {formatDate(oportunidad.pausaRecordatorio)}</p>}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* ── Timeline de gestión ── */}

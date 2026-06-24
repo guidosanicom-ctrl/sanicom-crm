@@ -10,6 +10,13 @@ import { usePipelineStore } from '../../store/pipelineStore';
 const ESTADOS_CLIENTE = ['Evaluando opciones', 'Esperando aprobación', 'Consultando dirección', 'Silencio', 'Listo para decidir'];
 const FINANCIACIONES = ['Propia', 'Financiación bancaria', 'Leasing', 'Subvención', 'Por definir'];
 const TEMPERATURAS = [{ value: 'frio', label: '❄️ Frío' }, { value: 'tibio', label: '🌤 Tibio' }, { value: 'caliente', label: '🔥 Caliente' }];
+const MOTIVOS_PAUSA = ['Gasto reciente en otro equipo', 'Esperando presupuesto', 'Decisión interna pendiente', 'Problema financiero', 'Competencia', 'Otro'];
+
+function addMonths(months) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0, 10);
+}
 
 const empty = { nombre: '', clienteId: '', equiposDescripcion: '', valor: '', probabilidad: 50, etapa: 'Prospecto', fechaCierre: '', responsable: '', origen: '', descripcion: '', estadoCliente: '', financiacion: '', temperatura: '', notaSeguimiento: '' };
 
@@ -124,6 +131,50 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-1">Descripción</label>
           <textarea value={form.descripcion} onChange={e => set('descripcion', e.target.value)} rows={2} placeholder="Descripción..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
+        </div>
+
+        {/* En pausa */}
+        <div className="md:col-span-2 border-t border-gray-100 pt-4">
+          <div className="flex items-center gap-3 mb-3">
+            <button
+              type="button"
+              onClick={() => set('enPausa', !form.enPausa)}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${form.enPausa ? 'bg-gray-400' : 'bg-gray-200'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ${form.enPausa ? 'translate-x-4' : 'translate-x-0'}`} />
+            </button>
+            <span className="text-sm font-medium text-gray-700">⏸️ En pausa</span>
+          </div>
+          {form.enPausa && (
+            <div className="bg-gray-50 rounded-xl p-3 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Motivo de pausa</label>
+                <select value={form.pausaMotivo || ''} onChange={e => set('pausaMotivo', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
+                  <option value="">Selecciona motivo...</option>
+                  {MOTIVOS_PAUSA.map(m => <option key={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Nota (opcional)</label>
+                <textarea value={form.pausaNota || ''} onChange={e => set('pausaNota', e.target.value)} rows={2}
+                  placeholder="Contexto adicional..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">Recordatorio</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {[['1m', '1 mes'], ['2m', '2 meses'], ['3m', '3 meses']].map(([key, label]) => (
+                    <button key={key} type="button"
+                      onClick={() => set('pausaRecordatorio', addMonths(key === '1m' ? 1 : key === '2m' ? 2 : 3))}
+                      className="px-3 py-1 rounded-lg text-xs font-medium border border-gray-200 bg-white hover:border-gray-400 transition-colors cursor-pointer">
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <input type="date" value={form.pausaRecordatorio || ''} onChange={e => set('pausaRecordatorio', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Nuevos campos de seguimiento */}

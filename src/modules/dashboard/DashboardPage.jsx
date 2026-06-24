@@ -188,6 +188,12 @@ export default function DashboardPage() {
       try { return parseISO(c.fechaAlta) >= sevenDaysAgo; } catch { return false; }
     }).length;
 
+    // Oportunidades en pausa con recordatorio vencido o de hoy
+    const todayStr = format(today, 'yyyy-MM-dd');
+    const oppsARetomar = oportunidades.filter(o =>
+      o.enPausa && o.pausaRecordatorio && o.pausaRecordatorio <= todayStr
+    ).map(o => ({ ...o, clienteNombre: clienteNombre(o.clienteId) }));
+
     return {
       activeClients, newThisMonth, newThisWeek,
       openOpps: openOpps.length, totalPipeline,
@@ -195,6 +201,7 @@ export default function DashboardPage() {
       upcomingDemos, upcomingEvents,
       closeRate, won, closed,
       funnelStages, valorPonderado, especData,
+      oppsARetomar,
     };
   }, [clientes, oportunidades, servicios, eventos, demos]);
 
@@ -459,6 +466,27 @@ export default function DashboardPage() {
           )}
         </Card>
       </div>
+
+      {/* ── Oportunidades a retomar ───────────────────────────── */}
+      {stats.oppsARetomar.length > 0 && (
+        <Card>
+          <SectionTitle icon={AlertCircle} label="Oportunidades a retomar ⏸️" action="Ver pipeline" onAction={() => navigate('/pipeline')} />
+          <div className="space-y-2">
+            {stats.oppsARetomar.map(o => (
+              <div key={o.id} onClick={() => navigate('/pipeline')}
+                className="flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors">
+                <span className="text-lg mt-0.5">⏸️</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{o.nombre}</p>
+                  <p className="text-xs text-gray-500">{o.clienteNombre}</p>
+                  {o.pausaMotivo && <p className="text-xs text-gray-400 mt-0.5">Motivo: {o.pausaMotivo}</p>}
+                </div>
+                <span className="text-xs text-red-500 font-medium flex-shrink-0">Retomar {o.pausaRecordatorio}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* ── Actividad reciente ────────────────────────────────── */}
       <Card>

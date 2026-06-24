@@ -101,9 +101,10 @@ function MobileOppCard({ opp, clients, users, onClick, onMove }) {
   const client = clients.find(c => c.id === opp.clienteId);
   const user = users.find(u => u.id === opp.responsable);
   return (
-    <div className="bg-white rounded-xl p-3.5 shadow-sm border border-gray-100">
+    <div className={`rounded-xl p-3.5 shadow-sm border ${opp.enPausa ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-100'}`}>
       <div className="flex items-start justify-between gap-2 mb-1">
         <button onClick={onClick} className="text-sm font-semibold text-gray-800 leading-snug text-left flex-1">
+          {opp.enPausa && <span className="mr-1">⏸️</span>}
           {opp.nombre}
           {opp.temperatura && <span className="ml-1">{TEMP_ICON[opp.temperatura]}</span>}
         </button>
@@ -156,10 +157,13 @@ function OppCard({ opp, clients, users, onClick }) {
   const client = clients.find(c => c.id === opp.clienteId);
   const user = users.find(u => u.id === opp.responsable);
   return (
-    <div onClick={onClick} className="bg-white rounded-xl p-3.5 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow">
-      {/* Cabecera: temperatura + nombre */}
+    <div onClick={onClick} className={`rounded-xl p-3.5 shadow-sm border cursor-pointer hover:shadow-md transition-shadow ${opp.enPausa ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-100'}`}>
+      {/* Cabecera: pausa + temperatura + nombre */}
       <div className="flex items-start justify-between gap-1 mb-1">
-        <p className="text-sm font-semibold text-gray-800 leading-snug flex-1">{opp.nombre}</p>
+        <p className="text-sm font-semibold text-gray-800 leading-snug flex-1">
+          {opp.enPausa && <span className="mr-1">⏸️</span>}
+          {opp.nombre}
+        </p>
         {opp.temperatura && <span className="text-base flex-shrink-0">{TEMP_ICON[opp.temperatura]}</span>}
       </div>
       <p className="text-xs text-gray-500 mb-2.5">{client?.nombre || '-'}</p>
@@ -196,6 +200,11 @@ function OppCard({ opp, clients, users, onClick }) {
         <span className="text-xs text-gray-400">Cierre: {formatDate(opp.fechaCierre)}</span>
         <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">{user?.name?.split(' ')[0]}</span>
       </div>
+      {opp.enPausa && opp.pausaRecordatorio && (
+        <div className="mt-1.5 flex items-center gap-1 text-[10px] text-gray-400">
+          <span>🔔 Retomar: {formatDate(opp.pausaRecordatorio)}</span>
+        </div>
+      )}
     </div>
   );
 }
