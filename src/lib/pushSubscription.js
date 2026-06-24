@@ -29,11 +29,13 @@ export async function registerPushSubscription(userId) {
   const endpoint = subJson.endpoint;
 
   // Eliminar cualquier suscripción previa de este dispositivo (de cualquier usuario)
-  // antes de registrar la nueva, para evitar que otro usuario siga recibiendo notificaciones
-  await supabase
+  // para evitar que otro usuario siga recibiendo notificaciones en este dispositivo.
+  // Usamos .filter() con sintaxis PostgREST para comparar dentro del JSONB.
+  const { error: delError } = await supabase
     .from('push_subscriptions')
     .delete()
-    .eq('subscription->>endpoint', endpoint);
+    .filter('subscription->>endpoint', 'eq', endpoint);
+  if (delError) console.warn('[push] error limpiando suscripción anterior:', delError);
 
   const id = `${userId}_${btoa(endpoint).slice(-20).replace(/[^a-zA-Z0-9]/g, '')}`;
   const { error: insertError } = await supabase
@@ -53,11 +55,14 @@ export async function unregisterPushSubscription() {
   if (!sub) return;
 
   const endpoint = sub.endpoint;
-  await sub.unsubscribe();
-  await supabase
+
+  // Primero eliminar en Supabase, luego desuscribir el SW
+  const { error: delError } = await supabase
     .from('push_subscriptions')
     .delete()
-    .eq('subscription->>endpoint', endpoint);
+    .filter('subscription->>endpoint', 'eq', endpoint);
+  if (delError) console.warn('[push] error eliminando suscripción en logout:', delError);
 
+  await sub.unsubscribe();
   console.log('[push] suscripción eliminada al cerrar sesión');
 }

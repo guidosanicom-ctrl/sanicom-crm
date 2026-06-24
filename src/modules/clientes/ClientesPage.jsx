@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
+import RefreshIndicator from '../../components/ui/RefreshIndicator';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Upload, Trash2, Users, Route, X, Eye, Copy, ClipboardList, MessageCircle, Mail, Phone, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -293,6 +295,7 @@ export default function ClientesPage() {
 
   const carlos = isCarlos();
   const puedeCrearRuta = carlos || user?.email === 'jgovantes@sanicom.es';
+  const { refreshing } = useAutoRefresh([makeRefresher(useClientesStore)]);
   const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
 
   // Mis clientes recientes (últimos 20 clientes accesibles, ordenados por actividad reciente)
@@ -386,6 +389,7 @@ export default function ClientesPage() {
 
   return (
     <div className="space-y-4">
+      <RefreshIndicator show={refreshing} />
       {/* Mis clientes recientes */}
       {!vistaSegui && misRecientes.length > 0 && (
         <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">

@@ -24,8 +24,9 @@ export const useAuthStore = create((set, get) => ({
     return false;
   },
 
-  logout: () => {
-    unregisterPushSubscription().catch((e) => console.warn('[push] error al desregistrar en logout:', e));
+  logout: async () => {
+    // Primero eliminar la suscripción push (necesita sesión activa para Supabase)
+    await unregisterPushSubscription().catch((e) => console.warn('[push] error al desregistrar en logout:', e));
     localStorage.removeItem(SESSION_KEY);
     set({ user: null });
   },

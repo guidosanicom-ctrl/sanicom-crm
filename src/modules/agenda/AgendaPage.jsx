@@ -1,4 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
+import RefreshIndicator from '../../components/ui/RefreshIndicator';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -207,6 +209,7 @@ export default function AgendaPage() {
   const [defaultHour, setDefaultHour] = useState('');
   const [detailEvent, setDetailEvent] = useState(null);
   const [delOpen, setDelOpen] = useState(false);
+  const { refreshing } = useAutoRefresh([makeRefresher(useAgendaStore)]);
   const [filterTipo, setFilterTipo] = useState('');
   const [filterResp, setFilterResp] = useState('');
 
@@ -297,6 +300,7 @@ export default function AgendaPage() {
 
   return (
     <div className="space-y-4">
+      <RefreshIndicator show={refreshing} />
       {/* Toolbar — escritorio */}
       <div className="hidden sm:flex items-center justify-between flex-wrap gap-3">
         <div className="flex gap-2">

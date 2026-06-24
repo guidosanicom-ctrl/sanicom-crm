@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useOpenFromUrl } from '../../hooks/useOpenFromUrl';
+import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
+import RefreshIndicator from '../../components/ui/RefreshIndicator';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Plus, Euro, TrendingUp, LayoutGrid, List, X, ArrowLeftRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -236,6 +238,8 @@ export default function PipelinePage() {
     if (opp) openDetail(opp);
   });
 
+  const { refreshing } = useAutoRefresh([makeRefresher(useOportunidadesStore)]);
+
   // Crear demo vinculada desde el detalle de una oportunidad
   const handleCrearDemoDesdeOpp = () => setDemoFormOpen(true);
 
@@ -278,6 +282,7 @@ export default function PipelinePage() {
 
   return (
     <div className="space-y-6">
+      <RefreshIndicator show={refreshing} />
       {/* Metrics bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[

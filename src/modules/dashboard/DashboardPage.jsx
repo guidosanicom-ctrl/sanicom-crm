@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
+import RefreshIndicator from '../../components/ui/RefreshIndicator';
 import {
   Users, TrendingUp, Wrench, Calendar, PlaySquare, Briefcase,
   Clock, Percent, ArrowUpRight, AlertCircle, ChevronRight,
@@ -99,6 +101,15 @@ export default function DashboardPage() {
   const { actividad } = useActividadStore();
   const { demos } = useDemosStore();
   const navigate = useNavigate();
+
+  const { refreshing } = useAutoRefresh([
+    makeRefresher(useClientesStore),
+    makeRefresher(useOportunidadesStore),
+    makeRefresher(useServicioStore),
+    makeRefresher(useAgendaStore),
+    makeRefresher(useActividadStore),
+    makeRefresher(useDemosStore),
+  ]);
 
   const stats = useMemo(() => {
     const today = startOfDay(new Date());
@@ -223,6 +234,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <RefreshIndicator show={refreshing} />
 
       {/* ── Encabezado ───────────────────────────────────────── */}
       <div>

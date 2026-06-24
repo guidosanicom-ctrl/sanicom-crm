@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useOpenFromUrl } from '../../hooks/useOpenFromUrl';
+import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
+import RefreshIndicator from '../../components/ui/RefreshIndicator';
 import { Plus, CheckCircle, TrendingUp, TrendingDown, Package, Euro, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useServicioStore } from '../../store/servicioStore';
@@ -161,10 +163,13 @@ export default function ServicioTecnicoPage() {
     if (ot) openDetail(ot);
   });
 
+  const { refreshing } = useAutoRefresh([makeRefresher(useServicioStore)]);
+
   const sel = `px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white`;
 
   return (
     <div className="space-y-6">
+      <RefreshIndicator show={refreshing} />
       {/* Tabs */}
       <div className="flex gap-1 border-b border-gray-200">
         <button
