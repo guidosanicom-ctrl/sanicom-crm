@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useOpenFromUrl } from '../../hooks/useOpenFromUrl';
 import { Plus, CheckCircle, TrendingUp, TrendingDown, Package, Euro, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useServicioStore } from '../../store/servicioStore';
@@ -154,6 +155,11 @@ export default function ServicioTecnicoPage() {
 
   const openDetail = (s) => { setSelected(s); setDetailOpen(true); };
   const openEdit = (s) => { setSelected(s); setDetailOpen(false); setFormOpen(true); };
+
+  useOpenFromUrl((id) => {
+    const ot = servicios.find((s) => s.id === id);
+    if (ot) openDetail(ot);
+  });
 
   const sel = `px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white`;
 

@@ -39,12 +39,15 @@ export const useNotificacionesStore = create((set, get) => ({
       .then(({ error }) => { if (error) console.error('[notificacionesStore.push]', error); });
 
     // Enviar push nativa al dispositivo del usuario destino
+    const deepUrl = notif.registroId
+      ? `${window.location.origin}${notif.enlace || '/'}?open=${notif.registroId}`
+      : `${window.location.origin}${notif.enlace || '/'}`;
     supabase.functions.invoke('send-push', {
       body: {
         targetUserId,
         title: 'Sanicom CRM',
         body: notif.mensaje || '',
-        url: `${window.location.origin}${notif.enlace || '/'}`,
+        url: deepUrl,
       },
     }).then(({ data, error }) => {
       if (error) console.error('[push-web] error invocando send-push:', error);

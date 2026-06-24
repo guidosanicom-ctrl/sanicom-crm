@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useOpenFromUrl } from '../../hooks/useOpenFromUrl';
 import { Plus, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useDemosStore } from '../../store/demosStore';
@@ -57,6 +58,11 @@ export default function DemostracionesPage() {
 
   const openDetail = (d) => { setSelected(d); setDetailOpen(true); };
   const openEdit   = (d) => { setSelected(d); setDetailOpen(false); setFormOpen(true); };
+
+  useOpenFromUrl((id) => {
+    const demo = demos.find((d) => d.id === id);
+    if (demo) openDetail(demo);
+  });
 
   // ── Vincular demo ↔ oportunidad ───────────────────────────────────────────
   const vincularDemoOpp = (demoId, opp) => {

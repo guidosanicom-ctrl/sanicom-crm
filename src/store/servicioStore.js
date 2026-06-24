@@ -66,7 +66,7 @@ export const useServicioStore = create((set, get) => ({
       if (servicioData.tecnico && servicioData.tecnico !== user.id) {
         useNotificacionesStore.getState().pushNotificacion(servicioData.tecnico, {
           mensaje: `${user.name} te asignó la orden de servicio ${numero}`,
-          tipo: 'servicio', modulo: 'servicio-tecnico', enlace: '/servicio-tecnico',
+          tipo: 'servicio', modulo: 'servicio-tecnico', enlace: '/servicio-tecnico', registroId: item.id,
         });
       }
     }

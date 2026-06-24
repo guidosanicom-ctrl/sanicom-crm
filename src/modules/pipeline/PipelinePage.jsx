@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useOpenFromUrl } from '../../hooks/useOpenFromUrl';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Plus, Euro, TrendingUp, LayoutGrid, List, X, ArrowLeftRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -220,6 +221,11 @@ export default function PipelinePage() {
   const openDetail = (opp) => { setSelected(opp); setDetailOpen(true); };
   const openEdit   = (opp) => { setSelected(opp); setDetailOpen(false); setFormOpen(true); };
   const openNew    = () => { setSelected(null); setFormOpen(true); };
+
+  useOpenFromUrl((id) => {
+    const opp = oportunidades.find((o) => o.id === id);
+    if (opp) openDetail(opp);
+  });
 
   // Crear demo vinculada desde el detalle de una oportunidad
   const handleCrearDemoDesdeOpp = () => setDemoFormOpen(true);

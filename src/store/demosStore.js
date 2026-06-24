@@ -61,7 +61,7 @@ export const useDemosStore = create((set, get) => ({
         const equipo  = useEquiposStore.getState().equipos.find(e => e.id === demoData.equipoId);
         useNotificacionesStore.getState().pushNotificacion(demoData.responsable, {
           mensaje: `${user.name} te asignó una demostración: ${equipo?.nombre || 'equipo'} con ${cliente?.nombre || 'cliente'} (${demoData.fecha || 'sin fecha'})`,
-          tipo: 'demo', modulo: 'demostraciones', enlace: '/demostraciones',
+          tipo: 'demo', modulo: 'demostraciones', enlace: '/demostraciones', registroId: item.id,
         });
       }
     }

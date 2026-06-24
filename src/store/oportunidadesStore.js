@@ -37,7 +37,7 @@ export const useOportunidadesStore = create((set, get) => ({
       if (oportunidadData.responsable && oportunidadData.responsable !== user.id) {
         useNotificacionesStore.getState().pushNotificacion(oportunidadData.responsable, {
           mensaje: `${user.name} te asignó la oportunidad "${item.nombre}"`,
-          tipo: 'oportunidad', modulo: 'pipeline', enlace: '/pipeline',
+          tipo: 'oportunidad', modulo: 'pipeline', enlace: '/pipeline', registroId: item.id,
         });
       }
     }
@@ -66,10 +66,10 @@ export const useOportunidadesStore = create((set, get) => ({
       const push = useNotificacionesStore.getState().pushNotificacion;
       if (updates.etapa && prev?.etapa !== updates.etapa) {
         const resp = updates.responsable || prev?.responsable;
-        if (resp && resp !== user.id) push(resp, { mensaje: `La oportunidad "${prev?.nombre}" avanzó a "${updates.etapa}"`, tipo: 'oportunidad', modulo: 'pipeline', enlace: '/pipeline' });
+        if (resp && resp !== user.id) push(resp, { mensaje: `La oportunidad "${prev?.nombre}" avanzó a "${updates.etapa}"`, tipo: 'oportunidad', modulo: 'pipeline', enlace: '/pipeline', registroId: id });
       }
       if (updates.responsable && updates.responsable !== prev?.responsable && updates.responsable !== user.id) {
-        push(updates.responsable, { mensaje: `${user.name} te asignó la oportunidad "${prev?.nombre}"`, tipo: 'oportunidad', modulo: 'pipeline', enlace: '/pipeline' });
+        push(updates.responsable, { mensaje: `${user.name} te asignó la oportunidad "${prev?.nombre}"`, tipo: 'oportunidad', modulo: 'pipeline', enlace: '/pipeline', registroId: id });
       }
     }
   },
