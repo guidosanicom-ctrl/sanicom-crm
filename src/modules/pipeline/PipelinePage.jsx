@@ -277,7 +277,7 @@ export default function PipelinePage() {
   const openEdit   = (opp) => { setSelected(opp); setDetailOpen(false); setFormOpen(true); };
   const openNew    = () => { setSelected(null); setFormOpen(true); };
 
-  useOpenFromUrl(oportunidades, (opp) => openDetail(opp));
+  useOpenFromUrl(oportunidades, (opp) => { setMobileTab(opp.etapa); openDetail(opp); });
 
   const { refreshing } = useAutoRefresh([makeRefresher(useOportunidadesStore)]);
 
