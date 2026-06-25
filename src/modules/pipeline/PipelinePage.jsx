@@ -260,9 +260,12 @@ export default function PipelinePage() {
   const [dragOverStage, setDragOverStage] = useState(null);
 
   const handleDragStart = (oppId) => { dragIdRef.current = oppId; };
-  const handleDragOver  = (e, stage) => { e.preventDefault(); setDragOverStage(stage); };
+  const handleDragOver  = (e, stage) => {
+    if (!dragIdRef.current) return; // no hay drag activo, no bloquear scroll ni otros eventos
+    e.preventDefault();
+    setDragOverStage(stage);
+  };
   const handleDragLeave = (e) => {
-    // Solo limpiar si el puntero sale de la columna (no de un hijo)
     if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null);
   };
   const handleDrop = (e, stage) => {
@@ -392,8 +395,8 @@ export default function PipelinePage() {
                     onDragOver={(e) => handleDragOver(e, stage)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, stage)}
-                    style={{ minHeight: 160 }}
-                    className={`space-y-2 rounded-lg p-1 transition-colors duration-150
+                    style={{ minHeight: 160, maxHeight: 'calc(100vh - 280px)' }}
+                    className={`space-y-2 overflow-y-auto rounded-lg p-1 transition-colors duration-150
                       ${isOver
                         ? 'bg-blue-50 border-2 border-dashed border-blue-300'
                         : 'border-2 border-transparent'
