@@ -375,13 +375,26 @@ export default function PipelinePage() {
                       <span className="text-xs bg-white/70 px-2 py-0.5 rounded-full font-medium text-gray-500">{stageopps.length}</span>
                     </div>
                     <Droppable droppableId={stage}>
-                      {(provided) => (
-                        <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-12 space-y-2">
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={`min-h-[120px] space-y-2 rounded-lg p-1 transition-colors duration-150
+                            ${snapshot.isDraggingOver
+                              ? 'bg-blue-50 border-2 border-dashed border-blue-300'
+                              : 'border-2 border-transparent'
+                            }`}
+                        >
+                          {stageopps.length === 0 && !snapshot.isDraggingOver && (
+                            <div className="flex items-center justify-center h-[96px] text-xs text-gray-300 select-none">
+                              Arrastra aquí
+                            </div>
+                          )}
                           {stageopps.map((opp, index) => (
                             <Draggable key={opp.id} draggableId={opp.id} index={index}>
-                              {(prov, snapshot) => (
+                              {(prov, snap) => (
                                 <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
-                                  className={snapshot.isDragging ? 'opacity-80 rotate-1' : ''}>
+                                  className={snap.isDragging ? 'opacity-80 rotate-1' : ''}>
                                   <OppCard opp={opp} clients={clientes} users={users} onClick={() => openDetail(opp)} />
                                 </div>
                               )}
