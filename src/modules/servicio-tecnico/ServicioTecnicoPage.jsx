@@ -69,8 +69,12 @@ function ResumenMensual({ servicios }) {
   const pendientes     = del.filter(s => s.estado === 'Pendiente' || s.estado === 'Programada').length;
   const canceladas     = del.filter(s => s.estado === 'Cancelada').length;
 
-  // Facturación — solo OTs completadas del período
-  const totalSinIva     = completadasDel.reduce((acc, s) => acc + (s.facturacion?.totalSinIva || 0), 0);
+  // Facturación — nuevo sistema (facturacion.totalSinIva) o fallback al campo antiguo (precioCobrado)
+  const totalSinIva = completadasDel.reduce((acc, s) => {
+    if (s.facturacion?.totalSinIva != null) return acc + s.facturacion.totalSinIva;
+    if (s.precioCobrado != null) return acc + (parseFloat(s.precioCobrado) || 0);
+    return acc;
+  }, 0);
   const sinDetalle      = completadasDel.filter(s => !s.facturacion).length;
   const pendienteFacturar = completadasDel.filter(s => s.facturacion && !s.facturacion.facturada).length;
 
