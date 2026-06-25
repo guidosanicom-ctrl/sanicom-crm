@@ -1,8 +1,9 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useOpenFromUrl } from '../../hooks/useOpenFromUrl';
 import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
 import RefreshIndicator from '../../components/ui/RefreshIndicator';
-import { Plus, LayoutGrid, List, X, ArrowLeftRight, Check } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { Plus, Euro, TrendingUp, LayoutGrid, List, X, ArrowLeftRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useClientesStore } from '../../store/clientesStore';
@@ -256,61 +257,11 @@ export default function PipelinePage() {
     setDemoFormOpen(false);
   };
 
-  const dragIdRef = useRef(null);
-  const [dragOverStage, setDragOverStage] = useState(null);
-
-  // Auto-scroll de página durante drag: rAF loop para scroll suave
-  useEffect(() => {
-    const THRESHOLD = 100; // px desde borde para activar scroll
-    const MAX_SPEED = 12;  // px por frame
-    let clientY = null;
-    let frameId = null;
-
-    const onDragOver = (e) => { clientY = e.clientY; };
-
-    const tick = () => {
-      if (clientY !== null && dragIdRef.current) {
-        const dist = clientY < THRESHOLD
-          ? clientY - THRESHOLD                        // negativo → scroll arriba
-          : clientY > window.innerHeight - THRESHOLD
-            ? clientY - (window.innerHeight - THRESHOLD) // positivo → scroll abajo
-            : 0;
-        if (dist !== 0) {
-          // velocidad proporcional a la proximidad al borde, máximo MAX_SPEED
-          const speed = Math.sign(dist) * Math.min(Math.abs(dist) / THRESHOLD * MAX_SPEED, MAX_SPEED);
-          window.scrollBy(0, speed);
-        }
-      }
-      frameId = requestAnimationFrame(tick);
-    };
-
-    window.addEventListener('dragover', onDragOver);
-    frameId = requestAnimationFrame(tick);
-    return () => {
-      window.removeEventListener('dragover', onDragOver);
-      cancelAnimationFrame(frameId);
-    };
-  }, []);
-
-  const handleDragStart = (oppId) => { dragIdRef.current = oppId; };
-  const handleDragOver  = (e, stage) => {
-    if (!dragIdRef.current) return; // no hay drag activo, no bloquear scroll ni otros eventos
-    e.preventDefault();
-    setDragOverStage(stage);
-  };
-  const handleDragLeave = (e) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null);
-  };
-  const handleDrop = (e, stage) => {
-    e.preventDefault();
-    setDragOverStage(null);
-    const id = dragIdRef.current;
-    if (!id) return;
-    const opp = oportunidades.find(o => o.id === id);
-    if (!opp || opp.etapa === stage) return;
-    updateOportunidad(id, { etapa: stage });
-    toast.success(`Movido a "${stage}"`);
-    dragIdRef.current = null;
+  const onDragEnd = ({ source, destination, draggableId }) => {
+    if (!destination) return;
+    const newStage = destination.droppableId;
+    updateOportunidad(draggableId, { etapa: newStage });
+    toast.success(`Movido a "${newStage}"`);
   };
 
   const metrics = useMemo(() => {
@@ -329,8 +280,7 @@ export default function PipelinePage() {
   return (
     <div className="space-y-6">
       <RefreshIndicator show={refreshing} />
-
-      {/* KPIs */}
+      {/* Metrics bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total oportunidades', value: metrics.total },
@@ -385,6 +335,8 @@ export default function PipelinePage() {
               </div>
             );
           })()}
+
+          {/* Tarjetas de la etapa activa */}
           {(() => {
             const cards = oportunidades.filter(o => o.etapa === mobileTab);
             if (cards.length === 0) return (
@@ -395,8 +347,14 @@ export default function PipelinePage() {
             return (
               <div className="space-y-2">
                 {cards.map(opp => (
-                  <MobileOppCard key={opp.id} opp={opp} clients={clientes} users={users}
-                    onClick={() => openDetail(opp)} onMove={() => setMoveSheet(opp)} />
+                  <MobileOppCard
+                    key={opp.id}
+                    opp={opp}
+                    clients={clientes}
+                    users={users}
+                    onClick={() => openDetail(opp)}
+                    onMove={() => setMoveSheet(opp)}
+                  />
                 ))}
               </div>
             );
@@ -405,49 +363,40 @@ export default function PipelinePage() {
       )}
 
       {viewMode === 'kanban' ? (
-        <div className="hidden sm:flex gap-4 overflow-x-auto pb-4">
-          {ETAPAS_PIPELINE.map(stage => {
-            const stageopps = oportunidades.filter(o => o.etapa === stage);
-            const isOver = dragOverStage === stage;
-            return (
-              <div key={stage} className="flex-shrink-0 w-72">
-                <div className={`rounded-xl border p-3 ${STAGE_COLORS[stage] || 'bg-gray-50 border-gray-100'}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`text-sm font-semibold ${STAGE_HEADER[stage] || 'text-gray-700'}`}>{stage}</span>
-                    <span className="text-xs bg-white/70 px-2 py-0.5 rounded-full font-medium text-gray-500">{stageopps.length}</span>
-                  </div>
-                  <div
-                    onDragOver={(e) => handleDragOver(e, stage)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, stage)}
-                    style={{ minHeight: 160 }}
-                    className={`space-y-2 rounded-lg p-1 transition-colors duration-150
-                      ${isOver
-                        ? 'bg-blue-50 border-2 border-dashed border-blue-300'
-                        : 'border-2 border-transparent'
-                      }`}
-                  >
-                    {stageopps.map((opp) => (
-                      <div key={opp.id} draggable
-                        onDragStart={() => handleDragStart(opp.id)}
-                        onDragEnd={() => { dragIdRef.current = null; setDragOverStage(null); }}
-                        className="cursor-grab active:cursor-grabbing active:opacity-70 active:rotate-1 transition-opacity"
-                      >
-                        <OppCard opp={opp} clients={clientes} users={users} onClick={() => openDetail(opp)} />
-                      </div>
-                    ))}
-                    {stageopps.length === 0 && (
-                      <div className={`flex items-center justify-center h-24 text-xs select-none rounded-md pointer-events-none
-                        ${isOver ? 'text-blue-400' : 'text-gray-300'}`}>
-                        {isOver ? 'Soltar aquí' : 'Arrastra aquí'}
-                      </div>
-                    )}
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="hidden sm:flex gap-4 overflow-x-auto pb-4">
+            {ETAPAS_PIPELINE.map(stage => {
+              const stageopps = oportunidades.filter(o => o.etapa === stage);
+              return (
+                <div key={stage} className="flex-shrink-0 w-72">
+                  <div className={`rounded-xl border p-3 ${STAGE_COLORS[stage] || 'bg-gray-50 border-gray-100'}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className={`text-sm font-semibold ${STAGE_HEADER[stage] || 'text-gray-700'}`}>{stage}</span>
+                      <span className="text-xs bg-white/70 px-2 py-0.5 rounded-full font-medium text-gray-500">{stageopps.length}</span>
+                    </div>
+                    <Droppable droppableId={stage}>
+                      {(provided) => (
+                        <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px] space-y-2">
+                          {stageopps.map((opp, index) => (
+                            <Draggable key={opp.id} draggableId={opp.id} index={index}>
+                              {(prov, snapshot) => (
+                                <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
+                                  className={snapshot.isDragging ? 'opacity-80 rotate-1' : ''}>
+                                  <OppCard opp={opp} clients={clientes} users={users} onClick={() => openDetail(opp)} />
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </DragDropContext>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <table className="w-full text-sm">
