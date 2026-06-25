@@ -294,10 +294,12 @@ export default function PipelinePage() {
   }, [oportunidades]);
 
   return (
-    <div className="space-y-6">
+    // h-full + flex-col para ocupar todo el espacio disponible del <main> sin scroll de página
+    <div className="flex flex-col h-full gap-4">
       <RefreshIndicator show={refreshing} />
-      {/* Metrics bar */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
         {[
           { label: 'Total oportunidades', value: metrics.total },
           { label: 'Pipeline total', value: formatCurrency(metrics.pipeline) },
@@ -312,7 +314,7 @@ export default function PipelinePage() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex gap-1 bg-white rounded-lg border border-gray-200 p-1">
           <button onClick={() => setViewMode('kanban')} className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${viewMode === 'kanban' ? 'bg-[#1B4F8A] text-white' : 'text-gray-500 hover:text-gray-700'}`}>
             <LayoutGrid className="w-4 h-4" />
@@ -326,7 +328,7 @@ export default function PipelinePage() {
 
       {/* ── Vista móvil (< 640px) ── */}
       {viewMode === 'kanban' && (
-        <div className="sm:hidden space-y-3">
+        <div className="sm:hidden flex-1 min-h-0 overflow-y-auto space-y-3">
           {/* Tabs de etapa — cuadrícula 2×3 */}
           {(() => {
             const ETAPA_SHORT = {
@@ -351,8 +353,6 @@ export default function PipelinePage() {
               </div>
             );
           })()}
-
-          {/* Tarjetas de la etapa activa */}
           {(() => {
             const cards = oportunidades.filter(o => o.etapa === mobileTab);
             if (cards.length === 0) return (
@@ -363,14 +363,8 @@ export default function PipelinePage() {
             return (
               <div className="space-y-2">
                 {cards.map(opp => (
-                  <MobileOppCard
-                    key={opp.id}
-                    opp={opp}
-                    clients={clientes}
-                    users={users}
-                    onClick={() => openDetail(opp)}
-                    onMove={() => setMoveSheet(opp)}
-                  />
+                  <MobileOppCard key={opp.id} opp={opp} clients={clientes} users={users}
+                    onClick={() => openDetail(opp)} onMove={() => setMoveSheet(opp)} />
                 ))}
               </div>
             );
@@ -379,33 +373,34 @@ export default function PipelinePage() {
       )}
 
       {viewMode === 'kanban' ? (
-        <div className="hidden sm:flex gap-4 overflow-x-auto pb-4">
+        // flex-1 min-h-0: ocupa el espacio restante y permite que flexbox lo comprima
+        // overflow-x-auto: scroll horizontal si hay muchas columnas
+        // overflow-y-hidden: no hay scroll vertical del board
+        <div className="hidden sm:flex flex-1 min-h-0 gap-4 overflow-x-auto overflow-y-hidden pb-2">
           {ETAPAS_PIPELINE.map(stage => {
             const stageopps = oportunidades.filter(o => o.etapa === stage);
             const isOver = dragOverStage === stage;
             return (
-              <div key={stage} className="flex-shrink-0 w-72">
-                <div className={`rounded-xl border p-3 ${STAGE_COLORS[stage] || 'bg-gray-50 border-gray-100'}`}>
-                  <div className="flex items-center justify-between mb-3">
+              // h-full para que la columna ocupe toda la altura del board
+              <div key={stage} className="flex-shrink-0 w-72 h-full flex flex-col">
+                <div className={`rounded-xl border p-3 flex flex-col flex-1 min-h-0 ${STAGE_COLORS[stage] || 'bg-gray-50 border-gray-100'}`}>
+                  <div className="flex items-center justify-between mb-3 flex-shrink-0">
                     <span className={`text-sm font-semibold ${STAGE_HEADER[stage] || 'text-gray-700'}`}>{stage}</span>
                     <span className="text-xs bg-white/70 px-2 py-0.5 rounded-full font-medium text-gray-500">{stageopps.length}</span>
                   </div>
-                  {/* Zona de drop — nativa HTML5 */}
+                  {/* Zona de drop: flex-1 min-h-0 → ocupa el resto de la columna; overflow-y-auto → scroll interno */}
                   <div
                     onDragOver={(e) => handleDragOver(e, stage)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, stage)}
-                    style={{ minHeight: 160, maxHeight: 'calc(100vh - 280px)' }}
-                    className={`space-y-2 overflow-y-auto rounded-lg p-1 transition-colors duration-150
+                    className={`flex-1 min-h-0 overflow-y-auto space-y-2 rounded-lg p-1 transition-colors duration-150
                       ${isOver
                         ? 'bg-blue-50 border-2 border-dashed border-blue-300'
                         : 'border-2 border-transparent'
                       }`}
                   >
                     {stageopps.map((opp) => (
-                      <div
-                        key={opp.id}
-                        draggable
+                      <div key={opp.id} draggable
                         onDragStart={() => handleDragStart(opp.id)}
                         onDragEnd={() => { dragIdRef.current = null; setDragOverStage(null); }}
                         className="cursor-grab active:cursor-grabbing active:opacity-70 active:rotate-1 transition-opacity"
@@ -414,11 +409,8 @@ export default function PipelinePage() {
                       </div>
                     ))}
                     {stageopps.length === 0 && (
-                      <div
-                        style={{ height: 120 }}
-                        className={`flex items-center justify-center text-xs select-none rounded-md pointer-events-none
-                          ${isOver ? 'text-blue-400' : 'text-gray-300'}`}
-                      >
+                      <div className={`flex items-center justify-center h-24 text-xs select-none rounded-md pointer-events-none
+                        ${isOver ? 'text-blue-400' : 'text-gray-300'}`}>
                         {isOver ? 'Soltar aquí' : 'Arrastra aquí'}
                       </div>
                     )}
@@ -429,7 +421,7 @@ export default function PipelinePage() {
           })}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto bg-white rounded-xl shadow-sm border border-gray-100">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
