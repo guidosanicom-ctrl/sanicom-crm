@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useOpenFromUrl } from '../../hooks/useOpenFromUrl';
 import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
 import RefreshIndicator from '../../components/ui/RefreshIndicator';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { DndContext, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core';
 import { Plus, Euro, TrendingUp, LayoutGrid, List, X, ArrowLeftRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
@@ -211,6 +211,50 @@ function OppCard({ opp, clients, users, onClick }) {
   );
 }
 
+// ── Tarjeta draggable (dnd-kit) ──────────────────────────────────────────────
+function KanbanCard({ opp, clients, users, onOpen }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: opp.id });
+  const style = transform
+    ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50 }
+    : undefined;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`touch-none ${isDragging ? 'opacity-50 rotate-1' : ''}`}
+    >
+      <OppCard opp={opp} clients={clients} users={users} onClick={() => !isDragging && onOpen(opp)} />
+    </div>
+  );
+}
+
+// ── Columna droppable (dnd-kit) ───────────────────────────────────────────────
+function KanbanColumn({ stage, opps, clientes, users, onOpen }) {
+  const { setNodeRef, isOver } = useDroppable({ id: stage });
+  return (
+    <div className="flex-shrink-0 w-72">
+      <div className={`rounded-xl border p-3 ${STAGE_COLORS[stage] || 'bg-gray-50 border-gray-100'}`}>
+        <div className="flex items-center justify-between mb-3">
+          <span className={`text-sm font-semibold ${STAGE_HEADER[stage] || 'text-gray-700'}`}>{stage}</span>
+          <span className="text-xs bg-white/70 px-2 py-0.5 rounded-full font-medium text-gray-500">{opps.length}</span>
+        </div>
+        <div
+          ref={setNodeRef}
+          style={{ minHeight: 200 }}
+          className={`space-y-2 rounded-lg p-1 transition-colors duration-150
+            ${isOver ? 'bg-blue-50 outline-2 outline-dashed outline-blue-300' : ''}`}
+        >
+          {opps.map(opp => (
+            <KanbanCard key={opp.id} opp={opp} clients={clientes} users={users} onOpen={onOpen} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PipelinePage() {
   const { oportunidades, addOportunidad, updateOportunidad, deleteOportunidad } = useOportunidadesStore();
   const { clientes } = useClientesStore();
@@ -257,10 +301,14 @@ export default function PipelinePage() {
     setDemoFormOpen(false);
   };
 
-  const onDragEnd = ({ source, destination, draggableId }) => {
-    if (!destination) return;
-    const newStage = destination.droppableId;
-    updateOportunidad(draggableId, { etapa: newStage });
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = ({ active, over }) => {
+    if (!over) return;
+    const newStage = over.id;
+    const opp = oportunidades.find(o => o.id === active.id);
+    if (!opp || opp.etapa === newStage) return;
+    updateOportunidad(active.id, { etapa: newStage });
     toast.success(`Movido a "${newStage}"`);
   };
 
@@ -363,47 +411,20 @@ export default function PipelinePage() {
       )}
 
       {viewMode === 'kanban' ? (
-        <DragDropContext onDragEnd={onDragEnd}>
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd} autoScroll={{ enabled: true }}>
           <div className="hidden sm:flex gap-4 overflow-x-auto pb-4">
-            {ETAPAS_PIPELINE.map(stage => {
-              const stageopps = oportunidades.filter(o => o.etapa === stage);
-              return (
-                <div key={stage} className="flex-shrink-0 w-72">
-                  <div className={`rounded-xl border p-3 ${STAGE_COLORS[stage] || 'bg-gray-50 border-gray-100'}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className={`text-sm font-semibold ${STAGE_HEADER[stage] || 'text-gray-700'}`}>{stage}</span>
-                      <span className="text-xs bg-white/70 px-2 py-0.5 rounded-full font-medium text-gray-500">{stageopps.length}</span>
-                    </div>
-                    <Droppable droppableId={stage}>
-                      {(provided) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className="space-y-2"
-                        >
-                          {stageopps.map((opp, index) => (
-                            <Draggable key={opp.id} draggableId={opp.id} index={index}>
-                              {(prov, snap) => (
-                                <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
-                                  className={snap.isDragging ? 'opacity-80 rotate-1' : ''}>
-                                  <OppCard opp={opp} clients={clientes} users={users} onClick={() => openDetail(opp)} />
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                          {/* Spacer con height real para que getBoundingClientRect() devuelva >0 en columnas vacías.
-                              min-height CSS no es suficiente: @hello-pangea/dnd ignora droppables con clientHeight=0. */}
-                          {stageopps.length === 0 && <div style={{ height: 200 }} />}
-                        </div>
-                      )}
-                    </Droppable>
-                  </div>
-                </div>
-              );
-            })}
+            {ETAPAS_PIPELINE.map(stage => (
+              <KanbanColumn
+                key={stage}
+                stage={stage}
+                opps={oportunidades.filter(o => o.etapa === stage)}
+                clientes={clientes}
+                users={users}
+                onOpen={openDetail}
+              />
+            ))}
           </div>
-        </DragDropContext>
+        </DndContext>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <table className="w-full text-sm">
