@@ -1,9 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useOpenFromUrl } from '../../hooks/useOpenFromUrl';
 import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
 import RefreshIndicator from '../../components/ui/RefreshIndicator';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, Euro, TrendingUp, LayoutGrid, List, X, ArrowLeftRight, Check } from 'lucide-react';
+import { Plus, LayoutGrid, List, X, ArrowLeftRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useClientesStore } from '../../store/clientesStore';
@@ -257,11 +256,25 @@ export default function PipelinePage() {
     setDemoFormOpen(false);
   };
 
-  const onDragEnd = ({ source, destination, draggableId }) => {
-    if (!destination) return;
-    const newStage = destination.droppableId;
-    updateOportunidad(draggableId, { etapa: newStage });
-    toast.success(`Movido a "${newStage}"`);
+  const dragIdRef = useRef(null);
+  const [dragOverStage, setDragOverStage] = useState(null);
+
+  const handleDragStart = (oppId) => { dragIdRef.current = oppId; };
+  const handleDragOver  = (e, stage) => { e.preventDefault(); setDragOverStage(stage); };
+  const handleDragLeave = (e) => {
+    // Solo limpiar si el puntero sale de la columna (no de un hijo)
+    if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null);
+  };
+  const handleDrop = (e, stage) => {
+    e.preventDefault();
+    setDragOverStage(null);
+    const id = dragIdRef.current;
+    if (!id) return;
+    const opp = oportunidades.find(o => o.id === id);
+    if (!opp || opp.etapa === stage) return;
+    updateOportunidad(id, { etapa: stage });
+    toast.success(`Movido a "${stage}"`);
+    dragIdRef.current = null;
   };
 
   const metrics = useMemo(() => {
@@ -363,58 +376,55 @@ export default function PipelinePage() {
       )}
 
       {viewMode === 'kanban' ? (
-        <DragDropContext onDragEnd={onDragEnd}>
-          <div className="hidden sm:flex gap-4 overflow-x-auto pb-4">
-            {ETAPAS_PIPELINE.map(stage => {
-              const stageopps = oportunidades.filter(o => o.etapa === stage);
-              return (
-                <div key={stage} className="flex-shrink-0 w-72">
-                  <div className={`rounded-xl border p-3 ${STAGE_COLORS[stage] || 'bg-gray-50 border-gray-100'}`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className={`text-sm font-semibold ${STAGE_HEADER[stage] || 'text-gray-700'}`}>{stage}</span>
-                      <span className="text-xs bg-white/70 px-2 py-0.5 rounded-full font-medium text-gray-500">{stageopps.length}</span>
-                    </div>
-                    <Droppable droppableId={stage}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          style={{ minHeight: 160 }}
-                          className={`space-y-2 rounded-lg p-1 transition-colors duration-150
-                            ${snapshot.isDraggingOver
-                              ? 'bg-blue-50 border-2 border-dashed border-blue-300'
-                              : 'border-2 border-transparent'
-                            }`}
-                        >
-                          {stageopps.map((opp, index) => (
-                            <Draggable key={opp.id} draggableId={opp.id} index={index}>
-                              {(prov, snap) => (
-                                <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
-                                  className={snap.isDragging ? 'opacity-80 rotate-1' : ''}>
-                                  <OppCard opp={opp} clients={clientes} users={users} onClick={() => openDetail(opp)} />
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                          {stageopps.length === 0 && (
-                            <div
-                              style={{ height: 120 }}
-                              className={`flex items-center justify-center text-xs select-none rounded-md
-                                ${snapshot.isDraggingOver ? 'text-blue-400' : 'text-gray-300'}`}
-                            >
-                              {snapshot.isDraggingOver ? 'Soltar aquí' : 'Arrastra aquí'}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </Droppable>
+        <div className="hidden sm:flex gap-4 overflow-x-auto pb-4">
+          {ETAPAS_PIPELINE.map(stage => {
+            const stageopps = oportunidades.filter(o => o.etapa === stage);
+            const isOver = dragOverStage === stage;
+            return (
+              <div key={stage} className="flex-shrink-0 w-72">
+                <div className={`rounded-xl border p-3 ${STAGE_COLORS[stage] || 'bg-gray-50 border-gray-100'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-sm font-semibold ${STAGE_HEADER[stage] || 'text-gray-700'}`}>{stage}</span>
+                    <span className="text-xs bg-white/70 px-2 py-0.5 rounded-full font-medium text-gray-500">{stageopps.length}</span>
+                  </div>
+                  {/* Zona de drop — nativa HTML5 */}
+                  <div
+                    onDragOver={(e) => handleDragOver(e, stage)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, stage)}
+                    style={{ minHeight: 160 }}
+                    className={`space-y-2 rounded-lg p-1 transition-colors duration-150
+                      ${isOver
+                        ? 'bg-blue-50 border-2 border-dashed border-blue-300'
+                        : 'border-2 border-transparent'
+                      }`}
+                  >
+                    {stageopps.map((opp) => (
+                      <div
+                        key={opp.id}
+                        draggable
+                        onDragStart={() => handleDragStart(opp.id)}
+                        onDragEnd={() => { dragIdRef.current = null; setDragOverStage(null); }}
+                        className="cursor-grab active:cursor-grabbing active:opacity-70 active:rotate-1 transition-opacity"
+                      >
+                        <OppCard opp={opp} clients={clientes} users={users} onClick={() => openDetail(opp)} />
+                      </div>
+                    ))}
+                    {stageopps.length === 0 && (
+                      <div
+                        style={{ height: 120 }}
+                        className={`flex items-center justify-center text-xs select-none rounded-md pointer-events-none
+                          ${isOver ? 'text-blue-400' : 'text-gray-300'}`}
+                      >
+                        {isOver ? 'Soltar aquí' : 'Arrastra aquí'}
+                      </div>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </DragDropContext>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <table className="w-full text-sm">
