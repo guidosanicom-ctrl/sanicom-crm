@@ -375,21 +375,29 @@ export default function PipelinePage() {
                       <span className="text-xs bg-white/70 px-2 py-0.5 rounded-full font-medium text-gray-500">{stageopps.length}</span>
                     </div>
                     <Droppable droppableId={stage}>
-                      {(provided) => (
-                        <div ref={provided.innerRef} {...provided.droppableProps} className="min-h-[200px] space-y-2">
-                          {stageopps.map((opp, index) => (
-                            <Draggable key={opp.id} draggableId={opp.id} index={index}>
-                              {(prov, snapshot) => (
-                                <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
-                                  className={snapshot.isDragging ? 'opacity-80 rotate-1' : ''}>
-                                  <OppCard opp={opp} clients={clientes} users={users} onClick={() => openDetail(opp)} />
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </div>
-                      )}
+                      {(provided, snapshot) => {
+                        console.log(`[kanban] stage="${stage}" isEmpty=${stageopps.length === 0} isDraggingOver=${snapshot.isDraggingOver}`);
+                        return (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            style={{ minHeight: 200 }}
+                            className="space-y-2"
+                          >
+                            {stageopps.map((opp, index) => (
+                              <Draggable key={opp.id} draggableId={opp.id} index={index}>
+                                {(prov, snap) => (
+                                  <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
+                                    className={snap.isDragging ? 'opacity-80 rotate-1' : ''}>
+                                    <OppCard opp={opp} clients={clientes} users={users} onClick={() => openDetail(opp)} />
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </div>
+                        );
+                      }}
                     </Droppable>
                   </div>
                 </div>
