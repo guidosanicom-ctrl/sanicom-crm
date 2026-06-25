@@ -142,7 +142,7 @@ export default function ServicioTecnicoPage() {
   const [delOpen, setDelOpen] = useState(false);
   const [facturacionOT, setFacturacionOT] = useState(null);
   const [pendingFormData, setPendingFormData] = useState(null);
-  const PER_PAGE = 10;
+  const [perPage, setPerPage] = useState(25);
 
   const filtered = useMemo(() => servicios.filter(s => {
     const client = clientes.find(c => c.id === s.clienteId);
@@ -156,7 +156,7 @@ export default function ServicioTecnicoPage() {
       && (!filterTecnico || s.tecnico === filterTecnico);
   }), [servicios, clientes, equipos, search, filterEstado, filterTipo, filterPrioridad, filterTecnico]);
 
-  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
   const openDetail = (s) => { setSelected(s); setDetailOpen(true); };
   const openEdit = (s) => { setSelected(s); setDetailOpen(false); setFormOpen(true); };
@@ -336,8 +336,24 @@ export default function ServicioTecnicoPage() {
               </table>
             </div>
 
-            <div className="px-4 pb-4">
-              <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
+            <div className="px-4 pb-4 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span>Mostrar</span>
+                {[25, 50, 100].map(n => (
+                  <button key={n} onClick={() => { setPerPage(n); setPage(1); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${perPage === n ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
+                    {n}
+                  </button>
+                ))}
+                <button onClick={() => { setPerPage(Infinity); setPage(1); }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${perPage === Infinity ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'border-gray-200 text-gray-600 hover:border-gray-400'}`}>
+                  Todos
+                </button>
+                <span className="text-gray-400">({filtered.length} total)</span>
+              </div>
+              {perPage !== Infinity && (
+                <Pagination page={page} total={filtered.length} perPage={perPage} onChange={setPage} />
+              )}
             </div>
           </>
         )}
