@@ -379,17 +379,13 @@ export default function PipelinePage() {
                         <div
                           ref={provided.innerRef}
                           {...provided.droppableProps}
-                          className={`min-h-[120px] space-y-2 rounded-lg p-1 transition-colors duration-150
+                          style={{ minHeight: 160 }}
+                          className={`space-y-2 rounded-lg p-1 transition-colors duration-150
                             ${snapshot.isDraggingOver
                               ? 'bg-blue-50 border-2 border-dashed border-blue-300'
                               : 'border-2 border-transparent'
                             }`}
                         >
-                          {stageopps.length === 0 && !snapshot.isDraggingOver && (
-                            <div className="flex items-center justify-center h-[96px] text-xs text-gray-300 select-none">
-                              Arrastra aquí
-                            </div>
-                          )}
                           {stageopps.map((opp, index) => (
                             <Draggable key={opp.id} draggableId={opp.id} index={index}>
                               {(prov, snap) => (
@@ -401,6 +397,15 @@ export default function PipelinePage() {
                             </Draggable>
                           ))}
                           {provided.placeholder}
+                          {stageopps.length === 0 && (
+                            <div
+                              style={{ height: 120 }}
+                              className={`flex items-center justify-center text-xs select-none rounded-md
+                                ${snapshot.isDraggingOver ? 'text-blue-400' : 'text-gray-300'}`}
+                            >
+                              {snapshot.isDraggingOver ? 'Soltar aquí' : 'Arrastra aquí'}
+                            </div>
+                          )}
                         </div>
                       )}
                     </Droppable>
