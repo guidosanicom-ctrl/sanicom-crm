@@ -141,6 +141,7 @@ export default function ServicioTecnicoPage() {
   const [selected, setSelected] = useState(null);
   const [delOpen, setDelOpen] = useState(false);
   const [facturacionOT, setFacturacionOT] = useState(null);
+  const [pendingFormData, setPendingFormData] = useState(null);
   const PER_PAGE = 10;
 
   const filtered = useMemo(() => servicios.filter(s => {
@@ -355,12 +356,16 @@ export default function ServicioTecnicoPage() {
 
       <FacturacionModal
         open={!!facturacionOT}
-        onClose={() => setFacturacionOT(null)}
+        onClose={() => { setFacturacionOT(null); setPendingFormData(null); }}
         ordenNumero={facturacionOT?.numero}
         onConfirm={(facturacion) => {
-          updateServicio(facturacionOT.id, { estado: 'Completada', facturacion });
+          const updates = pendingFormData
+            ? { ...pendingFormData, facturacion }
+            : { estado: 'Completada', facturacion };
+          updateServicio(facturacionOT.id, updates);
           toast.success('Orden completada y detalle de facturación guardado.');
           setFacturacionOT(null);
+          setPendingFormData(null);
         }}
       />
 
@@ -380,8 +385,19 @@ export default function ServicioTecnicoPage() {
         onClose={() => { setFormOpen(false); setSelected(null); }}
         initial={selected}
         onSave={(data) => {
-          if (selected) { updateServicio(selected.id, data); toast.success('Orden actualizada.'); }
-          else { addServicio(data); toast.success('Orden creada.'); }
+          if (selected) {
+            const marcandoCompletada = selected.estado !== 'Completada' && data.estado === 'Completada';
+            if (marcandoCompletada) {
+              setPendingFormData(data);
+              setFacturacionOT(selected);
+            } else {
+              updateServicio(selected.id, data);
+              toast.success('Orden actualizada.');
+            }
+          } else {
+            addServicio(data);
+            toast.success('Orden creada.');
+          }
         }}
       />
       <ConfirmDialog open={delOpen} onClose={() => setDelOpen(false)}
