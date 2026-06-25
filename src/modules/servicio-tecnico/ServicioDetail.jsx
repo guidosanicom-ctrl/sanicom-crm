@@ -7,7 +7,7 @@ import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { useServicioStore } from '../../store/servicioStore';
-import { formatDate } from '../../utils/formatters';
+import { formatDate, formatCurrency } from '../../utils/formatters';
 import { exportOTPdf } from '../../utils/exportOTPdf';
 import { Edit, Trash2, FileDown } from 'lucide-react';
 import logoSrc from '../../assets/sanicom_logo.png';
@@ -189,6 +189,60 @@ export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete 
               </button>
               {ecoSaved && <span className="text-xs text-green-600">✓ Guardado</span>}
             </div>
+          </div>
+        )}
+
+        {/* Facturación */}
+        {orden.facturacion && !isCarlos() && (
+          <div className="border border-yellow-200 rounded-xl p-4 bg-yellow-50">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <span className="w-1 h-4 bg-yellow-400 rounded-full inline-block" />
+                💶 Facturación
+              </h3>
+              {orden.facturacion.facturada ? (
+                <span className="text-xs text-green-600 font-semibold bg-green-100 px-2 py-1 rounded-lg">✓ Facturada</span>
+              ) : (
+                <button
+                  onClick={() => updateServicio(orden.id, { facturacion: { ...orden.facturacion, facturada: true } })}
+                  className="text-xs bg-[#1B4F8A] text-white px-3 py-1.5 rounded-lg hover:bg-[#163d6e] transition-colors cursor-pointer font-medium"
+                >
+                  Marcar como facturada
+                </button>
+              )}
+            </div>
+            <div className="space-y-1 mb-3">
+              <div className="hidden sm:grid grid-cols-[1fr_60px_90px_80px] gap-2 mb-1">
+                {['Concepto', 'Cant.', 'Precio unit.', 'Subtotal'].map(h => (
+                  <p key={h} className="text-xs font-medium text-gray-500">{h}</p>
+                ))}
+              </div>
+              {(orden.facturacion.lineas || []).map((l, i) => (
+                <div key={i} className="grid grid-cols-[1fr_60px_90px_80px] gap-2 text-sm">
+                  <span className="text-gray-800">{l.concepto}</span>
+                  <span className="text-gray-500">{l.cantidad}</span>
+                  <span className="text-gray-500">{formatCurrency(parseFloat(l.precioUnitario) || 0)}</span>
+                  <span className="font-medium text-gray-700">{formatCurrency((parseFloat(l.cantidad) || 0) * (parseFloat(l.precioUnitario) || 0))}</span>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-yellow-200 pt-2 space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Total sin IVA</span>
+                <span className="font-medium">{formatCurrency(orden.facturacion.totalSinIva || 0)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">IVA ({orden.facturacion.iva ?? 21}%)</span>
+                <span className="font-medium">{formatCurrency((orden.facturacion.totalConIva || 0) - (orden.facturacion.totalSinIva || 0))}</span>
+              </div>
+              <div className="flex justify-between text-sm font-bold pt-1 border-t border-yellow-200">
+                <span>Total con IVA</span>
+                <span className="text-[#1B4F8A] text-base">{formatCurrency(orden.facturacion.totalConIva || 0)}</span>
+              </div>
+            </div>
+            {orden.facturacion.notas && (
+              <p className="mt-2 text-xs text-gray-500 italic">{orden.facturacion.notas}</p>
+            )}
           </div>
         )}
 

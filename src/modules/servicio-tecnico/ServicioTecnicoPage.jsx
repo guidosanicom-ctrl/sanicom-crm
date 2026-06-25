@@ -16,6 +16,7 @@ import EmptyState from '../../components/shared/EmptyState';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import ServicioForm from './ServicioForm';
 import ServicioDetail from './ServicioDetail';
+import FacturacionModal from './FacturacionModal';
 import { formatDate } from '../../utils/formatters';
 import { ESTADOS_SERVICIO, TIPOS_SERVICIO, PRIORIDADES_SERVICIO } from '../../utils/constants';
 import { Wrench } from 'lucide-react';
@@ -139,6 +140,7 @@ export default function ServicioTecnicoPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [delOpen, setDelOpen] = useState(false);
+  const [facturacionOT, setFacturacionOT] = useState(null);
   const PER_PAGE = 10;
 
   const filtered = useMemo(() => servicios.filter(s => {
@@ -268,8 +270,11 @@ export default function ServicioTecnicoPage() {
                           {s.fechaProgramada && <span className="text-xs text-gray-400">{formatDate(s.fechaProgramada)}</span>}
                         </div>
                       </div>
+                      {s.facturacion && !s.facturacion.facturada && (
+                        <Badge color="yellow">💶 Pendiente</Badge>
+                      )}
                       {!readOnly && s.estado !== 'Completada' && (
-                        <button onClick={e => { e.stopPropagation(); updateServicio(s.id, { estado: 'Completada' }); toast.success('Orden completada.'); }}
+                        <button onClick={e => { e.stopPropagation(); setFacturacionOT(s); }}
                           className="p-1.5 rounded-lg text-green-500 hover:bg-green-50 flex-shrink-0 cursor-pointer" title="Marcar completada">
                           <CheckCircle className="w-4 h-4" />
                         </button>
@@ -309,8 +314,11 @@ export default function ServicioTecnicoPage() {
                         <td className="px-3 py-3"><Badge color={PRIORIDAD_BADGE[s.prioridad] || 'gray'}>{s.prioridad}</Badge></td>
                         <td className="px-3 py-3">
                           <div className="flex gap-2 items-center">
+                            {s.facturacion && !s.facturacion.facturada && (
+                              <Badge color="yellow">💶 Pendiente</Badge>
+                            )}
                             {!readOnly && s.estado !== 'Completada' && (
-                              <button onClick={() => { updateServicio(s.id, { estado: 'Completada' }); toast.success('Orden completada.'); }}
+                              <button onClick={() => setFacturacionOT(s)}
                                 className="p-1 text-green-500 hover:bg-green-50 rounded cursor-pointer" title="Marcar completada">
                                 <CheckCircle className="w-4 h-4" />
                               </button>
@@ -344,6 +352,17 @@ export default function ServicioTecnicoPage() {
           <Plus className="w-6 h-6" />
         </button>
       )}
+
+      <FacturacionModal
+        open={!!facturacionOT}
+        onClose={() => setFacturacionOT(null)}
+        ordenNumero={facturacionOT?.numero}
+        onConfirm={(facturacion) => {
+          updateServicio(facturacionOT.id, { estado: 'Completada', facturacion });
+          toast.success('Orden completada y detalle de facturación guardado.');
+          setFacturacionOT(null);
+        }}
+      />
 
       </>}
 

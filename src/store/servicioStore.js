@@ -92,9 +92,15 @@ export const useServicioStore = create((set, get) => ({
         const push = useNotificacionesStore.getState().pushNotificacion;
         const numero = prev?.numero || id;
         const admins = useAuthStore.getState().users.filter(u => u.role === 'Administración').map(u => u.id);
+        const totalStr = updates.facturacion?.totalConIva != null
+          ? ` — Total: ${updates.facturacion.totalConIva.toFixed(2).replace('.', ',')} €`
+          : '';
+        const mensaje = updates.facturacion
+          ? `OT ${numero} lista para facturar${totalStr}`
+          : `La orden ${numero} fue marcada como Completada por ${user.name}`;
         new Set([prev?.creadoPorId, ...admins].filter(Boolean)).forEach(targetId => {
           if (targetId !== user.id) {
-            push(targetId, { mensaje: `La orden ${numero} fue marcada como Completada por ${user.name}`, tipo: 'servicio', modulo: 'servicio-tecnico', enlace: '/servicio-tecnico', registroId: id });
+            push(targetId, { mensaje, tipo: 'servicio', modulo: 'servicio-tecnico', enlace: '/servicio-tecnico', registroId: id });
           }
         });
       }
