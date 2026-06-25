@@ -94,7 +94,7 @@ export const useServicioStore = create((set, get) => ({
         const admins = useAuthStore.getState().users.filter(u => u.role === 'Administración').map(u => u.id);
         new Set([prev?.creadoPorId, ...admins].filter(Boolean)).forEach(targetId => {
           if (targetId !== user.id) {
-            push(targetId, { mensaje: `La orden ${numero} fue marcada como Completada por ${user.name}`, tipo: 'servicio', modulo: 'servicio-tecnico', enlace: '/servicio-tecnico' });
+            push(targetId, { mensaje: `La orden ${numero} fue marcada como Completada por ${user.name}`, tipo: 'servicio', modulo: 'servicio-tecnico', enlace: '/servicio-tecnico', registroId: id });
           }
         });
       }

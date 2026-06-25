@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 /**
- * Abre automáticamente el detalle de un registro cuando la URL contiene ?id=<id>.
+ * Abre automáticamente el detalle de un registro cuando la URL contiene ?openId=<id>.
  * Espera a que `items` esté cargado antes de intentar encontrar el registro.
  *
  * @param {Array}    items   Array de registros del store (oportunidades, demos, etc.)
@@ -10,23 +10,23 @@ import { useSearchParams } from 'react-router-dom';
  */
 export function useOpenFromUrl(items, onOpen) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const id = searchParams.get('id');
-  const openedIdRef = useRef(null); // guarda el id que ya fue abierto
+  const openId = searchParams.get('openId');
+  const openedIdRef = useRef(null); // guarda el id que ya fue abierto para evitar doble apertura
   const onOpenRef = useRef(onOpen);
-  onOpenRef.current = onOpen; // siempre ref más reciente para evitar stale closure
+  onOpenRef.current = onOpen;
 
   useEffect(() => {
-    if (!id) return;
-    if (openedIdRef.current === id) return; // ya abierto este id
-    if (!items || items.length === 0) return; // esperar a que carguen los datos
+    if (!openId) return;
+    if (openedIdRef.current === openId) return; // ya abierto este id
+    if (!items || items.length === 0) return;    // esperar a que carguen los datos
 
-    // Comparar como string por si el id viene de URL (string) vs store (uuid string)
-    const item = items.find((i) => String(i.id) === String(id));
+    const item = items.find((i) => String(i.id) === String(openId));
     if (!item) return;
 
-    openedIdRef.current = id;
+    openedIdRef.current = openId;
     onOpenRef.current(item);
 
-    setSearchParams((prev) => { prev.delete('id'); return prev; }, { replace: true });
-  }, [id, items, setSearchParams]);
+    // Limpiar ?openId= de la URL sin añadir entrada al historial
+    setSearchParams((prev) => { prev.delete('openId'); return prev; }, { replace: true });
+  }, [openId, items, setSearchParams]);
 }

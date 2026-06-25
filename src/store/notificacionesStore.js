@@ -40,7 +40,7 @@ export const useNotificacionesStore = create((set, get) => ({
 
     // Enviar push nativa al dispositivo del usuario destino
     const deepUrl = notif.registroId
-      ? `${window.location.origin}${notif.enlace || '/'}?id=${notif.registroId}`
+      ? `${window.location.origin}${notif.enlace || '/'}?openId=${notif.registroId}`
       : `${window.location.origin}${notif.enlace || '/'}`;
     supabase.functions.invoke('send-push', {
       body: {

@@ -61,7 +61,7 @@ serve(async (req) => {
           targetUserId: opp.responsable,
           title: '⏸️ Recordatorio de pausa',
           body,
-          url: `/pipeline?id=${opp.id}`,
+          url: `/pipeline?openId=${opp.id}`,
         }),
       });
       const result = await res.json();
