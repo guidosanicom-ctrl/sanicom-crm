@@ -74,4 +74,18 @@ export const useNotificacionesStore = create((set, get) => ({
   },
 
   unreadCount: () => get().notificaciones.filter(n => !n.leida).length,
+
+  // Re-fetch desde Supabase — para reconexión tras background en Safari/iOS
+  refresh: async () => {
+    const { userId } = get();
+    if (!userId) return;
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select('data')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) { console.error('[notificacionesStore.refresh]', error); return; }
+    set({ notificaciones: (data || []).map(r => r.data) });
+  },
 }));
