@@ -259,6 +259,39 @@ export default function PipelinePage() {
   const dragIdRef = useRef(null);
   const [dragOverStage, setDragOverStage] = useState(null);
 
+  // Auto-scroll de página durante drag: rAF loop para scroll suave
+  useEffect(() => {
+    const THRESHOLD = 100; // px desde borde para activar scroll
+    const MAX_SPEED = 12;  // px por frame
+    let clientY = null;
+    let frameId = null;
+
+    const onDragOver = (e) => { clientY = e.clientY; };
+
+    const tick = () => {
+      if (clientY !== null && dragIdRef.current) {
+        const dist = clientY < THRESHOLD
+          ? clientY - THRESHOLD                        // negativo → scroll arriba
+          : clientY > window.innerHeight - THRESHOLD
+            ? clientY - (window.innerHeight - THRESHOLD) // positivo → scroll abajo
+            : 0;
+        if (dist !== 0) {
+          // velocidad proporcional a la proximidad al borde, máximo MAX_SPEED
+          const speed = Math.sign(dist) * Math.min(Math.abs(dist) / THRESHOLD * MAX_SPEED, MAX_SPEED);
+          window.scrollBy(0, speed);
+        }
+      }
+      frameId = requestAnimationFrame(tick);
+    };
+
+    window.addEventListener('dragover', onDragOver);
+    frameId = requestAnimationFrame(tick);
+    return () => {
+      window.removeEventListener('dragover', onDragOver);
+      cancelAnimationFrame(frameId);
+    };
+  }, []);
+
   const handleDragStart = (oppId) => { dragIdRef.current = oppId; };
   const handleDragOver  = (e, stage) => {
     if (!dragIdRef.current) return; // no hay drag activo, no bloquear scroll ni otros eventos
