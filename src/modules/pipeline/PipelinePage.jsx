@@ -375,29 +375,28 @@ export default function PipelinePage() {
                       <span className="text-xs bg-white/70 px-2 py-0.5 rounded-full font-medium text-gray-500">{stageopps.length}</span>
                     </div>
                     <Droppable droppableId={stage}>
-                      {(provided, snapshot) => {
-                        console.log(`[kanban] stage="${stage}" isEmpty=${stageopps.length === 0} isDraggingOver=${snapshot.isDraggingOver}`);
-                        return (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
-                            style={{ minHeight: 200 }}
-                            className="space-y-2"
-                          >
-                            {stageopps.map((opp, index) => (
-                              <Draggable key={opp.id} draggableId={opp.id} index={index}>
-                                {(prov, snap) => (
-                                  <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
-                                    className={snap.isDragging ? 'opacity-80 rotate-1' : ''}>
-                                    <OppCard opp={opp} clients={clientes} users={users} onClick={() => openDetail(opp)} />
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
-                            {provided.placeholder}
-                          </div>
-                        );
-                      }}
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className="space-y-2"
+                        >
+                          {stageopps.map((opp, index) => (
+                            <Draggable key={opp.id} draggableId={opp.id} index={index}>
+                              {(prov, snap) => (
+                                <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
+                                  className={snap.isDragging ? 'opacity-80 rotate-1' : ''}>
+                                  <OppCard opp={opp} clients={clientes} users={users} onClick={() => openDetail(opp)} />
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                          {/* Spacer con height real para que getBoundingClientRect() devuelva >0 en columnas vacías.
+                              min-height CSS no es suficiente: @hello-pangea/dnd ignora droppables con clientHeight=0. */}
+                          {stageopps.length === 0 && <div style={{ height: 200 }} />}
+                        </div>
+                      )}
                     </Droppable>
                   </div>
                 </div>
