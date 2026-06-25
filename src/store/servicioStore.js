@@ -77,7 +77,12 @@ export const useServicioStore = create((set, get) => ({
     const user = useAuthStore.getState().user;
     const prev = get().servicios.find(s => s.id === id);
     const entries = user ? buildAuditEntries(prev, { ...prev, ...updates }, user) : [];
-    const updated = { ...prev, ...updates, historial: [...(prev?.historial || []), ...entries] };
+    const marcandoCompletada = updates.estado === 'Completada' && prev?.estado !== 'Completada';
+    const updated = {
+      ...prev, ...updates,
+      historial: [...(prev?.historial || []), ...entries],
+      ...(marcandoCompletada ? { fechaCompletada: new Date().toISOString() } : {}),
+    };
     // Actualizar evento de agenda si existe y se solicitó
     if (updates._agendarEvento && updated.eventoId && updated.fechaProgramada) {
       useAgendaStore.getState().updateEvento(updated.eventoId, buildEventoData(updated));

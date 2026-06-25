@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useOpenFromUrl } from '../../hooks/useOpenFromUrl';
 import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
 import RefreshIndicator from '../../components/ui/RefreshIndicator';
-import { Plus, CheckCircle, TrendingUp, TrendingDown, Package, Euro, BarChart3 } from 'lucide-react';
+import { Plus, CheckCircle, TrendingUp, Package, Euro, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useServicioStore } from '../../store/servicioStore';
 import { useClientesStore } from '../../store/clientesStore';
@@ -50,24 +50,29 @@ function ResumenMensual({ servicios }) {
   const [anio, setAnio] = useState(now.getFullYear());
 
   const años = useMemo(() => {
-    const set = new Set(servicios.map(s => new Date(s.fechaCreacion || s.fechaProgramada).getFullYear()).filter(Boolean));
+    const set = new Set(servicios.map(s => {
+      const d = s.fechaCompletada || s.fechaCreacion || s.fechaProgramada;
+      return d ? new Date(d).getFullYear() : null;
+    }).filter(Boolean));
     set.add(now.getFullYear());
     return [...set].sort((a, b) => b - a);
   }, [servicios]);
 
+  // Órdenes del período filtradas por fecha de cierre (o creación si no tiene)
   const del = useMemo(() => servicios.filter(s => {
-    const d = new Date(s.fechaCreacion || s.fechaProgramada);
+    const d = new Date(s.fechaCompletada || s.fechaCreacion || s.fechaProgramada);
     return d.getFullYear() === anio && d.getMonth() === mes;
   }), [servicios, mes, anio]);
 
-  const completadas = del.filter(s => s.estado === 'Completada').length;
-  const enCurso    = del.filter(s => s.estado === 'En curso').length;
-  const pendientes  = del.filter(s => s.estado === 'Pendiente' || s.estado === 'Programada').length;
-  const canceladas  = del.filter(s => s.estado === 'Cancelada').length;
+  const completadasDel = del.filter(s => s.estado === 'Completada');
+  const enCurso        = del.filter(s => s.estado === 'En curso').length;
+  const pendientes     = del.filter(s => s.estado === 'Pendiente' || s.estado === 'Programada').length;
+  const canceladas     = del.filter(s => s.estado === 'Cancelada').length;
 
-  const totalCoste   = del.reduce((acc, s) => acc + (parseFloat(s.costeRepuestos) || 0), 0);
-  const totalPrecio  = del.reduce((acc, s) => acc + (parseFloat(s.precioCobrado) || 0), 0);
-  const margen       = totalPrecio - totalCoste;
+  // Facturación — solo OTs completadas del período
+  const totalSinIva     = completadasDel.reduce((acc, s) => acc + (s.facturacion?.totalSinIva || 0), 0);
+  const sinDetalle      = completadasDel.filter(s => !s.facturacion).length;
+  const pendienteFacturar = completadasDel.filter(s => s.facturacion && !s.facturacion.facturada).length;
 
   const fmt = (n) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
@@ -92,25 +97,19 @@ function ResumenMensual({ servicios }) {
         <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Órdenes de trabajo</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="Total" value={del.length} color="blue" icon={Wrench} />
-          <StatCard label="Completadas" value={completadas} color="green" icon={CheckCircle} />
+          <StatCard label="Completadas" value={completadasDel.length} color="green" icon={CheckCircle} />
           <StatCard label="En curso / Programadas" value={enCurso + pendientes} color="orange" icon={BarChart3} sub={`${enCurso} en curso · ${pendientes} pendientes`} />
           <StatCard label="Canceladas" value={canceladas} color="gray" />
         </div>
       </div>
 
-      {/* Control económico */}
+      {/* Facturación */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Control económico</h3>
+        <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Facturación</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <StatCard label="Coste de repuestos" value={fmt(totalCoste)} color="orange" icon={Package} sub="Total gastado en materiales" />
-          <StatCard label="Facturado al cliente" value={fmt(totalPrecio)} color="blue" icon={Euro} sub="Total cobrado" />
-          <StatCard
-            label="Margen total"
-            value={(margen >= 0 ? '+' : '') + fmt(margen)}
-            color={margen >= 0 ? 'green' : 'red'}
-            icon={margen >= 0 ? TrendingUp : TrendingDown}
-            sub={totalPrecio > 0 ? `${((margen / totalPrecio) * 100).toFixed(1)}% sobre facturado` : undefined}
-          />
+          <StatCard label="Total facturado (sin IVA)" value={fmt(totalSinIva)} color="blue" icon={Euro} sub="Suma de OTs completadas con detalle" />
+          <StatCard label="OTs sin detalle de facturación" value={sinDetalle} color={sinDetalle > 0 ? 'orange' : 'gray'} icon={Package} sub="Completadas sin conceptos cargados" />
+          <StatCard label="💶 Pendientes de facturar" value={pendienteFacturar} color={pendienteFacturar > 0 ? 'yellow' : 'gray'} icon={TrendingUp} sub="Cerradas por Guido, aún no facturadas" />
         </div>
         {del.length === 0 && (
           <p className="text-center text-sm text-gray-400 mt-6">No hay órdenes registradas en {MESES[mes]} {anio}.</p>
