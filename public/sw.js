@@ -19,6 +19,9 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/';
 
+  // Al hacer clic, limpiar el badge del SW (la app lo recalculará al activarse)
+  if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(() => {});
+
   event.waitUntil(
     clients
       .matchAll({ type: 'window', includeUncontrolled: true })
@@ -35,5 +38,15 @@ self.addEventListener('notificationclick', (event) => {
         // Si no hay ventana abierta, abrir una nueva
         if (clients.openWindow) return clients.openWindow(targetUrl);
       })
+  );
+});
+
+// Al activar el nuevo SW, limpiar el badge para evitar estado obsoleto
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    (async () => {
+      if ('clearAppBadge' in navigator) await navigator.clearAppBadge().catch(() => {});
+      // La app recalculará el badge real al cargarse con useAppBadge
+    })()
   );
 });
