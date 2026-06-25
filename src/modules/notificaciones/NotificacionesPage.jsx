@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNotificacionesStore } from '../../store/notificacionesStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -8,6 +9,7 @@ import { Bell } from 'lucide-react';
 import { formatDateTime } from '../../utils/formatters';
 
 export default function NotificacionesPage() {
+  const navigate = useNavigate();
   const { notificaciones, markRead, markAllRead } = useNotificacionesStore();
   const [filter, setFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -36,7 +38,13 @@ export default function NotificacionesPage() {
         ) : (
           <div className="divide-y divide-gray-50">
             {paginated.map(n => (
-              <div key={n.id} onClick={() => markRead(n.id)}
+              <div key={n.id} onClick={() => {
+                markRead(n.id);
+                if (n.enlace) {
+                  const url = n.registroId ? `${n.enlace}?openId=${n.registroId}` : n.enlace;
+                  navigate(url);
+                }
+              }}
                 className={`px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors flex items-start gap-4 ${!n.leida ? 'bg-blue-50' : ''}`}>
                 <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${!n.leida ? 'bg-[#1B4F8A]' : 'bg-gray-200'}`} />
                 <div className="flex-1 min-w-0">
