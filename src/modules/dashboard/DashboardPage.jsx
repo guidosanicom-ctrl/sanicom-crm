@@ -225,12 +225,46 @@ export default function DashboardPage() {
     return () => clearTimeout(t);
   }, [hoy]);
 
-  const feed = useMemo(() =>
-    actividad.slice(0, 15).map(item => ({
+  const feed = useMemo(() => {
+    // 1. Filtrar solo acciones relevantes
+    const ACCIONES_RELEVANTES = new Set([
+      'creó un nuevo cliente',
+      'creó una oportunidad',
+      'ganó la oportunidad',
+      'perdió la oportunidad',
+      'creó una orden de servicio',
+      'completó la orden de servicio',
+      'programó una nueva demostración',
+    ]);
+    const relevantes = actividad.filter(item =>
+      ACCIONES_RELEVANTES.has(item.accion) ||
+      // demosStore usa acción dinámica para completar; aceptar cualquier "completó" de demo
+      (item.tipo === 'demo' && item.accion?.startsWith('completó'))
+    );
+
+    // 2. Deduplicar: mismo usuario + misma oportunidad + menos de 1 hora → quedar solo con el más reciente
+    const seen = new Map(); // clave: userId+registroId
+    const dedup = [];
+    for (const item of relevantes) {
+      if (item.tipo === 'oportunidad' && item.registroId) {
+        const key = `${item.userId}|${item.registroId}`;
+        if (!seen.has(key)) {
+          seen.set(key, item.fechaHora);
+          dedup.push(item);
+        } else {
+          const diff = Math.abs(new Date(item.fechaHora) - new Date(seen.get(key)));
+          if (diff > 3_600_000) dedup.push(item); // más de 1h entre eventos → mostrar
+        }
+      } else {
+        dedup.push(item);
+      }
+    }
+
+    return dedup.slice(0, 15).map(item => ({
       ...item,
       userName: (item.userId ? users.find(u => u.id === item.userId)?.name : null) || item.userName,
-    })),
-  [actividad, users]);
+    }));
+  }, [actividad, users]);
 
   return (
     <div className="space-y-6">

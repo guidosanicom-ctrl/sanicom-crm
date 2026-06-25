@@ -56,12 +56,11 @@ export const useOportunidadesStore = create((set, get) => ({
     });
     if (user) {
       if (updates.etapa && prev?.etapa !== updates.etapa) {
-        const accion = updates.etapa === 'Ganado'
-          ? 'ganó la oportunidad'
-          : updates.etapa === 'Perdido'
-            ? 'perdió la oportunidad'
-            : `movió la oportunidad a "${updates.etapa}"`;
-        useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'oportunidad', accion, registroId: id, registroLabel: prev?.nombre || id, modulo: 'pipeline' });
+        const etapasFinales = new Set(['Ganado', 'Perdido']);
+        if (etapasFinales.has(updates.etapa)) {
+          const accion = updates.etapa === 'Ganado' ? 'ganó la oportunidad' : 'perdió la oportunidad';
+          useActividadStore.getState().addActividad({ userId: user.id, userName: user.name, tipo: 'oportunidad', accion, registroId: id, registroLabel: prev?.nombre || id, modulo: 'pipeline' });
+        }
       }
       const push = useNotificacionesStore.getState().pushNotificacion;
       if (updates.etapa && prev?.etapa !== updates.etapa) {
