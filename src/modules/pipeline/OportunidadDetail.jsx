@@ -337,9 +337,44 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
               )}
             </div>
             <Row label="Responsable" value={responsable?.name} />
-            <Row label="Fecha de cierre" value={formatDate(oportunidad.fechaCierre)} />
+            <Row label="Fecha de cierre" value={oportunidad.fechaCierre ? formatDate(oportunidad.fechaCierre) : 'Sin fecha'} />
             <Row label="Origen" value={oportunidad.origen === 'Redes sociales' && oportunidad.redSocial ? `Redes sociales · ${oportunidad.redSocial}` : oportunidad.origen} />
             <Row label="Creado" value={formatDate(oportunidad.fechaCreacion)} />
+            {(() => {
+              const hoy = new Date();
+              hoy.setHours(0, 0, 0, 0);
+              const diasDesde = (isoStr) => {
+                if (!isoStr) return null;
+                const d = new Date(isoStr);
+                d.setHours(0, 0, 0, 0);
+                return Math.round((hoy - d) / 86400000);
+              };
+              const apertura = oportunidad.fechaApertura || oportunidad.fechaCreacion;
+              const diasApertura = diasDesde(apertura);
+              const diasEnvio = diasDesde(oportunidad.fechaEnvioInfo);
+              return (
+                <>
+                  {diasApertura !== null && (
+                    <div>
+                      <p className="text-xs text-gray-400 mb-0.5">📅 Abierta</p>
+                      <p className="text-sm font-medium text-gray-800">
+                        {formatDate(apertura)}
+                        <span className="text-xs text-gray-400 font-normal ml-1">· hace {diasApertura} día{diasApertura !== 1 ? 's' : ''}</span>
+                      </p>
+                    </div>
+                  )}
+                  {oportunidad.fechaEnvioInfo && diasEnvio !== null && (
+                    <div>
+                      <p className="text-xs text-gray-400 mb-0.5">📤 Info enviada</p>
+                      <p className="text-sm font-medium text-gray-800">
+                        {formatDate(oportunidad.fechaEnvioInfo)}
+                        <span className="text-xs text-gray-400 font-normal ml-1">· hace {diasEnvio} día{diasEnvio !== 1 ? 's' : ''}</span>
+                      </p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
             {equiposNombres && <Row label="Equipos de interés" value={equiposNombres} />}
           </div>
 

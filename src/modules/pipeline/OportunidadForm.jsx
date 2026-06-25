@@ -43,7 +43,6 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
     if (!form.nombre.trim()) e.nombre = 'Requerido';
     if (!form.clienteId) e.clienteId = 'Requerido';
     if (!form.valor) e.valor = 'Requerido';
-    if (!form.fechaCierre) e.fechaCierre = 'Requerido';
     if (!form.responsable) e.responsable = 'Requerido';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -99,9 +98,16 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
           <input type="range" min={0} max={100} value={form.probabilidad} onChange={e => set('probabilidad', Number(e.target.value))} className="w-full mt-2" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Fecha cierre *</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Fecha cierre estimada</label>
           <input type="date" {...f('fechaCierre')} />
-          {errors.fechaCierre && <p className="text-xs text-red-500 mt-1">{errors.fechaCierre}</p>}
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">📅 Fecha de apertura</label>
+          <input type="date" {...f('fechaApertura')} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">📤 Fecha de envío de información</label>
+          <input type="date" {...f('fechaEnvioInfo')} />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Responsable *</label>

@@ -148,7 +148,7 @@ function MobileOppCard({ opp, clients, users, onClick, onMove }) {
         </div>
       </div>
       <div className="mt-1.5 flex items-center justify-between">
-        <span className="text-xs text-gray-400">Cierre: {formatDate(opp.fechaCierre)}</span>
+        <span className="text-xs text-gray-400">{opp.fechaCierre ? `Cierre: ${formatDate(opp.fechaCierre)}` : 'Sin fecha'}</span>
         <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">{user?.name?.split(' ')[0]}</span>
       </div>
     </div>
@@ -199,7 +199,7 @@ function OppCard({ opp, clients, users, onClick }) {
         <span className="text-xs text-gray-400">{opp.probabilidad}%</span>
       </div>
       <div className="mt-1.5 flex items-center justify-between">
-        <span className="text-xs text-gray-400">Cierre: {formatDate(opp.fechaCierre)}</span>
+        <span className="text-xs text-gray-400">{opp.fechaCierre ? `Cierre: ${formatDate(opp.fechaCierre)}` : 'Sin fecha'}</span>
         <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">{user?.name?.split(' ')[0]}</span>
       </div>
       {opp.enPausa && opp.pausaRecordatorio && (
