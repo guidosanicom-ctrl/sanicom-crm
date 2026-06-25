@@ -277,7 +277,11 @@ export default function PipelinePage() {
   const openEdit   = (opp) => { setSelected(opp); setDetailOpen(false); setFormOpen(true); };
   const openNew    = () => { setSelected(null); setFormOpen(true); };
 
-  useOpenFromUrl(oportunidades, (opp) => { setMobileTab(opp.etapa); openDetail(opp); });
+  useOpenFromUrl(oportunidades, (opp) => {
+    setMobileTab(opp.etapa);
+    // setTimeout(0): espera un tick para que React procese setMobileTab antes de abrir el modal
+    setTimeout(() => openDetail(opp), 0);
+  });
 
   const { refreshing } = useAutoRefresh([makeRefresher(useOportunidadesStore)]);
 

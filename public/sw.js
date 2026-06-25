@@ -19,6 +19,8 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/';
 
+  console.log('[SW] notificationclick — targetUrl:', targetUrl);
+
   // Al hacer clic, limpiar el badge del SW (la app lo recalculará al activarse)
   if ('clearAppBadge' in navigator) navigator.clearAppBadge().catch(() => {});
 
@@ -26,16 +28,17 @@ self.addEventListener('notificationclick', (event) => {
     clients
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Buscar una ventana del CRM ya abierta (mismo origen)
         const scope = self.registration.scope;
+        console.log('[SW] clientes abiertos:', clientList.map(c => c.url));
         const existing = clientList.find(
           (c) => c.url.startsWith(scope) && 'navigate' in c
         );
         if (existing) {
+          console.log('[SW] navegando cliente existente a:', targetUrl);
           existing.navigate(targetUrl);
           return existing.focus();
         }
-        // Si no hay ventana abierta, abrir una nueva
+        console.log('[SW] abriendo nueva ventana:', targetUrl);
         if (clients.openWindow) return clients.openWindow(targetUrl);
       })
   );
