@@ -233,10 +233,7 @@ export default function PipelinePage() {
   const openEdit   = (opp) => { setSelected(opp); setDetailOpen(false); setFormOpen(true); };
   const openNew    = () => { setSelected(null); setFormOpen(true); };
 
-  useOpenFromUrl((id) => {
-    const opp = oportunidades.find((o) => o.id === id);
-    if (opp) openDetail(opp);
-  });
+  useOpenFromUrl(oportunidades, (opp) => openDetail(opp));
 
   const { refreshing } = useAutoRefresh([makeRefresher(useOportunidadesStore)]);
 

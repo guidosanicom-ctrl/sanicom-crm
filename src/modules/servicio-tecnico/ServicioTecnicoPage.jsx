@@ -158,10 +158,7 @@ export default function ServicioTecnicoPage() {
   const openDetail = (s) => { setSelected(s); setDetailOpen(true); };
   const openEdit = (s) => { setSelected(s); setDetailOpen(false); setFormOpen(true); };
 
-  useOpenFromUrl((id) => {
-    const ot = servicios.find((s) => s.id === id);
-    if (ot) openDetail(ot);
-  });
+  useOpenFromUrl(servicios, (ot) => openDetail(ot));
 
   const { refreshing } = useAutoRefresh([makeRefresher(useServicioStore)]);
 

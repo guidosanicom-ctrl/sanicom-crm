@@ -59,10 +59,7 @@ export default function DemostracionesPage() {
   const openDetail = (d) => { setSelected(d); setDetailOpen(true); };
   const openEdit   = (d) => { setSelected(d); setDetailOpen(false); setFormOpen(true); };
 
-  useOpenFromUrl((id) => {
-    const demo = demos.find((d) => d.id === id);
-    if (demo) openDetail(demo);
-  });
+  useOpenFromUrl(demos, (demo) => openDetail(demo));
 
   // ── Vincular demo ↔ oportunidad ───────────────────────────────────────────
   const vincularDemoOpp = (demoId, opp) => {
