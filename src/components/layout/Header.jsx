@@ -91,7 +91,14 @@ export default function Header({ onMenuClick, title }) {
                 ) : recent.map(n => (
                   <div
                     key={n.id}
-                    onClick={() => { markRead(n.id); setShowNotifs(false); if (n.enlace) navigate(n.enlace); }}
+                    onClick={() => {
+                      markRead(n.id);
+                      setShowNotifs(false);
+                      if (n.enlace) {
+                        const url = n.registroId ? `${n.enlace}?openId=${n.registroId}` : n.enlace;
+                        navigate(url);
+                      }
+                    }}
                     className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors ${!n.leida ? 'bg-blue-50' : ''}`}
                   >
                     <p className={`text-xs ${!n.leida ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>{n.mensaje}</p>
