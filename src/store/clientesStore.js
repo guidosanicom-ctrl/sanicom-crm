@@ -207,5 +207,45 @@ export const useClientesStore = create((set, get) => ({
     return { imported, skipped, dbErrors, total: rows.length };
   },
 
+  // Importa clientes del JSON de SwiftMR. Cada fila trae { nombre, direccion, ciudad,
+  // provincia, telefono, email, web, grupo, campo }. especialidad se fija a "SwiftMR" y
+  // grupo/campo se guardan como grupo_rm/campo_rm (mismo patrón JSONB, sin migración).
+  importClientesSwiftMR: async (rows) => {
+    const BATCH = 50;
+    let imported = 0, dbErrors = 0;
+    const items = rows.map(row => ({
+      id: generateId(),
+      nombre: row.nombre,
+      direccion: row.direccion || '',
+      ciudad: row.ciudad || '',
+      provincia: row.provincia || '',
+      telefono: row.telefono || '',
+      email: row.email || '',
+      web: row.web || '',
+      especialidad: 'SwiftMR',
+      grupo_rm: row.grupo || '',
+      campo_rm: row.campo || '',
+      observaciones: '',
+      contactos: [],
+      estado: 'Activo',
+      fechaAlta: new Date().toISOString().split('T')[0],
+    }));
+
+    set(s => ({ clientes: [...s.clientes, ...items] }));
+
+    for (let i = 0; i < items.length; i += BATCH) {
+      const batch = items.slice(i, i + BATCH);
+      const { error } = await supabase.from(TABLE).insert(batch.map(c => ({ id: c.id, data: c })));
+      if (error) {
+        console.error(`[importClientesSwiftMR] Error en lote ${i}–${i + batch.length - 1}:`, error);
+        dbErrors += batch.length;
+      } else {
+        imported += batch.length;
+      }
+    }
+
+    return { imported, dbErrors, total: rows.length };
+  },
+
   getCliente: (id) => get().clientes.find(c => c.id === id),
 }));

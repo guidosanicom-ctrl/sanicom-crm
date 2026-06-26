@@ -268,7 +268,7 @@ function SeguimientoView({ clientes, contactos, usuarioId, onContactar }) {
 export default function ClientesPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { clientes, addCliente, deleteCliente, deleteClientes, importClientes } = useClientesStore();
+  const { clientes, addCliente, deleteCliente, deleteClientes, importClientes, importClientesSwiftMR } = useClientesStore();
   const { user, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const { contactos, addContacto } = useSeguimientoStore();
   const { especialidades } = useEspecialidadesStore();
@@ -289,6 +289,7 @@ export default function ClientesPage() {
   const [delBulkOpen, setDelBulkOpen] = useState(false);
   const [rutaOpen, setRutaOpen] = useState(false);
   const [sanicomOpen, setSanicomOpen] = useState(false);
+  const [swiftmrImporting, setSwiftmrImporting] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
   const [vistaSegui, setVistaSegui] = useState(false);
   useEffect(() => { setVistaSegui(false); }, [location.key]);
@@ -478,6 +479,42 @@ export default function ClientesPage() {
         <div className="flex gap-2">
           {!carlos && <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>}
           {!carlos && <Button variant="outline" size="sm" onClick={() => setSanicomOpen(true)}><Upload className="w-4 h-4" />Importar planilla Sanicom</Button>}
+          {!carlos && (
+            <>
+              <Button variant="outline" size="sm" disabled={swiftmrImporting}
+                onClick={() => document.getElementById('swiftmr-file-input').click()}>
+                <Upload className="w-4 h-4" />{swiftmrImporting ? 'Importando…' : 'Importar SwiftMR'}
+              </Button>
+              <input
+                id="swiftmr-file-input"
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files[0];
+                  e.target.value = '';
+                  if (!file) return;
+                  setSwiftmrImporting(true);
+                  try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+                    const rows = Array.isArray(data) ? data : (Array.isArray(data?.clientes) ? data.clientes : [data]);
+                    if (!rows[0]?.nombre) throw new Error('El JSON no tiene el formato esperado (falta campo "nombre").');
+                    const result = await importClientesSwiftMR(rows);
+                    if (result.dbErrors > 0) {
+                      toast.error(`${result.imported} clientes importados correctamente. ${result.dbErrors} fallaron al guardar.`);
+                    } else {
+                      toast.success(`${result.imported} clientes importados correctamente.`);
+                    }
+                  } catch (err) {
+                    toast.error(`Error al importar: ${err.message}`);
+                  } finally {
+                    setSwiftmrImporting(false);
+                  }
+                }}
+              />
+            </>
+          )}
           {!carlos && <Button variant="outline" size="sm" onClick={() => setDupOpen(true)}><Copy className="w-4 h-4" />Gestionar duplicados</Button>}
           {carlos && (
             <button onClick={() => setVistaSegui(v => !v)}
