@@ -717,6 +717,12 @@ export default function ClienteDetail() {
                 <div className="text-gray-500">CIF/NIF</div><div className="font-medium">{cliente.cif || '-'}</div>
                 <div className="text-gray-500">Tipo</div><div className="font-medium">{cliente.tipo}</div>
                 <div className="text-gray-500">Especialidad</div><div className="font-medium">{cliente.especialidad || '-'}</div>
+                {cliente.especialidad === 'SwiftMR' && (
+                  <>
+                    <div className="text-gray-500">Grupo RM</div><div className="font-medium">{cliente.grupo_rm || '-'}</div>
+                    <div className="text-gray-500">Campo RM</div><div className="font-medium">{cliente.campo_rm || '-'}</div>
+                  </>
+                )}
                 <div className="text-gray-500">Fecha de alta</div><div className="font-medium">{formatDate(cliente.fechaAlta)}</div>
               </div>
             </Card>

@@ -502,9 +502,13 @@ export default function ClientesPage() {
                     if (!rows[0]?.nombre) throw new Error('El JSON no tiene el formato esperado (falta campo "nombre").');
                     const result = await importClientesSwiftMR(rows);
                     if (result.dbErrors > 0) {
-                      toast.error(`${result.imported} clientes importados correctamente. ${result.dbErrors} fallaron al guardar.`);
+                      const motivo = result.errors[0] ? ` Motivo: ${result.errors[0]}` : '';
+                      toast.error(
+                        `✅ Se importaron ${result.imported} clientes correctamente. ❌ ${result.dbErrors} fallaron al guardar.${motivo}`,
+                        { duration: 8000 }
+                      );
                     } else {
-                      toast.success(`${result.imported} clientes importados correctamente.`);
+                      toast.success(`✅ Se importaron ${result.imported} clientes correctamente.`, { duration: 5000 });
                     }
                   } catch (err) {
                     toast.error(`Error al importar: ${err.message}`);

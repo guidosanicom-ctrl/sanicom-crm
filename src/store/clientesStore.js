@@ -213,6 +213,7 @@ export const useClientesStore = create((set, get) => ({
   importClientesSwiftMR: async (rows) => {
     const BATCH = 50;
     let imported = 0, dbErrors = 0;
+    const errors = [];
     const items = rows.map(row => ({
       id: generateId(),
       nombre: row.nombre,
@@ -221,7 +222,7 @@ export const useClientesStore = create((set, get) => ({
       provincia: row.provincia || '',
       telefono: row.telefono || '',
       email: row.email || '',
-      web: row.web || '',
+      website: row.web || '',
       especialidad: 'SwiftMR',
       grupo_rm: row.grupo || '',
       campo_rm: row.campo || '',
@@ -231,20 +232,24 @@ export const useClientesStore = create((set, get) => ({
       fechaAlta: new Date().toISOString().split('T')[0],
     }));
 
-    set(s => ({ clientes: [...s.clientes, ...items] }));
-
+    const insertedItems = [];
     for (let i = 0; i < items.length; i += BATCH) {
       const batch = items.slice(i, i + BATCH);
       const { error } = await supabase.from(TABLE).insert(batch.map(c => ({ id: c.id, data: c })));
       if (error) {
         console.error(`[importClientesSwiftMR] Error en lote ${i}–${i + batch.length - 1}:`, error);
         dbErrors += batch.length;
+        errors.push(error.message || String(error));
       } else {
         imported += batch.length;
+        insertedItems.push(...batch);
       }
     }
 
-    return { imported, dbErrors, total: rows.length };
+    // Solo añadir al estado local los que sí se guardaron en Supabase
+    set(s => ({ clientes: [...s.clientes, ...insertedItems] }));
+
+    return { imported, dbErrors, total: rows.length, errors };
   },
 
   getCliente: (id) => get().clientes.find(c => c.id === id),
