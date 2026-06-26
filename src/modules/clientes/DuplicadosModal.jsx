@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Copy, Trash2, Phone, Building2, CheckCircle2 } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
@@ -55,29 +55,24 @@ function detectarGrupos(clientes) {
 // ── Componente ─────────────────────────────────────────────────────────────────
 
 export default function DuplicadosModal({ open, onClose, clientes, onEliminar }) {
-  // Para cada grupo: id del cliente a CONSERVAR (por defecto el primero = más antiguo por fechaAlta)
-  const [conservar, setConservar] = useState({});
+  // Ids marcados manualmente para eliminar — ninguno por defecto, decisión 100% del usuario
+  const [marcados, setMarcados] = useState(new Set());
   const [confirmando, setConfirmando] = useState(false);
 
   const grupos = useMemo(() => detectarGrupos(clientes), [clientes]);
 
-  // Inicializar selección: conservar el cliente con fecha de alta más antigua
-  useMemo(() => {
-    const init = {};
-    grupos.forEach((g, gi) => {
-      const ordenado = [...g.miembros].sort((a, b) => new Date(a.fechaAlta) - new Date(b.fechaAlta));
-      init[gi] = ordenado[0].id;
-    });
-    setConservar(init);
-  }, [grupos]);
+  // Resetear selección cada vez que se abre el modal o cambian los grupos detectados
+  useEffect(() => {
+    if (open) { setMarcados(new Set()); setConfirmando(false); }
+  }, [open, grupos.length]);
 
-  const idsAEliminar = useMemo(() => {
-    const ids = [];
-    grupos.forEach((g, gi) => {
-      g.miembros.forEach(c => { if (c.id !== conservar[gi]) ids.push(c.id); });
-    });
-    return ids;
-  }, [grupos, conservar]);
+  const toggle = (id) => setMarcados(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const idsAEliminar = [...marcados];
 
   const handleEliminar = () => {
     onEliminar(idsAEliminar);
@@ -136,8 +131,8 @@ export default function DuplicadosModal({ open, onClose, clientes, onEliminar })
             <Copy className="w-5 h-5 text-amber-500 flex-shrink-0" />
             <div className="text-sm text-amber-800">
               Se detectaron <strong>{grupos.length} grupo{grupos.length !== 1 ? 's' : ''}</strong> de duplicados
-              ({idsAEliminar.length} registro{idsAEliminar.length !== 1 ? 's' : ''} para eliminar).
-              Selecciona cuál conservar en cada grupo.
+              ({idsAEliminar.length} registro{idsAEliminar.length !== 1 ? 's' : ''} marcado{idsAEliminar.length !== 1 ? 's' : ''} para eliminar).
+              Marca con el checkbox los que quieras eliminar — nada se borra automáticamente.
             </div>
           </div>
 
@@ -157,33 +152,27 @@ export default function DuplicadosModal({ open, onClose, clientes, onEliminar })
               {/* Filas de clientes */}
               <div className="divide-y divide-gray-100">
                 {g.miembros.map(c => {
-                  const estaConservado = conservar[gi] === c.id;
+                  const marcado = marcados.has(c.id);
                   return (
                     <label
                       key={c.id}
                       className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors
-                        ${estaConservado ? 'bg-green-50' : 'hover:bg-gray-50'}`}
+                        ${marcado ? 'bg-red-50' : 'hover:bg-gray-50'}`}
                     >
                       <input
-                        type="radio"
-                        name={`grupo-${gi}`}
-                        checked={estaConservado}
-                        onChange={() => setConservar(prev => ({ ...prev, [gi]: c.id }))}
-                        className="mt-1 accent-green-600 cursor-pointer"
+                        type="checkbox"
+                        checked={marcado}
+                        onChange={() => toggle(c.id)}
+                        className="mt-1 accent-red-600 cursor-pointer w-4 h-4"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-sm font-semibold ${estaConservado ? 'text-green-700' : 'text-gray-800'}`}>
+                          <span className={`text-sm font-semibold ${marcado ? 'text-red-700' : 'text-gray-800'}`}>
                             {c.nombre}
                           </span>
-                          {estaConservado && (
-                            <span className="text-xs text-green-600 font-medium bg-green-100 px-1.5 py-0.5 rounded">
-                              Conservar
-                            </span>
-                          )}
-                          {!estaConservado && (
-                            <span className="text-xs text-red-500 font-medium bg-red-50 px-1.5 py-0.5 rounded">
-                              Eliminar
+                          {marcado && (
+                            <span className="text-xs text-red-500 font-medium bg-red-100 px-1.5 py-0.5 rounded">
+                              Marcado para eliminar
                             </span>
                           )}
                         </div>
