@@ -17,6 +17,7 @@ import ImportWizard from './ImportWizard';
 import RutaModal from './RutaModal';
 import SanicomImportWizard from './SanicomImportWizard';
 import DuplicadosModal from './DuplicadosModal';
+import SwiftMRDuplicadosModal from './SwiftMRDuplicadosModal';
 import { formatDate } from '../../utils/formatters';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -291,6 +292,7 @@ export default function ClientesPage() {
   const [sanicomOpen, setSanicomOpen] = useState(false);
   const [swiftmrImporting, setSwiftmrImporting] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
+  const [dupSwiftOpen, setDupSwiftOpen] = useState(false);
   const [vistaSegui, setVistaSegui] = useState(false);
   const [accionesOpen, setAccionesOpen] = useState(false);
   const accionesRef = useRef(null);
@@ -551,6 +553,13 @@ export default function ClientesPage() {
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer text-left disabled:opacity-50"
                   >
                     📥 {swiftmrImporting ? 'Importando…' : 'Importar SwiftMR'}
+                  </button>
+                  <div className="border-t border-gray-100 my-1" />
+                  <button
+                    onClick={() => { setAccionesOpen(false); setDupSwiftOpen(true); }}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer text-left"
+                  >
+                    🔍 Revisar duplicados SwiftMR
                   </button>
                 </div>
               )}
@@ -834,6 +843,19 @@ export default function ClientesPage() {
             toast.error('Error al eliminar en Supabase. Revisa la consola (F12) para ver el detalle.');
           } else {
             toast.success(`${ids.length} duplicado${ids.length !== 1 ? 's' : ''} eliminado${ids.length !== 1 ? 's' : ''}.`);
+          }
+        }}
+      />
+      <SwiftMRDuplicadosModal
+        open={dupSwiftOpen}
+        onClose={() => setDupSwiftOpen(false)}
+        clientes={clientes}
+        onEliminar={async (ids) => {
+          const result = await deleteClientes(ids);
+          if (result?.ok === false) {
+            toast.error('Error al eliminar en Supabase. Revisa la consola (F12) para ver el detalle.');
+          } else {
+            toast.success(`${ids.length} cliente${ids.length !== 1 ? 's' : ''} SwiftMR eliminado${ids.length !== 1 ? 's' : ''}.`);
           }
         }}
       />
