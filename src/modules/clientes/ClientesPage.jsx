@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
 import RefreshIndicator from '../../components/ui/RefreshIndicator';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -292,6 +292,16 @@ export default function ClientesPage() {
   const [swiftmrImporting, setSwiftmrImporting] = useState(false);
   const [dupOpen, setDupOpen] = useState(false);
   const [vistaSegui, setVistaSegui] = useState(false);
+  const [accionesOpen, setAccionesOpen] = useState(false);
+  const accionesRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (accionesRef.current && !accionesRef.current.contains(e.target)) setAccionesOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
   useEffect(() => { setVistaSegui(false); }, [location.key]);
 
   const carlos = isCarlos();
@@ -478,13 +488,8 @@ export default function ClientesPage() {
         </div>
         <div className="flex gap-2">
           {!carlos && <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>}
-          {!carlos && <Button variant="outline" size="sm" onClick={() => setSanicomOpen(true)}><Upload className="w-4 h-4" />Importar planilla Sanicom</Button>}
           {!carlos && (
             <>
-              <Button variant="outline" size="sm" disabled={swiftmrImporting}
-                onClick={() => document.getElementById('swiftmr-file-input').click()}>
-                <Upload className="w-4 h-4" />{swiftmrImporting ? 'Importando…' : 'Importar SwiftMR'}
-              </Button>
               <input
                 id="swiftmr-file-input"
                 type="file"
@@ -526,6 +531,30 @@ export default function ClientesPage() {
                 ${vistaSegui ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
               <ClipboardList className="w-4 h-4" />Seguimiento
             </button>
+          )}
+          {!carlos && (
+            <div className="relative" ref={accionesRef}>
+              <Button variant="outline" size="sm" onClick={() => setAccionesOpen(v => !v)}>
+                ⚙️ Acciones<ChevronDown className="w-3.5 h-3.5" />
+              </Button>
+              {accionesOpen && (
+                <div className="absolute right-0 top-11 w-56 bg-white rounded-xl shadow-xl border border-gray-100 z-50 py-1">
+                  <button
+                    onClick={() => { setAccionesOpen(false); setSanicomOpen(true); }}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer text-left"
+                  >
+                    📥 Importar planilla Sanicom
+                  </button>
+                  <button
+                    onClick={() => { setAccionesOpen(false); document.getElementById('swiftmr-file-input').click(); }}
+                    disabled={swiftmrImporting}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer text-left disabled:opacity-50"
+                  >
+                    📥 {swiftmrImporting ? 'Importando…' : 'Importar SwiftMR'}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           <Button size="sm" onClick={() => setFormOpen(true)}><Plus className="w-4 h-4" />Nuevo cliente</Button>
         </div>
