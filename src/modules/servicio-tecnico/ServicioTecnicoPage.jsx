@@ -17,13 +17,14 @@ import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import ServicioForm from './ServicioForm';
 import ServicioDetail from './ServicioDetail';
 import FacturacionModal from './FacturacionModal';
-import { formatDate } from '../../utils/formatters';
+import Modal from '../../components/ui/Modal';
+import { formatDate, formatCurrency } from '../../utils/formatters';
 import { ESTADOS_SERVICIO, TIPOS_SERVICIO, PRIORIDADES_SERVICIO } from '../../utils/constants';
 import { Wrench } from 'lucide-react';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-function StatCard({ label, value, sub, color = 'gray', icon: Icon }) {
+function StatCard({ label, value, sub, color = 'gray', icon: Icon, onClick }) {
   const colors = {
     gray:   'bg-gray-50 border-gray-200 text-gray-700',
     blue:   'bg-blue-50 border-blue-200 text-blue-700',
@@ -32,22 +33,28 @@ function StatCard({ label, value, sub, color = 'gray', icon: Icon }) {
     orange: 'bg-orange-50 border-orange-200 text-orange-700',
     yellow: 'bg-yellow-50 border-yellow-200 text-yellow-700',
   };
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div className={`border rounded-xl p-4 ${colors[color]}`}>
+    <Tag
+      onClick={onClick}
+      className={`border rounded-xl p-4 text-left w-full ${colors[color]} ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+    >
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-medium opacity-70">{label}</p>
         {Icon && <Icon className="w-4 h-4 opacity-50" />}
       </div>
       <p className="text-2xl font-bold">{value}</p>
       {sub && <p className="text-xs mt-1 opacity-60">{sub}</p>}
-    </div>
+    </Tag>
   );
 }
 
-function ResumenMensual({ servicios, isGuido }) {
+function ResumenMensual({ servicios, isGuido, onOpenOT }) {
+  const { clientes } = useClientesStore();
   const now = new Date();
   const [mes, setMes] = useState(now.getMonth());
   const [anio, setAnio] = useState(now.getFullYear());
+  const [detalleOpen, setDetalleOpen] = useState(false);
 
   const años = useMemo(() => {
     const set = new Set(servicios.map(s => {
@@ -70,11 +77,16 @@ function ResumenMensual({ servicios, isGuido }) {
   const canceladas     = del.filter(s => s.estado === 'Cancelada').length;
 
   // Facturación — nuevo sistema (facturacion.totalSinIva) o fallback al campo antiguo (precioCobrado)
-  const totalSinIva = completadasDel.reduce((acc, s) => {
-    if (s.facturacion?.totalSinIva != null) return acc + s.facturacion.totalSinIva;
-    if (s.precioCobrado != null) return acc + (parseFloat(s.precioCobrado) || 0);
-    return acc;
-  }, 0);
+  const otsFacturadas = useMemo(() => completadasDel
+    .map(s => {
+      const monto = s.facturacion?.totalSinIva != null
+        ? s.facturacion.totalSinIva
+        : s.precioCobrado != null ? (parseFloat(s.precioCobrado) || 0) : null;
+      return monto != null ? { ...s, _montoSinIva: monto } : null;
+    })
+    .filter(Boolean), [completadasDel]);
+
+  const totalSinIva = otsFacturadas.reduce((acc, s) => acc + s._montoSinIva, 0);
   const sinDetalle      = completadasDel.filter(s => !s.facturacion).length;
   const pendienteFacturar = completadasDel.filter(s => s.facturacion && !s.facturacion.facturada).length;
 
@@ -111,7 +123,7 @@ function ResumenMensual({ servicios, isGuido }) {
       <div>
         <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Facturación</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <StatCard label="Total facturado (sin IVA)" value={fmt(totalSinIva)} color="blue" icon={Euro} sub="Suma de OTs completadas con detalle" />
+          <StatCard label="Total facturado (sin IVA)" value={fmt(totalSinIva)} color="blue" icon={Euro} sub="Suma de OTs completadas con detalle · ver desglose" onClick={() => setDetalleOpen(true)} />
           <StatCard label="OTs sin detalle de facturación" value={sinDetalle} color={sinDetalle > 0 ? 'orange' : 'gray'} icon={Package} sub="Completadas sin conceptos cargados" />
           <StatCard label="💶 Pendientes de facturar" value={pendienteFacturar} color={pendienteFacturar > 0 ? 'yellow' : 'gray'} icon={TrendingUp} sub="Cerradas por Guido, aún no facturadas" />
         </div>
@@ -124,6 +136,60 @@ function ResumenMensual({ servicios, isGuido }) {
           <p className="text-center text-sm text-gray-400 mt-6">No hay órdenes registradas en {MESES[mes]} {anio}.</p>
         )}
       </div>
+
+      <Modal
+        open={detalleOpen}
+        onClose={() => setDetalleOpen(false)}
+        title={`Total facturado — ${MESES[mes]} ${anio}`}
+        size="lg"
+      >
+        {otsFacturadas.length === 0 ? (
+          <p className="text-center text-sm text-gray-400 py-6">No hay OTs facturadas en este período.</p>
+        ) : (
+          <div className="space-y-3">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500 uppercase">OT</th>
+                    <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500 uppercase">Cliente</th>
+                    <th className="text-right py-2 px-2 text-xs font-semibold text-gray-500 uppercase">Monto sin IVA</th>
+                    <th className="text-left py-2 px-2 text-xs font-semibold text-gray-500 uppercase">Fecha de cierre</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {otsFacturadas.map(s => {
+                    const cliente = clientes.find(c => c.id === s.clienteId);
+                    const fechaCierre = s.fechaCompletada || s.fechaCreacion;
+                    return (
+                      <tr key={s.id} className="hover:bg-gray-50">
+                        <td className="py-2 px-2">
+                          <button
+                            onClick={() => { setDetalleOpen(false); onOpenOT?.(s); }}
+                            className="font-mono text-xs text-[#1B4F8A] hover:underline cursor-pointer"
+                          >
+                            {s.numero}
+                          </button>
+                        </td>
+                        <td className="py-2 px-2 text-gray-700">{cliente?.nombre || '-'}</td>
+                        <td className="py-2 px-2 text-right font-medium text-gray-800">{formatCurrency(s._montoSinIva)}</td>
+                        <td className="py-2 px-2 text-gray-500 text-xs">{fechaCierre ? formatDate(fechaCierre) : '-'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-gray-200">
+                    <td colSpan={2} className="py-2 px-2 text-sm font-semibold text-gray-700">Total</td>
+                    <td className="py-2 px-2 text-right text-base font-bold text-[#1B4F8A]">{formatCurrency(totalSinIva)}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
@@ -196,7 +262,7 @@ export default function ServicioTecnicoPage() {
         )}
       </div>
 
-      {activeTab === 'resumen' && !isCarlos() && <ResumenMensual servicios={servicios} isGuido={isGuido()} />}
+      {activeTab === 'resumen' && !isCarlos() && <ResumenMensual servicios={servicios} isGuido={isGuido()} onOpenOT={openDetail} />}
 
       {activeTab === 'ordenes' && <>
 
