@@ -44,7 +44,7 @@ function StatCard({ label, value, sub, color = 'gray', icon: Icon }) {
   );
 }
 
-function ResumenMensual({ servicios }) {
+function ResumenMensual({ servicios, isGuido }) {
   const now = new Date();
   const [mes, setMes] = useState(now.getMonth());
   const [anio, setAnio] = useState(now.getFullYear());
@@ -115,6 +115,11 @@ function ResumenMensual({ servicios }) {
           <StatCard label="OTs sin detalle de facturación" value={sinDetalle} color={sinDetalle > 0 ? 'orange' : 'gray'} icon={Package} sub="Completadas sin conceptos cargados" />
           <StatCard label="💶 Pendientes de facturar" value={pendienteFacturar} color={pendienteFacturar > 0 ? 'yellow' : 'gray'} icon={TrendingUp} sub="Cerradas por Guido, aún no facturadas" />
         </div>
+        {isGuido && (
+          <div className="mt-3">
+            <StatCard label="💰 Mi comisión del mes" value={fmt(totalSinIva * 0.10)} color="green" icon={Euro} sub="10% del total facturado sin IVA" />
+          </div>
+        )}
         {del.length === 0 && (
           <p className="text-center text-sm text-gray-400 mt-6">No hay órdenes registradas en {MESES[mes]} {anio}.</p>
         )}
@@ -130,7 +135,7 @@ export default function ServicioTecnicoPage() {
   const { servicios, addServicio, updateServicio, deleteServicio } = useServicioStore();
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
-  const { users, isReadOnly, isCarlos } = useAuthStore();
+  const { users, isReadOnly, isCarlos, isGuido } = useAuthStore();
   const readOnly = isReadOnly('servicio-tecnico');
   const [activeTab, setActiveTab] = useState('ordenes');
   const [search, setSearch] = useState('');
@@ -191,7 +196,7 @@ export default function ServicioTecnicoPage() {
         )}
       </div>
 
-      {activeTab === 'resumen' && !isCarlos() && <ResumenMensual servicios={servicios} />}
+      {activeTab === 'resumen' && !isCarlos() && <ResumenMensual servicios={servicios} isGuido={isGuido()} />}
 
       {activeTab === 'ordenes' && <>
 

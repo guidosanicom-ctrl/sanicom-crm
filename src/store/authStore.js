@@ -52,6 +52,8 @@ export const useAuthStore = create((set, get) => ({
 
   isCarlos: () => get().user?.email === 'carlosleal@sanicom.es',
 
+  isGuido: () => get().user?.email === 'guidorosso@sanicom.es',
+
   canEditRecord: (record) => {
     const { user } = get();
     if (!user) return false;
