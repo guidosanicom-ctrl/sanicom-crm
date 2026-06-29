@@ -748,6 +748,11 @@ export default function ClienteDetail() {
                 <div className="text-gray-500">CIF/NIF</div><div className="font-medium">{cliente.cif || '-'}</div>
                 <div className="text-gray-500">Tipo</div><div className="font-medium">{cliente.tipo}</div>
                 <div className="text-gray-500">Especialidad</div><div className="font-medium">{cliente.especialidad || '-'}</div>
+                {cliente.subespecialidad && (
+                  <>
+                    <div className="text-gray-500">Subespecialidad</div><div className="font-medium">{cliente.subespecialidad}</div>
+                  </>
+                )}
                 {cliente.especialidad === 'SwiftMR' && (
                   <>
                     <div className="text-gray-500">Grupo RM</div><div className="font-medium">{cliente.grupo_rm || '-'}</div>
