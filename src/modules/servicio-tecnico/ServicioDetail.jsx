@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -9,10 +9,11 @@ import { useAuthStore } from '../../store/authStore';
 import { useServicioStore } from '../../store/servicioStore';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { exportOTPdf } from '../../utils/exportOTPdf';
-import { Edit, Trash2, FileDown } from 'lucide-react';
+import { Edit, Trash2, FileDown, Truck } from 'lucide-react';
 import logoSrc from '../../assets/sanicom_logo.png';
+import FirmaCanvas from '../../components/ui/FirmaCanvas';
 
-const ESTADO_COLOR = { 'Pendiente': 'yellow', 'Programada': 'blue', 'En curso': 'orange', 'Completada': 'green', 'Cancelada': 'gray' };
+const ESTADO_COLOR = { 'Pendiente': 'yellow', 'Programada': 'blue', 'En curso': 'orange', 'Completada': 'green', 'Entregada': 'purple', 'Cancelada': 'gray' };
 const PRIORIDAD_COLOR = { 'Baja': 'gray', 'Normal': 'blue', 'Alta': 'orange', 'Urgente': 'red' };
 
 function Row({ label, value }) {
@@ -30,12 +31,32 @@ export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete 
   const { users, isCarlos } = useAuthStore();
   const { updateServicio } = useServicioStore();
   const [exporting, setExporting] = useState(false);
+  const [fechaEntrega, setFechaEntrega] = useState(new Date().toISOString().split('T')[0]);
+  const [firmaCliente, setFirmaCliente] = useState(null);
+  const [registrandoEntrega, setRegistrandoEntrega] = useState(false);
+
+  useEffect(() => {
+    if (open && orden) {
+      setFechaEntrega(orden.fechaEntrega || new Date().toISOString().split('T')[0]);
+      setFirmaCliente(orden.firmaCliente || null);
+    }
+  }, [open, orden?.id]);
 
   if (!orden) return null;
 
   const cliente = clientes.find(c => c.id === orden.clienteId);
   const equipo = orden.equipoNombre ? { nombre: orden.equipoNombre } : equipos.find(e => e.id === orden.equipoId);
   const tecnico = users.find(u => u.id === orden.tecnico);
+
+  const handleRegistrarEntrega = async () => {
+    if (!firmaCliente) return;
+    setRegistrandoEntrega(true);
+    try {
+      await updateServicio(orden.id, { estado: 'Entregada', fechaEntrega, firmaCliente });
+    } finally {
+      setRegistrandoEntrega(false);
+    }
+  };
 
   const handleExportPdf = async () => {
     setExporting(true);
@@ -169,6 +190,53 @@ export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete 
             </div>
             {orden.facturacion.notas && (
               <p className="mt-2 text-xs text-gray-500 italic">{orden.facturacion.notas}</p>
+            )}
+          </div>
+        )}
+
+        {/* Entrega del equipo */}
+        {(orden.estado === 'Completada' || orden.estado === 'Entregada') && (
+          <div className="border border-purple-200 rounded-xl p-4 bg-purple-50">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <Truck className="w-4 h-4 text-purple-500" />
+              Entrega del equipo
+            </h3>
+
+            {orden.estado === 'Entregada' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Row label="Fecha de entrega" value={formatDate(orden.fechaEntrega)} />
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Firma del cliente</p>
+                  {orden.firmaCliente ? (
+                    <img src={orden.firmaCliente} alt="Firma del cliente" className="border border-gray-200 rounded-lg bg-white h-24 object-contain" />
+                  ) : (
+                    <p className="text-sm text-gray-400">Sin firma registrada</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">📅 Fecha de entrega</label>
+                  <input
+                    type="date"
+                    value={fechaEntrega}
+                    onChange={e => setFechaEntrega(e.target.value)}
+                    className="w-full sm:w-56 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">✍️ Firma del cliente</label>
+                  <FirmaCanvas onChange={setFirmaCliente} initialValue={firmaCliente} />
+                </div>
+                <button
+                  onClick={handleRegistrarEntrega}
+                  disabled={!firmaCliente || registrandoEntrega}
+                  className="px-4 py-2 bg-[#1B4F8A] text-white text-sm font-medium rounded-lg hover:bg-[#163d6e] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {registrandoEntrega ? 'Guardando…' : 'Registrar entrega'}
+                </button>
+              </div>
             )}
           </div>
         )}

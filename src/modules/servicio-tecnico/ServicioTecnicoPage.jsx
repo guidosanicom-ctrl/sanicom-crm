@@ -71,7 +71,8 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
     return d.getFullYear() === anio && d.getMonth() === mes;
   }), [servicios, mes, anio]);
 
-  const completadasDel = del.filter(s => s.estado === 'Completada');
+  // Entregada es un paso posterior a Completada — se sigue contando como cerrada/facturable
+  const completadasDel = del.filter(s => s.estado === 'Completada' || s.estado === 'Entregada');
   const enCurso        = del.filter(s => s.estado === 'En curso').length;
   const pendientes     = del.filter(s => s.estado === 'Pendiente' || s.estado === 'Programada').length;
   const canceladas     = del.filter(s => s.estado === 'Cancelada').length;
@@ -194,7 +195,7 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
   );
 }
 
-const ESTADO_BADGE = { 'Pendiente': 'yellow', 'Programada': 'blue', 'En curso': 'orange', 'Completada': 'green', 'Cancelada': 'gray' };
+const ESTADO_BADGE = { 'Pendiente': 'yellow', 'Programada': 'blue', 'En curso': 'orange', 'Completada': 'green', 'Entregada': 'purple', 'Cancelada': 'gray' };
 const PRIORIDAD_BADGE = { 'Baja': 'gray', 'Normal': 'blue', 'Alta': 'orange', 'Urgente': 'red' };
 
 export default function ServicioTecnicoPage() {
@@ -348,7 +349,7 @@ export default function ServicioTecnicoPage() {
                       {s.facturacion && !s.facturacion.facturada && (
                         <Badge color="yellow">💶 Pendiente</Badge>
                       )}
-                      {!readOnly && s.estado !== 'Completada' && (
+                      {!readOnly && s.estado !== 'Completada' && s.estado !== 'Entregada' && (
                         <button onClick={e => { e.stopPropagation(); setFacturacionOT(s); }}
                           className="p-1.5 rounded-lg text-green-500 hover:bg-green-50 flex-shrink-0 cursor-pointer" title="Marcar completada">
                           <CheckCircle className="w-4 h-4" />
@@ -392,7 +393,7 @@ export default function ServicioTecnicoPage() {
                             {s.facturacion && !s.facturacion.facturada && (
                               <Badge color="yellow">💶 Pendiente</Badge>
                             )}
-                            {!readOnly && s.estado !== 'Completada' && (
+                            {!readOnly && s.estado !== 'Completada' && s.estado !== 'Entregada' && (
                               <button onClick={() => setFacturacionOT(s)}
                                 className="p-1 text-green-500 hover:bg-green-50 rounded cursor-pointer" title="Marcar completada">
                                 <CheckCircle className="w-4 h-4" />

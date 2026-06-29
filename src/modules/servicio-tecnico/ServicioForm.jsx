@@ -97,8 +97,11 @@ export default function ServicioForm({ open, onClose, onSave, initial }) {
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
           <select value={form.estado} onChange={e => set('estado', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
-            {ESTADOS_SERVICIO.map(s => <option key={s}>{s}</option>)}
+            {ESTADOS_SERVICIO.filter(s => s !== 'Entregada' || form.estado === 'Entregada').map(s => <option key={s}>{s}</option>)}
           </select>
+          {form.estado === 'Entregada' && (
+            <p className="text-xs text-gray-400 mt-1">Este estado se gestiona desde "Registrar entrega" en el detalle de la OT.</p>
+          )}
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Nº de serie</label>
