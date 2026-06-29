@@ -637,7 +637,7 @@ export default function ClienteDetail() {
     if (!result) console.error('[ClienteDetail] No se pudo guardar la nota en Supabase');
   };
 
-  const handleAgendarLlamada = () => {
+  const handleAgendarLlamada = async () => {
     if (!llamadaForm?.fechaHora) return;
     const [fecha, hora] = llamadaForm.fechaHora.split('T');
     addEvento({
@@ -650,6 +650,12 @@ export default function ClienteDetail() {
       responsable: user?.id,
       descripcion: llamadaForm.nota,
     });
+
+    const [anio, mes, dia] = fecha.split('-');
+    const fechaFmt = `${dia}/${mes}/${anio} ${hora}`;
+    const texto = `📞 Llamada agendada para el ${fechaFmt}${llamadaForm.nota ? ` — ${llamadaForm.nota}` : ''}`;
+    await addNota({ clienteId: id, texto, autorId: user?.id, autorNombre: user?.name });
+
     setLlamadaForm(null);
     toast.success('Llamada agendada. Te llegará un aviso el día indicado.');
   };
@@ -703,6 +709,11 @@ export default function ClienteDetail() {
           {carlos && (
             <Button size="sm" onClick={() => setContactoSegForm({ tipo: 'whatsapp', fecha: new Date().toISOString().slice(0,10), nota: '' })}>
               <MessageCircle className="w-4 h-4" />Registrar contacto
+            </Button>
+          )}
+          {carlos && (
+            <Button variant="outline" size="sm" onClick={() => setLlamadaForm({ fechaHora: new Date().toISOString().slice(0, 16), nota: '' })}>
+              📞 Agendar llamada
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}><Edit className="w-4 h-4" />Editar</Button>
@@ -947,14 +958,7 @@ export default function ClienteDetail() {
       {activeTab === 'notas' && (
         <div className="space-y-5">
           <Card>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-800">Notas & Actividad</h3>
-              {carlos && (
-                <Button size="sm" variant="outline" onClick={() => setLlamadaForm({ fechaHora: new Date().toISOString().slice(0, 16), nota: '' })}>
-                  📞 Agendar llamada
-                </Button>
-              )}
-            </div>
+            <h3 className="font-semibold text-gray-800 mb-4">Notas & Actividad</h3>
             <div className="flex gap-2 mb-4">
               <input value={note} onChange={e => setNote(e.target.value)} placeholder="Añadir nota..."
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
