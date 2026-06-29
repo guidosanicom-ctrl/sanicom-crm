@@ -88,7 +88,8 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
     .filter(Boolean), [completadasDel]);
 
   const totalSinIva = otsFacturadas.reduce((acc, s) => acc + s._montoSinIva, 0);
-  const sinDetalle      = completadasDel.filter(s => !s.facturacion).length;
+  // No contar las OTs marcadas explícitamente como "no requiere factura"
+  const sinDetalle      = completadasDel.filter(s => !s.facturacion && s.facturacionRequerida !== false).length;
   const pendienteFacturar = completadasDel.filter(s => s.facturacion && !s.facturacion.facturada).length;
 
   const fmt = (n) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -449,12 +450,17 @@ export default function ServicioTecnicoPage() {
         open={!!facturacionOT}
         onClose={() => { setFacturacionOT(null); setPendingFormData(null); }}
         ordenNumero={facturacionOT?.numero}
-        onConfirm={(facturacion) => {
-          const updates = pendingFormData
-            ? { ...pendingFormData, facturacion }
-            : { estado: 'Completada', facturacion };
+        onConfirm={(resultado) => {
+          const base = pendingFormData || { estado: 'Completada' };
+          const updates = resultado.facturacionRequerida === false
+            ? { ...base, facturacionRequerida: false }
+            : { ...base, facturacion: resultado.facturacion };
           updateServicio(facturacionOT.id, updates);
-          toast.success('Orden completada y detalle de facturación guardado.');
+          toast.success(
+            resultado.facturacionRequerida === false
+              ? 'Orden completada sin facturación.'
+              : 'Orden completada y detalle de facturación guardado.'
+          );
           setFacturacionOT(null);
           setPendingFormData(null);
         }}

@@ -9,12 +9,14 @@ const IVA_OPTIONS = [0, 10, 21];
 const emptyLinea = () => ({ concepto: '', cantidad: 1, precioUnitario: 0 });
 
 export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero }) {
+  const [requiereFactura, setRequiereFactura] = useState(true);
   const [lineas, setLineas] = useState([emptyLinea()]);
   const [iva, setIva] = useState(21);
   const [notas, setNotas] = useState('');
 
   useEffect(() => {
     if (open) {
+      setRequiereFactura(true);
       setLineas([emptyLinea()]);
       setIva(21);
       setNotas('');
@@ -33,9 +35,13 @@ export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero
   const totalConIva = totalSinIva * (1 + iva / 100);
 
   const handleConfirm = () => {
+    if (!requiereFactura) {
+      onConfirm({ facturacionRequerida: false });
+      return;
+    }
     const lineasValidas = lineas.filter(l => l.concepto.trim());
     if (lineasValidas.length === 0) return;
-    onConfirm({ lineas: lineasValidas, iva, notas, totalSinIva, totalConIva, facturada: false });
+    onConfirm({ facturacion: { lineas: lineasValidas, iva, notas, totalSinIva, totalConIva, facturada: false } });
   };
 
   const inp = 'w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20';
@@ -49,13 +55,40 @@ export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleConfirm} disabled={!lineas.some(l => l.concepto.trim())}>
-            Confirmar y cerrar OT
+          <Button onClick={handleConfirm} disabled={requiereFactura && !lineas.some(l => l.concepto.trim())}>
+            {requiereFactura ? 'Confirmar y cerrar OT' : 'Cerrar OT sin facturar'}
           </Button>
         </>
       }
     >
       <div className="space-y-5">
+        {/* Selector: requiere factura o no */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setRequiereFactura(true)}
+            className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-colors cursor-pointer
+              ${requiereFactura ? 'border-[#1B4F8A] bg-blue-50 text-[#1B4F8A]' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+          >
+            ✅ Requiere factura
+          </button>
+          <button
+            onClick={() => setRequiereFactura(false)}
+            className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-colors cursor-pointer
+              ${!requiereFactura ? 'border-[#1B4F8A] bg-blue-50 text-[#1B4F8A]' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+          >
+            ⬜ No requiere factura
+          </button>
+        </div>
+
+        {!requiereFactura && (
+          <p className="text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
+            La OT se marcará como completada sin pedir datos de facturación y no aparecerá como pendiente de facturar en el resumen mensual.
+          </p>
+        )}
+      </div>
+
+      {requiereFactura && (
+      <div className="space-y-5 mt-5">
         {/* Tabla de líneas */}
         <div>
           <div className="hidden sm:grid grid-cols-[1fr_80px_100px_90px_32px] gap-2 mb-1 px-1">
@@ -150,6 +183,7 @@ export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero
           />
         </div>
       </div>
+      )}
     </Modal>
   );
 }
