@@ -28,21 +28,17 @@ export async function registerPushSubscription(userId) {
   const subJson = subscription.toJSON();
   const endpoint = subJson.endpoint;
 
-  // Eliminar cualquier suscripción previa de este dispositivo (de cualquier usuario)
-  // para evitar que otro usuario siga recibiendo notificaciones en este dispositivo.
-  // Usamos .filter() con sintaxis PostgREST para comparar dentro del JSONB.
-  const { error: delError } = await supabase
+  // El id de la fila depende SOLO del endpoint (no del usuario), para que un mismo
+  // dispositivo físico nunca pueda quedar registrado bajo dos user_id distintos a la vez.
+  // upsert sobre ese id reasigna atómicamente el dispositivo al usuario que acaba de
+  // iniciar sesión, sin dejar filas huérfanas de un usuario anterior (bug: Guido recibía
+  // pushes de Carlos porque el mismo endpoint quedaba duplicado bajo ambos user_id).
+  const id = btoa(endpoint).slice(-24).replace(/[^a-zA-Z0-9]/g, '');
+  const { error: upsertError } = await supabase
     .from('push_subscriptions')
-    .delete()
-    .filter('subscription->>endpoint', 'eq', endpoint);
-  if (delError) console.warn('[push] error limpiando suscripción anterior:', delError);
+    .upsert({ id, user_id: userId, subscription: subJson }, { onConflict: 'id' });
 
-  const id = `${userId}_${btoa(endpoint).slice(-20).replace(/[^a-zA-Z0-9]/g, '')}`;
-  const { error: insertError } = await supabase
-    .from('push_subscriptions')
-    .insert({ id, user_id: userId, subscription: subJson });
-
-  if (insertError) console.error('[push] error guardando suscripción:', insertError);
+  if (upsertError) console.error('[push] error guardando suscripción:', upsertError);
   else console.log('[push] suscripción registrada OK, id:', id, 'userId:', userId);
 }
 
