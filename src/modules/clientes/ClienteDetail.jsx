@@ -13,6 +13,7 @@ import { useNotasStore } from '../../store/notasStore';
 import { useAgendaStore } from '../../store/agendaStore';
 import { useSeguimientoStore } from '../../store/seguimientoStore';
 import { MessageCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
@@ -572,6 +573,7 @@ export default function ClienteDetail() {
   const { visitas } = useVisitasStore();
   const { notas, addNota, deleteNota } = useNotasStore();
   const { contactos: todosContactosSeg, addContacto: addContactoSeg, deleteContacto: deleteContactoSeg } = useSeguimientoStore();
+  const { addEvento } = useAgendaStore();
   const [activeTab, setActiveTab] = useState('resumen');
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
@@ -579,6 +581,7 @@ export default function ClienteDetail() {
   const [note, setNote] = useState('');
   const [geoLoading, setGeoLoading] = useState(false);
   const [contactoSegForm, setContactoSegForm] = useState(null);
+  const [llamadaForm, setLlamadaForm] = useState(null);
 
   const { user, users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const carlos = isCarlos();
@@ -603,7 +606,7 @@ export default function ClienteDetail() {
     { key: 'contactos',         label: 'Contactos' },
     ...(seccionConfig ? [{ key: 'servicios', label: seccionConfig.label }] : []),
     { key: 'equipos-tiene',     label: 'Equipos que tiene' },
-    { key: 'equipos-vendidos',  label: 'Equipos vendidos por Sanicom' },
+    { key: 'equipos-vendidos',  label: 'Equipos Sanicom' },
     { key: 'oportunidades',     label: 'Oportunidades' },
     { key: 'presupuestos',      label: 'Presupuestos' },
     { key: 'visitas',           label: 'Visitas' },
@@ -632,6 +635,23 @@ export default function ClienteDetail() {
     setNote('');
     const result = await addNota({ clienteId: id, texto: text, autorId: user?.id, autorNombre: user?.name });
     if (!result) console.error('[ClienteDetail] No se pudo guardar la nota en Supabase');
+  };
+
+  const handleAgendarLlamada = () => {
+    if (!llamadaForm?.fechaHora) return;
+    const [fecha, hora] = llamadaForm.fechaHora.split('T');
+    addEvento({
+      tipo: 'Llamada/Seguimiento',
+      titulo: `📞 Llamada — ${cliente.nombre}`,
+      inicio: llamadaForm.fechaHora,
+      fin: buildEventoFin(fecha, hora),
+      clienteId: id,
+      clienteNombre: cliente.nombre,
+      responsable: user?.id,
+      descripcion: llamadaForm.nota,
+    });
+    setLlamadaForm(null);
+    toast.success('Llamada agendada. Te llegará un aviso el día indicado.');
   };
 
   // Auto-geocodificar al abrir la ficha si tiene dirección pero no coordenadas
@@ -692,12 +712,12 @@ export default function ClienteDetail() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <div className="flex gap-1 overflow-x-auto">
+        <div className="flex flex-wrap gap-x-1 gap-y-0.5">
           {TABS.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer border-b-2 -mb-px
+              className={`px-2.5 py-2 text-xs font-medium whitespace-nowrap transition-colors cursor-pointer border-b-2 -mb-px
                 ${activeTab === tab.key ? 'border-[#1B4F8A] text-[#1B4F8A]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
             >
               {tab.label}
@@ -927,7 +947,14 @@ export default function ClienteDetail() {
       {activeTab === 'notas' && (
         <div className="space-y-5">
           <Card>
-            <h3 className="font-semibold text-gray-800 mb-4">Notas & Actividad</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-800">Notas & Actividad</h3>
+              {carlos && (
+                <Button size="sm" variant="outline" onClick={() => setLlamadaForm({ fechaHora: new Date().toISOString().slice(0, 16), nota: '' })}>
+                  📞 Agendar llamada
+                </Button>
+              )}
+            </div>
             <div className="flex gap-2 mb-4">
               <input value={note} onChange={e => setNote(e.target.value)} placeholder="Añadir nota..."
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
@@ -998,6 +1025,43 @@ export default function ClienteDetail() {
               </div>
             )}
           </Card>
+        </div>
+      )}
+
+      {/* Mini formulario: agendar llamada (solo Carlos) */}
+      {llamadaForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setLlamadaForm(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-800">📞 Agendar llamada</h3>
+              <button onClick={() => setLlamadaForm(null)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Fecha y hora</label>
+              <input
+                type="datetime-local"
+                value={llamadaForm.fechaHora}
+                onChange={e => setLlamadaForm(f => ({ ...f, fechaHora: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nota (opcional)</label>
+              <textarea
+                rows={2}
+                value={llamadaForm.nota}
+                onChange={e => setLlamadaForm(f => ({ ...f, nota: e.target.value }))}
+                placeholder="Motivo de la llamada..."
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" size="sm" onClick={() => setLlamadaForm(null)}>Cancelar</Button>
+              <Button size="sm" onClick={handleAgendarLlamada} disabled={!llamadaForm.fechaHora}>Agendar</Button>
+            </div>
+          </div>
         </div>
       )}
 
