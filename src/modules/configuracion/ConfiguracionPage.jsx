@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { ROLES } from '../../utils/constants';
 import { Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 import CopiaSeguridad from './CopiaSeguridad';
+import { forceReregisterPushSubscription } from '../../lib/pushSubscription';
 
 const TABS_BASE = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos', 'Tipos de cliente', 'Servicios hospitalarios', 'Enlace Google Drive'];
 const EMAILS_BACKUP = ['administracion@sanicom.es', 'jgovantes@sanicom.es', 'guidorosso@sanicom.es'];
@@ -182,6 +183,21 @@ export default function ConfiguracionPage() {
 
   const saveProfile = () => toast.success('Perfil actualizado (demo).');
 
+  const [reactivando, setReactivando] = useState(false);
+  const handleReactivarNotificaciones = async () => {
+    if (!user?.id) return;
+    setReactivando(true);
+    try {
+      await forceReregisterPushSubscription(user.id);
+      toast.success('Notificaciones reactivadas. Este dispositivo volverá a recibir avisos.');
+    } catch (err) {
+      console.error('[push] error en reactivación forzada:', err);
+      toast.error(err.message || 'No se pudo reactivar. Revisa los permisos de notificaciones del navegador.');
+    } finally {
+      setReactivando(false);
+    }
+  };
+
   const toggleUser = (id) => {
     setUsersState(u => u.map(usr => usr.id === id ? { ...usr, active: !usr.active } : usr));
     toast.success('Estado actualizado.');
@@ -282,6 +298,18 @@ export default function ConfiguracionPage() {
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
             </div>
             <Button onClick={saveProfile}>Guardar perfil</Button>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-gray-100">
+            <h4 className="text-sm font-semibold text-gray-700 mb-1">Notificaciones push</h4>
+            <p className="text-xs text-gray-400 mb-3">
+              Si dejaste de recibir notificaciones en este dispositivo (frecuente en iOS tras reinstalar
+              la app o tras un tiempo sin usarla), pulsa este botón para volver a pedir permiso y registrar
+              un token nuevo.
+            </p>
+            <Button variant="outline" onClick={handleReactivarNotificaciones} loading={reactivando}>
+              {reactivando ? 'Reactivando…' : '🔔 Reactivar notificaciones'}
+            </Button>
           </div>
         </Card>
       )}

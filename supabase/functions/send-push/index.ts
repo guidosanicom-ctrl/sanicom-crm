@@ -34,7 +34,10 @@ serve(async (req) => {
 
     if (error) throw error;
     if (!subs?.length) {
-      return new Response(JSON.stringify({ sent: 0 }), {
+      // Sin fila en push_subscriptions: el usuario nunca completó el registro
+      // (permiso nunca concedido, o se guardó y luego se borró/expiró sin re-registrar).
+      console.warn(`[send-push] userId=${targetUserId} no tiene ninguna suscripción registrada — no se puede enviar push`);
+      return new Response(JSON.stringify({ sent: 0, reason: 'no_subscriptions' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -42,22 +45,41 @@ serve(async (req) => {
     const payload = JSON.stringify({ title, body, url, icon: '/minilogo.png' });
 
     const results = await Promise.allSettled(
-      subs.map(({ subscription }) =>
-        webpush.sendNotification(subscription, payload).catch(async (err) => {
-          // Si la suscripción expiró (410), eliminarla
-          if (err.statusCode === 410) {
-            await supabase
-              .from('push_subscriptions')
-              .delete()
-              .eq('subscription->>endpoint', subscription.endpoint);
-          }
-          throw err;
-        })
-      )
+      subs.map(({ subscription }) => {
+        const endpointTail = subscription?.endpoint?.slice(-24) ?? '?';
+        return webpush.sendNotification(subscription, payload)
+          .then(() => {
+            console.log(`[send-push] OK userId=${targetUserId} endpoint=...${endpointTail}`);
+          })
+          .catch(async (err) => {
+            console.error(
+              `[send-push] FALLO userId=${targetUserId} endpoint=...${endpointTail} ` +
+              `statusCode=${err.statusCode} body=${err.body ?? err.message ?? err}`
+            );
+            // 404/410: suscripción ya no existe en el servicio push (dispositivo
+            // desinstaló la app, token expirado). 403: VAPID/clave rechazada —
+            // también indica una suscripción muerta que conviene limpiar.
+            if ([404, 410, 403].includes(err.statusCode)) {
+              const { error: delErr } = await supabase
+                .from('push_subscriptions')
+                .delete()
+                .eq('subscription->>endpoint', subscription.endpoint);
+              if (delErr) {
+                console.error(`[send-push] error eliminando suscripción muerta de userId=${targetUserId}:`, delErr);
+              } else {
+                console.log(`[send-push] suscripción muerta eliminada (userId=${targetUserId}, statusCode=${err.statusCode})`);
+              }
+            }
+            throw err;
+          });
+      })
     );
 
     const sent = results.filter((r) => r.status === 'fulfilled').length;
-    return new Response(JSON.stringify({ sent, total: subs.length }), {
+    const failed = results.length - sent;
+    console.log(`[send-push] userId=${targetUserId} resultado: ${sent}/${subs.length} enviados, ${failed} fallidos`);
+
+    return new Response(JSON.stringify({ sent, total: subs.length, failed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
