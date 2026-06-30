@@ -622,6 +622,7 @@ export default function ClienteDetail() {
   const { notas, addNota, deleteNota } = useNotasStore();
   const { contactos: todosContactosSeg, addContacto: addContactoSeg, deleteContacto: deleteContactoSeg } = useSeguimientoStore();
   const { addEvento } = useAgendaStore();
+  const { categorias } = useCategoriasStore();
   const [activeTab, setActiveTab] = useState('resumen');
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
@@ -709,6 +710,25 @@ export default function ClienteDetail() {
     toast.success('Llamada agendada. Te llegará un aviso el día indicado.');
   };
 
+  const handleGuardarContacto = async () => {
+    if (!contactoSegForm) return;
+    await addContactoSeg({
+      clienteId: id, usuarioId: user.id, tipo: contactoSegForm.tipo,
+      fecha: contactoSegForm.fecha, nota: contactoSegForm.nota,
+    });
+
+    if (contactoSegForm.interesado && (contactoSegForm.equipoCategoria || contactoSegForm.equipoModeloMarca)) {
+      const nombre = [contactoSegForm.equipoCategoria, contactoSegForm.equipoModeloMarca].filter(Boolean).join(' — ');
+      saveEquiposInteres([
+        ...(cliente.equiposInteres || []),
+        { id: genId(), nombre, categoria: contactoSegForm.equipoCategoria, modeloMarca: contactoSegForm.equipoModeloMarca },
+      ]);
+      toast.success('Contacto registrado y equipo de interés añadido.');
+    }
+
+    setContactoSegForm(null);
+  };
+
   // Auto-geocodificar al abrir la ficha si tiene dirección pero no coordenadas
   useEffect(() => {
     if (cliente.lat || cliente.lng) return;
@@ -756,7 +776,7 @@ export default function ClienteDetail() {
         </div>
         <div className="flex gap-2 flex-wrap">
           {carlos && (
-            <Button size="sm" onClick={() => setContactoSegForm({ tipo: 'whatsapp', fecha: new Date().toISOString().slice(0,10), nota: '' })}>
+            <Button size="sm" onClick={() => setContactoSegForm({ tipo: 'whatsapp', fecha: new Date().toISOString().slice(0,10), nota: '', interesado: false, equipoCategoria: '', equipoModeloMarca: '' })}>
               <MessageCircle className="w-4 h-4" />Registrar contacto
             </Button>
           )}
@@ -1178,21 +1198,55 @@ export default function ClienteDetail() {
                 onChange={e => setContactoSegForm(f => ({ ...f, nota: e.target.value }))}
                 placeholder="¿De qué hablaste?"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                onKeyDown={async e => {
-                  if (e.key === 'Enter') {
-                    await addContactoSeg({ clienteId: id, usuarioId: user.id, tipo: contactoSegForm.tipo, fecha: contactoSegForm.fecha, nota: contactoSegForm.nota });
-                    setContactoSegForm(null);
-                  }
-                }}
+                onKeyDown={e => { if (e.key === 'Enter') handleGuardarContacto(); }}
               />
             </div>
 
+            {/* ¿Le interesó algún equipo? */}
+            <div>
+              <p className="text-xs font-medium text-gray-600 mb-2">¿Le interesó algún equipo?</p>
+              <div className="flex gap-2">
+                {[{ v: true, label: 'Sí' }, { v: false, label: 'No' }].map(({ v, label }) => {
+                  const sel = contactoSegForm.interesado === v;
+                  return (
+                    <button key={label} type="button"
+                      onClick={() => setContactoSegForm(f => ({ ...f, interesado: v }))}
+                      className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer
+                        ${sel ? 'bg-cyan-50 border-cyan-400 text-cyan-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {contactoSegForm.interesado && (
+              <div className="space-y-3 bg-cyan-50/50 border border-cyan-100 rounded-lg p-3">
+                <p className="text-xs font-medium text-gray-600">¿Cuál?</p>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Categoría</label>
+                  <select
+                    value={contactoSegForm.equipoCategoria}
+                    onChange={e => setContactoSegForm(f => ({ ...f, equipoCategoria: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                  >
+                    <option value="">Sin especificar</option>
+                    {categorias.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Modelo / Marca</label>
+                  <input type="text" value={contactoSegForm.equipoModeloMarca}
+                    onChange={e => setContactoSegForm(f => ({ ...f, equipoModeloMarca: e.target.value }))}
+                    placeholder="Ej: GE Voluson E10"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white" />
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2 justify-end pt-1">
               <Button variant="outline" size="sm" onClick={() => setContactoSegForm(null)}>Cancelar</Button>
-              <Button size="sm" onClick={async () => {
-                await addContactoSeg({ clienteId: id, usuarioId: user.id, tipo: contactoSegForm.tipo, fecha: contactoSegForm.fecha, nota: contactoSegForm.nota });
-                setContactoSegForm(null);
-              }}>Guardar</Button>
+              <Button size="sm" onClick={handleGuardarContacto}>Guardar</Button>
             </div>
           </div>
         </div>
