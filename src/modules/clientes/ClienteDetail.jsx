@@ -12,6 +12,7 @@ import { useVisitasStore } from '../../store/visitasStore';
 import { useNotasStore } from '../../store/notasStore';
 import { useAgendaStore } from '../../store/agendaStore';
 import { useSeguimientoStore } from '../../store/seguimientoStore';
+import { useCategoriasStore } from '../../store/categoriasStore';
 import { MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../../components/ui/Button';
@@ -172,7 +173,7 @@ const ESTADOS_EQUIPO_INST  = ['Operativo', 'Averiado', 'Obsoleto'];
 const BADGE_ESTADO_INST    = { 'Operativo': 'green', 'Averiado': 'red', 'Obsoleto': 'gray' };
 const EQUIPO_INST_EMPTY    = { nombre: '', marca: '', modelo: '', nSerie: '', anioInstalacion: '', distribuidor: '', estado: 'Operativo' };
 
-function EquiposTieneTab({ equipos = [], equiposInteres = [], onSave, onSaveInteres }) {
+function EquiposTieneTab({ equipos = [], onSave }) {
   const [form, setForm] = useState(null);
   const [delId, setDelId] = useState(null);
   const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -241,27 +242,74 @@ function EquiposTieneTab({ equipos = [], equiposInteres = [], onSave, onSaveInte
       )}
 
       <ConfirmDialog open={!!delId} onClose={() => setDelId(null)} onConfirm={() => remove(delId)} title="Eliminar equipo" message="¿Eliminar este equipo del registro del cliente?" confirmText="Eliminar" />
+    </Card>
+  );
+}
 
-      {equiposInteres.length > 0 && (
-        <div className="mt-6 pt-5 border-t border-dashed border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-cyan-100 flex items-center justify-center"><Star className="w-3 h-3 text-cyan-600" /></div>
-              <h4 className="text-sm font-semibold text-gray-700">Equipos con interés</h4>
-              <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">{equiposInteres.length}</span>
-            </div>
-            <p className="text-xs text-gray-400">Importado desde planilla (celdas celestes)</p>
+// ── Pestaña: Equipos con interés ───────────────────────────────────────────
+const EQUIPO_INTERES_EMPTY = { categoria: '', modeloMarca: '' };
+
+function EquiposInteresTab({ equiposInteres = [], onSave }) {
+  const { categorias } = useCategoriasStore();
+  const [form, setForm] = useState(null);
+  const [delIdx, setDelIdx] = useState(null);
+  const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const save = () => {
+    if (!form?.categoria && !form?.modeloMarca?.trim()) return;
+    const nombre = [form.categoria, form.modeloMarca].filter(Boolean).join(' — ');
+    onSave([...equiposInteres, { id: genId(), nombre, categoria: form.categoria, modeloMarca: form.modeloMarca }]);
+    setForm(null);
+  };
+  const remove = (idx) => { onSave(equiposInteres.filter((_, j) => j !== idx)); setDelIdx(null); };
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded-full bg-cyan-100 flex items-center justify-center"><Star className="w-3 h-3 text-cyan-600" /></div>
+          <h3 className="font-semibold text-gray-800">Equipos con interés</h3>
+          {equiposInteres.length > 0 && (
+            <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">{equiposInteres.length}</span>
+          )}
+        </div>
+        {!form && <Button size="sm" onClick={() => setForm(EQUIPO_INTERES_EMPTY)}><Plus className="w-4 h-4" />Añadir equipo de interés</Button>}
+      </div>
+      <p className="text-xs text-gray-400 mb-4">Importado desde planilla (celdas celestes)</p>
+
+      {form && (
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-5 space-y-3">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Nuevo equipo de interés</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FRow label="Categoría">
+              <select className={selCls} value={form.categoria} onChange={e => s('categoria', e.target.value)}>
+                <option value="">Sin especificar</option>
+                {categorias.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </FRow>
+            <FRow label="Modelo / Marca"><input className={inputCls} value={form.modeloMarca} onChange={e => s('modeloMarca', e.target.value)} placeholder="Ej: GE Voluson E10" /></FRow>
           </div>
-          <div className="divide-y divide-gray-50">
-            {equiposInteres.map((eq, i) => (
-              <div key={eq.id || i} className="py-2 flex items-center justify-between">
-                <p className="text-sm text-gray-700">{eq.nombre}</p>
-                <button onClick={() => onSaveInteres(equiposInteres.filter((_, j) => j !== i))} className="p-1 rounded text-gray-300 hover:text-red-400 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
-              </div>
-            ))}
+          <div className="flex gap-2 justify-end pt-1">
+            <Button size="sm" variant="outline" onClick={() => setForm(null)}>Cancelar</Button>
+            <Button size="sm" onClick={save}>Guardar</Button>
           </div>
         </div>
       )}
+
+      {equiposInteres.length === 0 && !form ? (
+        <div className="py-12 text-center"><Star className="w-8 h-8 mx-auto mb-2 text-gray-200" /><p className="text-sm text-gray-400">Sin equipos de interés registrados</p></div>
+      ) : (
+        <div className="divide-y divide-gray-100">
+          {equiposInteres.map((eq, i) => (
+            <div key={eq.id || i} className="py-3 flex items-center justify-between gap-3">
+              <p className="text-sm text-gray-700">{eq.nombre}</p>
+              <button onClick={() => setDelIdx(i)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 cursor-pointer flex-shrink-0"><Trash2 className="w-4 h-4" /></button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ConfirmDialog open={delIdx !== null} onClose={() => setDelIdx(null)} onConfirm={() => remove(delIdx)} title="Eliminar equipo de interés" message="¿Eliminar este equipo de la lista de interés del cliente?" confirmText="Eliminar" />
     </Card>
   );
 }
@@ -606,6 +654,7 @@ export default function ClienteDetail() {
     { key: 'contactos',         label: 'Contactos' },
     ...(seccionConfig ? [{ key: 'servicios', label: seccionConfig.label }] : []),
     { key: 'equipos-tiene',     label: 'Equipos que tiene' },
+    { key: 'equipos-interes',   label: 'Equipos con interés' },
     { key: 'equipos-vendidos',  label: 'Equipos Sanicom' },
     { key: 'oportunidades',     label: 'Oportunidades' },
     { key: 'presupuestos',      label: 'Presupuestos' },
@@ -845,9 +894,15 @@ export default function ClienteDetail() {
       {activeTab === 'equipos-tiene' && (
         <EquiposTieneTab
           equipos={cliente.equiposInstalados || []}
-          equiposInteres={cliente.equiposInteres || []}
           onSave={saveEquiposTiene}
-          onSaveInteres={saveEquiposInteres}
+        />
+      )}
+
+      {/* ── Equipos con interés ── */}
+      {activeTab === 'equipos-interes' && (
+        <EquiposInteresTab
+          equiposInteres={cliente.equiposInteres || []}
+          onSave={saveEquiposInteres}
         />
       )}
 
