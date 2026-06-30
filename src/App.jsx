@@ -19,6 +19,8 @@ import { useDriveStore } from './store/driveStore';
 import { usePipelineStore } from './store/pipelineStore';
 import { useVisitasStore } from './store/visitasStore';
 import { useAppBadge } from './hooks/useAppBadge';
+import { useGlobalRefresh } from './hooks/useGlobalRefresh';
+import { makeRefresher } from './hooks/useAutoRefresh';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useRealtimeSync } from './hooks/useRealtimeSync';
 import { useNotasStore } from './store/notasStore';
@@ -79,6 +81,27 @@ function AppInit() {
       initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(), initVisitas(), initNotas(), initSeguimiento(),
     ]).catch(e => console.error('[AppInit]', e));
   }, [user?.id]);
+
+  const refreshNotificaciones = useNotificacionesStore(s => s.refresh);
+
+  // Refresco global: al volver de background (iOS mata Realtime/JS en segundo
+  // plano), refetchea TODOS los stores, no solo el de la pantalla activa.
+  useGlobalRefresh(
+    user?.id
+      ? [
+          refreshNotificaciones,
+          makeRefresher(useClientesStore), makeRefresher(useEquiposStore),
+          makeRefresher(useOportunidadesStore), makeRefresher(useDemosStore),
+          makeRefresher(useServicioStore), makeRefresher(useAgendaStore),
+          makeRefresher(useActividadStore), makeRefresher(useVisitasStore),
+          makeRefresher(useNotasStore), makeRefresher(useSeguimientoStore),
+          makeRefresher(useEspecialidadesStore), makeRefresher(useSubespecialidadesStore),
+          makeRefresher(useCategoriasStore), makeRefresher(useTiposClienteStore),
+          makeRefresher(useServiciosHospitalStore), makeRefresher(useDriveStore),
+          makeRefresher(usePipelineStore),
+        ]
+      : []
+  );
 
   return null;
 }

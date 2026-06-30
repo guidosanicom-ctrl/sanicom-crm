@@ -3,15 +3,29 @@
 
 self.addEventListener('push', (event) => {
   if (!event.data) return;
-  const { title, body, url, icon } = event.data.json();
+  const { title, body, url, icon, badgeCount } = event.data.json();
+
   event.waitUntil(
-    self.registration.showNotification(title || 'Sanicom CRM', {
-      body: body || '',
-      icon: icon || '/minilogo.png',
-      badge: '/minilogo.png',
-      data: { url: url || '/' },
-      vibrate: [200, 100, 200],
-    })
+    (async () => {
+      await self.registration.showNotification(title || 'Sanicom CRM', {
+        body: body || '',
+        icon: icon || '/minilogo.png',
+        badge: '/minilogo.png',
+        data: { url: url || '/' },
+        vibrate: [200, 100, 200],
+      });
+
+      // Actualiza el badge del icono de la app directamente desde el SW, incluso
+      // con la app cerrada. Soportado en Chrome/Edge/Android; Safari/iOS aún no
+      // implementa la Badging API dentro del Service Worker (solo en foreground,
+      // cubierto por useAppBadge.js al reabrir la app).
+      if (typeof badgeCount === 'number' && self.navigator && 'setAppBadge' in self.navigator) {
+        try {
+          if (badgeCount > 0) await self.navigator.setAppBadge(badgeCount);
+          else await self.navigator.clearAppBadge();
+        } catch (_) { /* no soportado en este navegador, ignorar */ }
+      }
+    })()
   );
 });
 

@@ -42,7 +42,17 @@ serve(async (req) => {
       });
     }
 
-    const payload = JSON.stringify({ title, body, url, icon: '/minilogo.png' });
+    // Conteo real de no leídas del destinatario, para que el Service Worker pueda
+    // actualizar el badge del icono de la app aunque esté cerrada (Chrome/Android;
+    // Safari/iOS no soporta aún Badging API desde el SW, solo en foreground).
+    const { count: badgeCount, error: countError } = await supabase
+      .from('notificaciones')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', targetUserId)
+      .eq('data->>leida', 'false');
+    if (countError) console.error(`[send-push] error contando no leídas de userId=${targetUserId}:`, countError);
+
+    const payload = JSON.stringify({ title, body, url, icon: '/minilogo.png', badgeCount: badgeCount ?? undefined });
 
     const results = await Promise.allSettled(
       subs.map(({ subscription }) => {

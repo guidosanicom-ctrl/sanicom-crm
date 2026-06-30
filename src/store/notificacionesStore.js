@@ -34,25 +34,31 @@ export const useNotificacionesStore = create((set, get) => ({
     if (get().userId === targetUserId) {
       set(s => ({ notificaciones: [nueva, ...s.notificaciones].slice(0, 100) }));
     }
-    supabase.from(TABLE)
-      .insert({ id: nueva.id, user_id: targetUserId, data: nueva })
-      .then(({ error }) => { if (error) console.error('[notificacionesStore.push]', error); });
 
-    // Enviar push nativa al dispositivo del usuario destino
+    // Enviar push nativa al dispositivo del usuario destino. Se invoca DESPUÉS de
+    // que el insert confirme en Supabase (no en paralelo) para que la Edge Function
+    // pueda calcular el badge_count real consultando las no leídas — si se invocara
+    // en paralelo, podría leer la tabla antes de que esta notificación existiera.
     const deepUrl = notif.registroId
       ? `${window.location.origin}${notif.enlace || '/'}?openId=${notif.registroId}`
       : `${window.location.origin}${notif.enlace || '/'}`;
-    supabase.functions.invoke('send-push', {
-      body: {
-        targetUserId,
-        title: 'Sanicom CRM',
-        body: notif.mensaje || '',
-        url: deepUrl,
-      },
-    }).then(({ data, error }) => {
-      if (error) console.error('[push-web] error invocando send-push:', error);
-      else console.log('[push-web] send-push respuesta:', data);
-    }).catch((e) => console.error('[push-web] excepción:', e));
+
+    supabase.from(TABLE)
+      .insert({ id: nueva.id, user_id: targetUserId, data: nueva })
+      .then(({ error }) => {
+        if (error) { console.error('[notificacionesStore.push]', error); return; }
+        supabase.functions.invoke('send-push', {
+          body: {
+            targetUserId,
+            title: 'Sanicom CRM',
+            body: notif.mensaje || '',
+            url: deepUrl,
+          },
+        }).then(({ data, error: pushError }) => {
+          if (pushError) console.error('[push-web] error invocando send-push:', pushError);
+          else console.log('[push-web] send-push respuesta:', data);
+        }).catch((e) => console.error('[push-web] excepción:', e));
+      });
   },
 
   markRead: (id) => {
