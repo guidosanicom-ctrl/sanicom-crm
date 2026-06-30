@@ -12,7 +12,6 @@ import { useVisitasStore } from '../../store/visitasStore';
 import { useNotasStore } from '../../store/notasStore';
 import { useAgendaStore } from '../../store/agendaStore';
 import { useSeguimientoStore } from '../../store/seguimientoStore';
-import { useCategoriasStore } from '../../store/categoriasStore';
 import { MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../../components/ui/Button';
@@ -30,6 +29,9 @@ const TIPOS_SERVICIOS = {
   'Hospital privado':  { label: 'Especialidades', jefeLabel: 'Responsable'      },
   'Centro médico':     { label: 'Especialidades', jefeLabel: 'Responsable'      },
 };
+
+// Categorías de equipos con interés — propias de Sanicom, no el catálogo general de Equipos
+const CATEGORIAS_INTERES = ['Diatermia', 'Onda de Choque', 'Super Inductiva', 'Ecógrafo', 'Otro'];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function genId() { return `id_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`; }
@@ -247,18 +249,18 @@ function EquiposTieneTab({ equipos = [], onSave }) {
 }
 
 // ── Pestaña: Equipos con interés ───────────────────────────────────────────
-const EQUIPO_INTERES_EMPTY = { categoria: '', modeloMarca: '' };
+const EQUIPO_INTERES_EMPTY = { categoria: '', categoriaOtro: '', modeloMarca: '' };
 
 function EquiposInteresTab({ equiposInteres = [], onSave }) {
-  const { categorias } = useCategoriasStore();
   const [form, setForm] = useState(null);
   const [delIdx, setDelIdx] = useState(null);
   const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const save = () => {
-    if (!form?.categoria && !form?.modeloMarca?.trim()) return;
-    const nombre = [form.categoria, form.modeloMarca].filter(Boolean).join(' — ');
-    onSave([...equiposInteres, { id: genId(), nombre, categoria: form.categoria, modeloMarca: form.modeloMarca }]);
+    const categoriaFinal = form?.categoria === 'Otro' ? form?.categoriaOtro?.trim() : form?.categoria;
+    if (!categoriaFinal && !form?.modeloMarca?.trim()) return;
+    const nombre = [categoriaFinal, form.modeloMarca].filter(Boolean).join(' — ');
+    onSave([...equiposInteres, { id: genId(), nombre, categoria: categoriaFinal, modeloMarca: form.modeloMarca }]);
     setForm(null);
   };
   const remove = (idx) => { onSave(equiposInteres.filter((_, j) => j !== idx)); setDelIdx(null); };
@@ -284,9 +286,12 @@ function EquiposInteresTab({ equiposInteres = [], onSave }) {
             <FRow label="Categoría">
               <select className={selCls} value={form.categoria} onChange={e => s('categoria', e.target.value)}>
                 <option value="">Sin especificar</option>
-                {categorias.map(c => <option key={c}>{c}</option>)}
+                {CATEGORIAS_INTERES.map(c => <option key={c}>{c}</option>)}
               </select>
             </FRow>
+            {form.categoria === 'Otro' && (
+              <FRow label="Especifica la categoría"><input className={inputCls} value={form.categoriaOtro} onChange={e => s('categoriaOtro', e.target.value)} placeholder="Ej: Radiofrecuencia" /></FRow>
+            )}
             <FRow label="Modelo / Marca"><input className={inputCls} value={form.modeloMarca} onChange={e => s('modeloMarca', e.target.value)} placeholder="Ej: GE Voluson E10" /></FRow>
           </div>
           <div className="flex gap-2 justify-end pt-1">
@@ -622,7 +627,6 @@ export default function ClienteDetail() {
   const { notas, addNota, deleteNota } = useNotasStore();
   const { contactos: todosContactosSeg, addContacto: addContactoSeg, deleteContacto: deleteContactoSeg } = useSeguimientoStore();
   const { addEvento } = useAgendaStore();
-  const { categorias } = useCategoriasStore();
   const [activeTab, setActiveTab] = useState('resumen');
   const [editOpen, setEditOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
@@ -717,11 +721,15 @@ export default function ClienteDetail() {
       fecha: contactoSegForm.fecha, nota: contactoSegForm.nota,
     });
 
-    if (contactoSegForm.interesado && (contactoSegForm.equipoCategoria || contactoSegForm.equipoModeloMarca)) {
-      const nombre = [contactoSegForm.equipoCategoria, contactoSegForm.equipoModeloMarca].filter(Boolean).join(' — ');
+    const categoriaFinal = contactoSegForm.equipoCategoria === 'Otro'
+      ? contactoSegForm.equipoCategoriaOtro?.trim()
+      : contactoSegForm.equipoCategoria;
+
+    if (contactoSegForm.interesado && (categoriaFinal || contactoSegForm.equipoModeloMarca)) {
+      const nombre = [categoriaFinal, contactoSegForm.equipoModeloMarca].filter(Boolean).join(' — ');
       saveEquiposInteres([
         ...(cliente.equiposInteres || []),
-        { id: genId(), nombre, categoria: contactoSegForm.equipoCategoria, modeloMarca: contactoSegForm.equipoModeloMarca },
+        { id: genId(), nombre, categoria: categoriaFinal, modeloMarca: contactoSegForm.equipoModeloMarca },
       ]);
       toast.success('Contacto registrado y equipo de interés añadido.');
     }
@@ -776,7 +784,7 @@ export default function ClienteDetail() {
         </div>
         <div className="flex gap-2 flex-wrap">
           {carlos && (
-            <Button size="sm" onClick={() => setContactoSegForm({ tipo: 'whatsapp', fecha: new Date().toISOString().slice(0,10), nota: '', interesado: false, equipoCategoria: '', equipoModeloMarca: '' })}>
+            <Button size="sm" onClick={() => setContactoSegForm({ tipo: 'whatsapp', fecha: new Date().toISOString().slice(0,10), nota: '', interesado: false, equipoCategoria: '', equipoCategoriaOtro: '', equipoModeloMarca: '' })}>
               <MessageCircle className="w-4 h-4" />Registrar contacto
             </Button>
           )}
@@ -1231,9 +1239,18 @@ export default function ClienteDetail() {
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
                   >
                     <option value="">Sin especificar</option>
-                    {categorias.map(c => <option key={c}>{c}</option>)}
+                    {CATEGORIAS_INTERES.map(c => <option key={c}>{c}</option>)}
                   </select>
                 </div>
+                {contactoSegForm.equipoCategoria === 'Otro' && (
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Especifica la categoría</label>
+                    <input type="text" value={contactoSegForm.equipoCategoriaOtro || ''}
+                      onChange={e => setContactoSegForm(f => ({ ...f, equipoCategoriaOtro: e.target.value }))}
+                      placeholder="Ej: Radiofrecuencia"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white" />
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Modelo / Marca</label>
                   <input type="text" value={contactoSegForm.equipoModeloMarca}
