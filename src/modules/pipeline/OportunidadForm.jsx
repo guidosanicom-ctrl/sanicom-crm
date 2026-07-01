@@ -18,17 +18,20 @@ function addMonths(months) {
   return d.toISOString().slice(0, 10);
 }
 
-const empty = { nombre: '', clienteId: '', equiposDescripcion: '', valor: '', probabilidad: 50, etapa: 'Prospecto', fechaCierre: '', responsable: '', origen: '', descripcion: '', estadoCliente: '', financiacion: '', temperatura: '', notaSeguimiento: '' };
+const empty = { nombre: '', clienteId: '', clienteNombreLibre: '', equiposDescripcion: '', valor: '', probabilidad: 50, etapa: 'Prospecto', fechaCierre: '', responsable: '', origen: '', descripcion: '', estadoCliente: '', financiacion: '', temperatura: '', notaSeguimiento: '' };
 
 export default function OportunidadForm({ open, onClose, onSave, initial }) {
   const { etapas: ETAPAS_PIPELINE } = usePipelineStore();
   const [form, setForm] = useState(initial || empty);
   const [errors, setErrors] = useState({});
+  // clienteLibre: true = texto libre, false = buscar existente
+  const [clienteLibre, setClienteLibre] = useState(() => !!(initial?.clienteNombreLibre && !initial?.clienteId));
 
   useEffect(() => {
     if (open) {
       setForm(initial || empty);
       setErrors({});
+      setClienteLibre(!!(initial?.clienteNombreLibre && !initial?.clienteId));
     }
   }, [open, initial]);
 
@@ -41,7 +44,11 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
   const validate = () => {
     const e = {};
     if (!form.nombre.trim()) e.nombre = 'Requerido';
-    if (!form.clienteId) e.clienteId = 'Requerido';
+    if (clienteLibre) {
+      if (!form.clienteNombreLibre?.trim()) e.clienteNombreLibre = 'Escribe el nombre del cliente';
+    } else {
+      if (!form.clienteId) e.clienteId = 'Selecciona un cliente';
+    }
     if (!form.valor) e.valor = 'Requerido';
     if (!form.responsable) e.responsable = 'Requerido';
     setErrors(e);
@@ -73,14 +80,39 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Cliente *</label>
-          <ClienteSearchInput
-            value={form.clienteId}
-            onChange={id => set('clienteId', id)}
-            clientes={clientes}
-            error={!!errors.clienteId}
-            placeholder="Buscar cliente..."
-          />
-          {errors.clienteId && <p className="text-xs text-red-500 mt-1">{errors.clienteId}</p>}
+          {/* Toggle: existente / libre */}
+          <div className="flex gap-1 mb-2 bg-gray-100 p-0.5 rounded-lg w-fit">
+            <button type="button"
+              onClick={() => { setClienteLibre(false); set('clienteNombreLibre', ''); }}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${!clienteLibre ? 'bg-white text-[#1B4F8A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              Buscar existente
+            </button>
+            <button type="button"
+              onClick={() => { setClienteLibre(true); set('clienteId', ''); }}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${clienteLibre ? 'bg-white text-[#1B4F8A] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              Sin registrar
+            </button>
+          </div>
+          {clienteLibre ? (
+            <input
+              type="text"
+              value={form.clienteNombreLibre || ''}
+              onChange={e => set('clienteNombreLibre', e.target.value)}
+              placeholder="Nombre del cliente o clínica..."
+              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors.clienteNombreLibre ? 'border-red-400' : 'border-gray-200'}`}
+            />
+          ) : (
+            <ClienteSearchInput
+              value={form.clienteId}
+              onChange={id => set('clienteId', id)}
+              clientes={clientes}
+              error={!!errors.clienteId}
+              placeholder="Buscar cliente..."
+            />
+          )}
+          {(errors.clienteId || errors.clienteNombreLibre) && (
+            <p className="text-xs text-red-500 mt-1">{errors.clienteId || errors.clienteNombreLibre}</p>
+          )}
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Etapa *</label>

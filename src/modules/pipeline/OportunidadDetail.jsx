@@ -244,6 +244,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
   if (!oportunidad) return null;
 
   const cliente = clienteData || clientes.find(c => c.id === oportunidad.clienteId);
+  const clienteNombreMostrar = cliente?.nombre || oportunidad.clienteNombreLibre || '-';
   const demosVinculadas = (oportunidad.demoIds || []).map(id => demos.find(d => d.id === id)).filter(Boolean);
   const responsable = users.find(u => u.id === oportunidad.responsable);
   const equiposNombres = oportunidad.equiposDescripcion ||
@@ -305,7 +306,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">Cliente</p>
-              <p className="text-sm font-medium text-gray-800">{cliente?.nombre || '-'}</p>
+              <p className="text-sm font-medium text-gray-800">{clienteNombreMostrar}</p>
               {cliente && (
                 <div className="mt-1.5 flex flex-col gap-1">
                   {cliente.telefono && (

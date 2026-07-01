@@ -101,6 +101,7 @@ function MoveBottomSheet({ opp, etapas, onMove, onClose }) {
 // ── Tarjeta móvil con botón Mover ────────────────────────────────────────────
 function MobileOppCard({ opp, clients, users, onClick, onMove }) {
   const client = clients.find(c => c.id === opp.clienteId);
+  const clienteNombre = client?.nombre || opp.clienteNombreLibre || '-';
   const user = users.find(u => u.id === opp.responsable);
   return (
     <div className={`rounded-xl p-3.5 shadow-sm border ${opp.enPausa ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-100'}`}>
@@ -111,7 +112,7 @@ function MobileOppCard({ opp, clients, users, onClick, onMove }) {
           {opp.temperatura && <span className="ml-1">{TEMP_ICON[opp.temperatura]}</span>}
         </button>
       </div>
-      <p className="text-xs text-gray-500 mb-2.5">{client?.nombre || '-'}</p>
+      <p className="text-xs text-gray-500 mb-2.5">{clienteNombre}</p>
 
       {(opp.estadoCliente || opp.financiacion) && (
         <div className="flex flex-wrap gap-1 mb-2.5">
@@ -157,6 +158,7 @@ function MobileOppCard({ opp, clients, users, onClick, onMove }) {
 
 function OppCard({ opp, clients, users, onClick }) {
   const client = clients.find(c => c.id === opp.clienteId);
+  const clienteNombre = client?.nombre || opp.clienteNombreLibre || '-';
   const user = users.find(u => u.id === opp.responsable);
   return (
     <div onClick={onClick} className={`rounded-xl p-3.5 shadow-sm border cursor-pointer hover:shadow-md transition-shadow ${opp.enPausa ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-100'}`}>
@@ -168,7 +170,7 @@ function OppCard({ opp, clients, users, onClick }) {
         </p>
         {opp.temperatura && <span className="text-base flex-shrink-0">{TEMP_ICON[opp.temperatura]}</span>}
       </div>
-      <p className="text-xs text-gray-500 mb-2.5">{client?.nombre || '-'}</p>
+      <p className="text-xs text-gray-500 mb-2.5">{clienteNombre}</p>
 
       {/* Chips: estado cliente + financiación */}
       {(opp.estadoCliente || opp.financiacion) && (
@@ -482,12 +484,13 @@ export default function PipelinePage() {
             <tbody className="divide-y divide-gray-50">
               {oportunidadesFiltradas.map(o => {
                 const client = clientes.find(c => c.id === o.clienteId);
+                const clienteNombre = client?.nombre || o.clienteNombreLibre || '-';
                 return (
                   <tr key={o.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium">
                       <button onClick={() => openDetail(o)} className="text-[#1B4F8A] hover:underline text-left cursor-pointer">{o.nombre}</button>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{client?.nombre}</td>
+                    <td className="px-4 py-3 text-gray-600">{clienteNombre}</td>
                     <td className="px-4 py-3 font-semibold text-[#1B4F8A]">{formatCurrency(o.valor)}</td>
                     <td className="px-4 py-3">{o.probabilidad}%</td>
                     <td className="px-4 py-3">
