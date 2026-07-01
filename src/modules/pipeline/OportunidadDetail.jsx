@@ -7,13 +7,22 @@ import PresupuestosSection from '../../components/shared/PresupuestosSection';
 import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
+import { useAgendaStore } from '../../store/agendaStore';
 import { supabase } from '../../lib/supabase';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Edit, Trash2, Phone, Mail, MapPin, User, PlaySquare,
-         CheckCircle2, Circle, Clock, Plus, Trophy } from 'lucide-react';
+         CheckCircle2, Circle, Clock, Plus, Trophy, X } from 'lucide-react';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useDemosStore } from '../../store/demosStore';
 import { etapaLabel } from '../../utils/constants';
+import toast from 'react-hot-toast';
+
+function buildEventoFin(fecha, hora) {
+  const [h, m] = (hora || '09:00').split(':').map(Number);
+  const fin = new Date(`${fecha}T${hora || '09:00'}`);
+  fin.setMinutes(fin.getMinutes() + 30);
+  return fin.toISOString().slice(0, 16);
+}
 
 const STAGE_COLOR = {
   'Prospecto': 'gray', 'Interesado': 'blue', 'Propuesta enviada': 'purple',
@@ -227,10 +236,30 @@ function GestionTimeline({ oportunidad, demosVinculadas, onUpdate, onCrearDemo }
 export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, onDelete, onCrearDemo }) {
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
-  const { users } = useAuthStore();
+  const { user, users } = useAuthStore();
   const { updateOportunidad } = useOportunidadesStore();
   const { demos } = useDemosStore();
+  const { addEvento } = useAgendaStore();
   const [clienteData, setClienteData] = useState(null);
+  const [llamadaForm, setLlamadaForm] = useState(null);
+
+  const canAgendar = user?.email === 'jgovantes@sanicom.es' || user?.email === 'carlosleal@sanicom.es';
+
+  const handleAgendarLlamada = async () => {
+    if (!llamadaForm?.fechaHora) return;
+    const [fecha, hora] = llamadaForm.fechaHora.split('T');
+    addEvento({
+      tipo: 'Llamada/Seguimiento',
+      titulo: `📞 Llamada — ${oportunidad.nombre}`,
+      inicio: llamadaForm.fechaHora,
+      fin: buildEventoFin(fecha, hora),
+      oportunidadId: oportunidad.id,
+      responsable: user?.id,
+      descripcion: llamadaForm.nota,
+    });
+    setLlamadaForm(null);
+    toast.success('Llamada agendada. Te llegará un aviso el día indicado.');
+  };
 
   useEffect(() => {
     if (!open || !oportunidad?.clienteId) { setClienteData(null); return; }
@@ -261,6 +290,11 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Cerrar</Button>
+          {canAgendar && (
+            <Button variant="outline" onClick={() => setLlamadaForm({ fechaHora: new Date().toISOString().slice(0, 16), nota: '' })}>
+              📞 Agendar llamada
+            </Button>
+          )}
           {onDelete && (
             <Button variant="danger" onClick={onDelete}>
               <Trash2 className="w-4 h-4" />Eliminar
@@ -476,5 +510,41 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
         </div>
       </div>
     </Modal>
+
+    {llamadaForm && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40" onClick={() => setLlamadaForm(null)}>
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-gray-800">📞 Agendar llamada</h3>
+            <button onClick={() => setLlamadaForm(null)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Fecha y hora</label>
+            <input
+              type="datetime-local"
+              value={llamadaForm.fechaHora}
+              onChange={e => setLlamadaForm(f => ({ ...f, fechaHora: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Nota (opcional)</label>
+            <textarea
+              rows={2}
+              value={llamadaForm.nota}
+              onChange={e => setLlamadaForm(f => ({ ...f, nota: e.target.value }))}
+              placeholder="Motivo de la llamada..."
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" size="sm" onClick={() => setLlamadaForm(null)}>Cancelar</Button>
+            <Button size="sm" onClick={handleAgendarLlamada} disabled={!llamadaForm.fechaHora}>Agendar</Button>
+          </div>
+        </div>
+      </div>
+    )}
   );
 }
