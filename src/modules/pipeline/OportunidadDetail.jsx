@@ -282,6 +282,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
     (oportunidad.equipos || []).map(id => equipos.find(e => e.id === id)?.nombre).filter(Boolean).join(', ');
 
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
@@ -512,6 +513,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
     </Modal>
 
     {llamadaForm && (
+
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40" onClick={() => setLlamadaForm(null)}>
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between">
@@ -546,5 +548,6 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
         </div>
       </div>
     )}
+    </>
   );
 }
