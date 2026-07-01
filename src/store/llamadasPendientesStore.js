@@ -18,7 +18,6 @@ export const useLlamadasPendientesStore = create((set, get) => ({
     const { data, error } = await supabase
       .from(TABLE)
       .select('*')
-      .eq('confirmada', false)
       .order('fecha_hora', { ascending: true });
     if (error) { console.error('[llamadasPendientesStore]', error); return; }
     set({ llamadas: data || [] });
@@ -33,19 +32,23 @@ export const useLlamadasPendientesStore = create((set, get) => ({
 
   confirmar: async (id) => {
     const llamada = get().llamadas.find(l => l.id === id);
+    const confirmada_at = new Date().toISOString();
     const { error } = await supabase.from(TABLE).update({
       confirmada: true,
-      confirmada_at: new Date().toISOString(),
+      confirmada_at,
     }).eq('id', id);
     if (error) { console.error('[llamadasPendientesStore.confirmar]', error); return; }
     // Eliminar el evento de agenda vinculado
     if (llamada?.evento_id) {
       useAgendaStore.getState().deleteEvento(llamada.evento_id);
     }
-    set(s => ({ llamadas: s.llamadas.filter(l => l.id !== id) }));
+    // Mantener en estado como histórico (confirmada: true)
+    set(s => ({
+      llamadas: s.llamadas.map(l => l.id === id ? { ...l, confirmada: true, confirmada_at } : l),
+    }));
   },
 
-  // Returns Set of oportunidadIds with pending calls
+  // Returns Set of oportunidadIds with UNconfirmed calls (for badge + dashboard)
   oportunidadesConLlamadaPendiente: () =>
     new Set(get().llamadas.filter(l => !l.confirmada).map(l => l.oportunidad_id)),
 }));

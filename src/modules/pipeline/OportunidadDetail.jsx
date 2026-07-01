@@ -488,30 +488,47 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                 <span className="w-1 h-4 bg-amber-400 rounded-full inline-block" />
-                Llamadas programadas
+                Llamadas
               </h3>
               <div className="space-y-2">
                 {llamadasOpp.map(l => {
                   const dt = new Date(l.fecha_hora);
                   const fechaStr = dt.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
                   const horaStr = dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-                  const isPast = dt < new Date();
+                  const isPast = !l.confirmada && dt < new Date();
+
+                  if (l.confirmada) {
+                    const confirmedDt = l.confirmada_at ? new Date(l.confirmada_at) : null;
+                    const confirmedStr = confirmedDt
+                      ? confirmedDt.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) + ' · ' + confirmedDt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                      : null;
+                    return (
+                      <div key={l.id} className="flex items-start gap-3 rounded-lg px-4 py-3 bg-gray-50 border border-gray-100 opacity-70">
+                        <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 text-base">✅</div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-gray-400 line-through">{fechaStr} · {horaStr}</p>
+                          {l.nota && <p className="text-xs text-gray-400 italic mt-0.5">"{l.nota}"</p>}
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Realizada{confirmedStr ? ` · ${confirmedStr}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
-                    <div key={l.id} className={`flex items-start gap-3 rounded-lg px-4 py-3 ${l.confirmada ? 'bg-green-50 border border-green-100' : isPast ? 'bg-red-50 border border-red-100' : 'bg-amber-50 border border-amber-100'}`}>
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-base ${l.confirmada ? 'bg-green-100' : isPast ? 'bg-red-100' : 'bg-amber-100'}`}>
-                        {l.confirmada ? '✅' : '📞'}
+                    <div key={l.id} className={`flex items-start gap-3 rounded-lg px-4 py-3 ${isPast ? 'bg-red-50 border border-red-100' : 'bg-amber-50 border border-amber-100'}`}>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-base ${isPast ? 'bg-red-100' : 'bg-amber-100'}`}>
+                        📞
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-800">{fechaStr} · {horaStr}</p>
                         {l.nota && <p className="text-xs text-gray-500 italic mt-0.5">"{l.nota}"</p>}
-                        {l.confirmada
-                          ? <p className="text-xs text-green-600 mt-0.5">Confirmada</p>
-                          : isPast
-                            ? <p className="text-xs text-red-500 mt-0.5">Pendiente de confirmar</p>
-                            : <p className="text-xs text-amber-600 mt-0.5">Pendiente</p>
-                        }
+                        <p className={`text-xs mt-0.5 ${isPast ? 'text-red-500' : 'text-amber-600'}`}>
+                          {isPast ? 'Pendiente de confirmar' : 'Pendiente'}
+                        </p>
                       </div>
-                      {!l.confirmada && canAgendar && (
+                      {canAgendar && (
                         <button
                           onClick={() => confirmarLlamada(l.id).then(() => toast.success('Seguimiento confirmado.'))}
                           className="flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors cursor-pointer"
