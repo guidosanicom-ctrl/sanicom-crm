@@ -638,8 +638,9 @@ export default function ClienteDetail() {
   const [contactoSegForm, setContactoSegForm] = useState(null);
   const [llamadaForm, setLlamadaForm] = useState(null);
 
-  const { user, users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const { user, users, isCarlos, isGuido, CARLOS_ESPECIALIDADES } = useAuthStore();
   const carlos = isCarlos();
+  const javier = user?.email === 'jgovantes@sanicom.es';
 
   const cliente = getCliente(id);
   if (!cliente) return <div className="p-8 text-gray-400">Cliente no encontrado.</div>;
@@ -793,7 +794,7 @@ export default function ClienteDetail() {
               <MessageCircle className="w-4 h-4" />Registrar contacto
             </Button>
           )}
-          {carlos && (
+          {(carlos || javier) && (
             <Button variant="outline" size="sm" onClick={() => setLlamadaForm({ fechaHora: new Date().toISOString().slice(0, 16), nota: '' })}>
               📞 Agendar llamada
             </Button>
