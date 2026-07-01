@@ -181,7 +181,7 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
           <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
           <select value={form.estado} onChange={e => set('estado', e.target.value)} disabled={readOnly}
             className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none ${readOnly ? 'bg-gray-50' : ''}`}>
-            <option>Activo</option><option>Descatalogado</option>
+            <option>Activo</option><option>Demo</option><option>Descatalogado</option>
           </select>
         </div>
         <div className="md:col-span-2">
@@ -239,7 +239,7 @@ export default function EquiposPage() {
           </select>
           <select className={sel} value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1); }}>
             <option value="">Todos los estados</option>
-            <option>Activo</option><option>Descatalogado</option>
+            <option>Activo</option><option>Demo</option><option>Descatalogado</option>
           </select>
         </div>
         {!readOnly && <Button size="sm" onClick={() => { setSelected(null); setFormOpen(true); }}><Plus className="w-4 h-4" />Nuevo equipo</Button>}
@@ -261,14 +261,14 @@ export default function EquiposPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {paginated.map(e => (
-                    <tr key={e.id} className="hover:bg-gray-50">
+                    <tr key={e.id} className={e.estado === 'Demo' ? 'bg-red-200 hover:bg-red-300' : 'hover:bg-gray-50'}>
                       <td className="px-4 py-3 font-medium cursor-pointer text-[#1B4F8A]" onClick={() => { setSelected(e); setFormOpen(true); }}>{e.nombre}</td>
                       <td className="px-4 py-3 text-gray-600">{e.marca}</td>
                       <td className="px-4 py-3 text-gray-500">{e.modelo}</td>
                       <td className="px-4 py-3 text-center text-gray-700 font-medium">{e.unidades ?? '-'}</td>
                       <td className="px-4 py-3 text-gray-500">{e.categoria}</td>
                       <td className="px-4 py-3 font-semibold text-[#1B4F8A]">{formatCurrency(e.precioVenta)}</td>
-                      <td className="px-4 py-3"><Badge color={e.estado === 'Activo' ? 'green' : 'gray'}>{e.estado}</Badge></td>
+                      <td className="px-4 py-3"><Badge color={e.estado === 'Activo' ? 'green' : e.estado === 'Demo' ? 'red' : 'gray'}>{e.estado}</Badge></td>
                       <td className="px-4 py-3">
                         <button onClick={() => { setSelected(e); setFormOpen(true); }} className="text-blue-600 hover:underline text-xs cursor-pointer mr-2">{readOnly ? 'Ver' : 'Editar'}</button>
                         {!readOnly && <button onClick={() => { setSelected(e); setDelOpen(true); }} className="text-red-500 hover:underline text-xs cursor-pointer">Eliminar</button>}
