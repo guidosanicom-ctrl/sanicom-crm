@@ -198,6 +198,25 @@ export default function ConfiguracionPage() {
     }
   };
 
+  const [enviandoAgenda, setEnviandoAgenda] = useState(false);
+  const handleEnviarNotifAgenda = async () => {
+    setEnviandoAgenda(true);
+    try {
+      const { supabase } = await import('../../lib/supabase');
+      const { data, error } = await supabase.functions.invoke('daily-agenda-push', { body: {} });
+      if (error) throw error;
+      const sent = data?.sent ?? 0;
+      const users_ = data?.users ?? 0;
+      if (sent === 0) toast('No hay eventos hoy o ningún usuario tiene suscripción push activa.', { icon: 'ℹ️' });
+      else toast.success(`Notificaciones enviadas: ${sent} push a ${users_} usuario${users_ !== 1 ? 's' : ''}.`);
+    } catch (err) {
+      console.error('[agenda-push]', err);
+      toast.error('Error al invocar la función. Revisa la consola.');
+    } finally {
+      setEnviandoAgenda(false);
+    }
+  };
+
   const toggleUser = (id) => {
     setUsersState(u => u.map(usr => usr.id === id ? { ...usr, active: !usr.active } : usr));
     toast.success('Estado actualizado.');
@@ -309,6 +328,17 @@ export default function ConfiguracionPage() {
             </p>
             <Button variant="outline" onClick={handleReactivarNotificaciones} loading={reactivando}>
               {reactivando ? 'Reactivando…' : '🔔 Reactivar notificaciones'}
+            </Button>
+          </div>
+
+          <div className="border-t border-gray-100 pt-4 mt-4">
+            <p className="text-sm font-medium text-gray-700 mb-1">Prueba de notificaciones de agenda</p>
+            <p className="text-xs text-gray-400 mb-3">
+              Envía ahora mismo las notificaciones push de los eventos de hoy, sin esperar al cron de las 7:30.
+              Útil para verificar que las notificaciones llegan correctamente.
+            </p>
+            <Button variant="outline" onClick={handleEnviarNotifAgenda} loading={enviandoAgenda}>
+              {enviandoAgenda ? 'Enviando…' : '🔔 Enviar notificaciones de hoy'}
             </Button>
           </div>
         </Card>
