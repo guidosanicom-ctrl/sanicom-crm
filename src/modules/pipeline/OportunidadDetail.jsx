@@ -248,6 +248,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
   const clienteNombreMostrar = cliente?.nombre || oportunidad.clienteNombreLibre || '-';
   const demosVinculadas = (oportunidad.demoIds || []).map(id => demos.find(d => d.id === id)).filter(Boolean);
   const responsable = users.find(u => u.id === oportunidad.responsable);
+  const corresponsable = oportunidad.corresponsableId ? users.find(u => u.id === oportunidad.corresponsableId) : null;
   const equiposNombres = oportunidad.equiposDescripcion ||
     (oportunidad.equipos || []).map(id => equipos.find(e => e.id === id)?.nombre).filter(Boolean).join(', ');
 
@@ -339,6 +340,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
               )}
             </div>
             <Row label="Responsable" value={responsable?.name} />
+            {corresponsable && <Row label="Corresponsable (captación)" value={corresponsable.name} />}
             <Row label="Fecha de cierre" value={oportunidad.fechaCierre ? formatDate(oportunidad.fechaCierre) : 'Sin fecha'} />
             <Row label="Origen" value={oportunidad.origen === 'Redes sociales' && oportunidad.redSocial ? `Redes sociales · ${oportunidad.redSocial}` : oportunidad.origen} />
             <Row label="Creado" value={formatDate(oportunidad.fechaCreacion)} />

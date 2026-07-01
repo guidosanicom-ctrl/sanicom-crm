@@ -20,7 +20,10 @@ function addMonths(months) {
   return d.toISOString().slice(0, 10);
 }
 
-const empty = { nombre: '', clienteId: '', clienteNombreLibre: '', equiposDescripcion: '', equiposSeleccionados: [], valor: '', probabilidad: 50, etapa: 'Prospecto', fechaCierre: '', responsable: '', origen: '', descripcion: '', estadoCliente: '', financiacion: '', temperatura: '', notaSeguimiento: '' };
+const empty = { nombre: '', clienteId: '', clienteNombreLibre: '', equiposDescripcion: '', equiposSeleccionados: [], valor: '', probabilidad: 50, etapa: 'Prospecto', fechaCierre: '', responsable: '', corresponsableId: '', origen: '', descripcion: '', estadoCliente: '', financiacion: '', temperatura: '', notaSeguimiento: '' };
+
+const JULIETA_ID = 'u1';
+const ORIGENES_JULIETA = ['Redes sociales', 'Web'];
 
 export default function OportunidadForm({ open, onClose, onSave, initial }) {
   const { etapas: ETAPAS_PIPELINE } = usePipelineStore();
@@ -176,7 +179,16 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Origen</label>
-          <select value={form.origen} onChange={e => { set('origen', e.target.value); if (e.target.value !== 'Redes sociales') set('redSocial', ''); }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
+          <select
+            value={form.origen}
+            onChange={e => {
+              const v = e.target.value;
+              set('origen', v);
+              if (v !== 'Redes sociales') set('redSocial', '');
+              set('corresponsableId', ORIGENES_JULIETA.includes(v) ? JULIETA_ID : '');
+            }}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
+          >
             <option value="">Selecciona origen</option>
             {ORIGENES_OPP.map(o => <option key={o}>{o}</option>)}
           </select>
@@ -187,6 +199,14 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
             </select>
           )}
         </div>
+        {form.corresponsableId && (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Corresponsable (captación)</label>
+            <div className="w-full px-3 py-2 border border-gray-100 rounded-lg text-sm bg-purple-50 text-purple-700 font-medium">
+              Julieta Govantes
+            </div>
+          </div>
+        )}
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-1">Equipos de interés</label>
           {/* Tags de equipos seleccionados */}

@@ -204,7 +204,14 @@ function MobileOppCard({ opp, clients, users, onClick, onMove }) {
       </div>
       <div className="mt-1.5 flex items-center justify-between">
         <span className="text-xs text-gray-400">{opp.fechaCierre ? `Cierre: ${formatDate(opp.fechaCierre)}` : 'Sin fecha'}</span>
-        <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">{user?.name?.split(' ')[0]}</span>
+        <div className="flex items-center gap-1">
+          {opp.corresponsableId && (
+            <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">
+              {users.find(u => u.id === opp.corresponsableId)?.name?.split(' ')[0]}
+            </span>
+          )}
+          <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">{user?.name?.split(' ')[0]}</span>
+        </div>
       </div>
     </div>
   );
@@ -256,7 +263,14 @@ function OppCard({ opp, clients, users, onClick }) {
       </div>
       <div className="mt-1.5 flex items-center justify-between">
         <span className="text-xs text-gray-400">{opp.fechaCierre ? `Cierre: ${formatDate(opp.fechaCierre)}` : 'Sin fecha'}</span>
-        <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">{user?.name?.split(' ')[0]}</span>
+        <div className="flex items-center gap-1">
+          {opp.corresponsableId && (
+            <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">
+              {users.find(u => u.id === opp.corresponsableId)?.name?.split(' ')[0]}
+            </span>
+          )}
+          <span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-500">{user?.name?.split(' ')[0]}</span>
+        </div>
       </div>
       {opp.enPausa && opp.pausaRecordatorio && (
         <div className="mt-1.5 flex items-center gap-1 text-[10px] text-gray-400">
@@ -431,10 +445,10 @@ export default function PipelinePage() {
           if (!matchesCategory(haystack, equipoFiltro)) return false;
         }
       }
-      // Filtro responsable (responsableFiltro es el nombre; o.responsable es el userId)
+      // Filtro responsable — coincide con responsable principal O corresponsable
       if (responsableFiltro) {
         const u = users.find(u => u.name === responsableFiltro);
-        if (!u || o.responsable !== u.id) return false;
+        if (!u || (o.responsable !== u.id && o.corresponsableId !== u.id)) return false;
       }
       // Filtro ciudad
       if (ciudadFiltro) {
