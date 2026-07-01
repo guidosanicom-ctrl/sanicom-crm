@@ -14,6 +14,7 @@ import { Edit, Trash2, Phone, Mail, MapPin, User, PlaySquare,
          CheckCircle2, Circle, Clock, Plus, Trophy, X } from 'lucide-react';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useDemosStore } from '../../store/demosStore';
+import { useLlamadasPendientesStore } from '../../store/llamadasPendientesStore';
 import { etapaLabel } from '../../utils/constants';
 import toast from 'react-hot-toast';
 
@@ -240,6 +241,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
   const { updateOportunidad } = useOportunidadesStore();
   const { demos } = useDemosStore();
   const { addEvento } = useAgendaStore();
+  const { add: addLlamada, confirmar: confirmarLlamada, llamadas } = useLlamadasPendientesStore();
   const [clienteData, setClienteData] = useState(null);
   const [llamadaForm, setLlamadaForm] = useState(null);
 
@@ -257,9 +259,19 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
       responsable: user?.id,
       descripcion: llamadaForm.nota,
     });
+    await addLlamada({
+      oportunidad_id: oportunidad.id,
+      oportunidad_nombre: oportunidad.nombre,
+      fecha_hora: llamadaForm.fechaHora,
+      nota: llamadaForm.nota || null,
+      usuario_id: user?.id,
+      confirmada: false,
+      recordatorios_enviados: 0,
+    });
     setLlamadaForm(null);
-    toast.success('Llamada agendada. Te llegará un aviso el día indicado.');
+    toast.success('Llamada agendada. Te llegará un aviso a la hora indicada.');
   };
+
 
   useEffect(() => {
     if (!open || !oportunidad?.clienteId) { setClienteData(null); return; }
@@ -464,6 +476,55 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
           onUpdate={(updates) => updateOportunidad(oportunidad.id, updates)}
           onCrearDemo={onCrearDemo}
         />
+
+        {/* ── Llamadas programadas ── */}
+        {(() => {
+          const llamadasOpp = llamadas
+            .filter(l => l.oportunidad_id === oportunidad.id)
+            .sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora));
+          if (!llamadasOpp.length) return null;
+          return (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <span className="w-1 h-4 bg-amber-400 rounded-full inline-block" />
+                Llamadas programadas
+              </h3>
+              <div className="space-y-2">
+                {llamadasOpp.map(l => {
+                  const dt = new Date(l.fecha_hora);
+                  const fechaStr = dt.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+                  const horaStr = dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                  const isPast = dt < new Date();
+                  return (
+                    <div key={l.id} className={`flex items-start gap-3 rounded-lg px-4 py-3 ${l.confirmada ? 'bg-green-50 border border-green-100' : isPast ? 'bg-red-50 border border-red-100' : 'bg-amber-50 border border-amber-100'}`}>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-base ${l.confirmada ? 'bg-green-100' : isPast ? 'bg-red-100' : 'bg-amber-100'}`}>
+                        {l.confirmada ? '✅' : '📞'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-800">{fechaStr} · {horaStr}</p>
+                        {l.nota && <p className="text-xs text-gray-500 italic mt-0.5">"{l.nota}"</p>}
+                        {l.confirmada
+                          ? <p className="text-xs text-green-600 mt-0.5">Confirmada</p>
+                          : isPast
+                            ? <p className="text-xs text-red-500 mt-0.5">Pendiente de confirmar</p>
+                            : <p className="text-xs text-amber-600 mt-0.5">Pendiente</p>
+                        }
+                      </div>
+                      {!l.confirmada && canAgendar && (
+                        <button
+                          onClick={() => confirmarLlamada(l.id).then(() => toast.success('Seguimiento confirmado.'))}
+                          className="flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors cursor-pointer"
+                        >
+                          ✅ Ya llamé
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Demos vinculadas */}
         {demosVinculadas.length > 0 && (

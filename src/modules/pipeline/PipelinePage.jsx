@@ -16,6 +16,7 @@ import OportunidadDetail from './OportunidadDetail';
 import DemoForm from '../demostraciones/DemoForm';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { usePipelineStore } from '../../store/pipelineStore';
+import { useLlamadasPendientesStore } from '../../store/llamadasPendientesStore';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import { etapaLabel } from '../../utils/constants';
 
@@ -153,7 +154,7 @@ function MoveBottomSheet({ opp, etapas, onMove, onClose }) {
 }
 
 // ── Tarjeta móvil con botón Mover ────────────────────────────────────────────
-function MobileOppCard({ opp, clients, users, onClick, onMove }) {
+function MobileOppCard({ opp, clients, users, onClick, onMove, hasPendingLlamada }) {
   const client = clients.find(c => c.id === opp.clienteId);
   const clienteNombre = client?.nombre || opp.clienteNombreLibre || '-';
   const user = users.find(u => u.id === opp.responsable);
@@ -165,6 +166,9 @@ function MobileOppCard({ opp, clients, users, onClick, onMove }) {
           {opp.nombre}
           {opp.temperatura && <span className="ml-1">{TEMP_ICON[opp.temperatura]}</span>}
         </button>
+        {hasPendingLlamada && (
+          <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0" title="Llamada pendiente">📞</span>
+        )}
       </div>
       <p className="text-xs text-gray-500 mb-2.5">{clienteNombre}</p>
 
@@ -217,7 +221,7 @@ function MobileOppCard({ opp, clients, users, onClick, onMove }) {
   );
 }
 
-function OppCard({ opp, clients, users, onClick }) {
+function OppCard({ opp, clients, users, onClick, hasPendingLlamada }) {
   const client = clients.find(c => c.id === opp.clienteId);
   const clienteNombre = client?.nombre || opp.clienteNombreLibre || '-';
   const user = users.find(u => u.id === opp.responsable);
@@ -229,7 +233,12 @@ function OppCard({ opp, clients, users, onClick }) {
           {opp.enPausa && <span className="mr-1">⏸️</span>}
           {opp.nombre}
         </p>
-        {opp.temperatura && <span className="text-base flex-shrink-0">{TEMP_ICON[opp.temperatura]}</span>}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {hasPendingLlamada && (
+            <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0" title="Llamada pendiente de confirmar">📞</span>
+          )}
+          {opp.temperatura && <span className="text-base">{TEMP_ICON[opp.temperatura]}</span>}
+        </div>
       </div>
       <p className="text-xs text-gray-500 mb-2.5">{clienteNombre}</p>
 
@@ -282,7 +291,7 @@ function OppCard({ opp, clients, users, onClick }) {
 }
 
 // ── Tarjeta draggable (dnd-kit) ──────────────────────────────────────────────
-function KanbanCard({ opp, clients, users, onOpen }) {
+function KanbanCard({ opp, clients, users, onOpen, hasPendingLlamada }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: opp.id });
   const style = transform
     ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 50 }
@@ -295,7 +304,7 @@ function KanbanCard({ opp, clients, users, onOpen }) {
       {...listeners}
       className={`touch-none ${isDragging ? 'opacity-50 rotate-1' : ''}`}
     >
-      <OppCard opp={opp} clients={clients} users={users} onClick={() => !isDragging && onOpen(opp)} />
+      <OppCard opp={opp} clients={clients} users={users} onClick={() => !isDragging && onOpen(opp)} hasPendingLlamada={hasPendingLlamada} />
     </div>
   );
 }
@@ -317,7 +326,7 @@ function KanbanColumn({ stage, opps, clientes, users, onOpen }) {
             ${isOver ? 'bg-blue-50 outline-2 outline-dashed outline-blue-300' : ''}`}
         >
           {opps.map(opp => (
-            <KanbanCard key={opp.id} opp={opp} clients={clientes} users={users} onOpen={onOpen} />
+            <KanbanCard key={opp.id} opp={opp} clients={clientes} users={users} onOpen={onOpen} hasPendingLlamada={pendingLlamadasSet.has(opp.id)} />
           ))}
         </div>
       </div>
@@ -331,6 +340,8 @@ export default function PipelinePage() {
   const { users, canEditRecord } = useAuthStore();
   const { addDemo, updateDemo } = useDemosStore();
   const { etapas: ETAPAS_PIPELINE } = usePipelineStore();
+  const { oportunidadesConLlamadaPendiente } = useLlamadasPendientesStore();
+  const pendingLlamadasSet = oportunidadesConLlamadaPendiente();
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -572,6 +583,7 @@ export default function PipelinePage() {
                     users={users}
                     onClick={() => openDetail(opp)}
                     onMove={() => setMoveSheet(opp)}
+                    hasPendingLlamada={pendingLlamadasSet.has(opp.id)}
                   />
                 ))}
               </div>

@@ -17,6 +17,7 @@ import { useAgendaStore } from '../../store/agendaStore';
 import { useActividadStore } from '../../store/actividadStore';
 import { useAuthStore } from '../../store/authStore';
 import { useDemosStore } from '../../store/demosStore';
+import { useLlamadasPendientesStore } from '../../store/llamadasPendientesStore';
 import { formatCurrency } from '../../utils/formatters';
 
 const MODULO_RUTA = {
@@ -93,14 +94,16 @@ function KpiCard({ icon: Icon, label, value, trend, trendIcon: TrendIcon, accent
 }
 
 export default function DashboardPage() {
-  const { users } = useAuthStore();
+  const { users, user } = useAuthStore();
   const { clientes } = useClientesStore();
   const { oportunidades } = useOportunidadesStore();
   const { servicios } = useServicioStore();
   const { eventos } = useAgendaStore();
   const { actividad } = useActividadStore();
   const { demos } = useDemosStore();
+  const { llamadas: llamadasPendientes } = useLlamadasPendientesStore();
   const navigate = useNavigate();
+  const isJavier = user?.email === 'jgovantes@sanicom.es';
 
   const { refreshing } = useAutoRefresh([
     makeRefresher(useClientesStore),
@@ -580,6 +583,49 @@ export default function DashboardPage() {
           </div>
         )}
       </Card>
+
+      {/* ── Seguimientos pendientes (solo Javier) ── */}
+      {isJavier && llamadasPendientes.length > 0 && (
+        <Card>
+          <SectionTitle icon={AlertCircle} label="⚠️ Seguimientos pendientes" />
+          <div className="space-y-2">
+            {llamadasPendientes.map(l => {
+              let fechaLabel = '';
+              try {
+                fechaLabel = format(parseISO(l.fecha_hora), "d MMM · HH:mm", { locale: es });
+              } catch {}
+              const hace = (() => {
+                try { return formatDistanceToNow(parseISO(l.fecha_hora), { addSuffix: true, locale: es }); } catch { return ''; }
+              })();
+              return (
+                <div key={l.id} className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-100">
+                  <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <span className="text-base">📞</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <button
+                      onClick={() => navigate('/pipeline')}
+                      className="text-sm font-semibold text-red-800 hover:underline text-left"
+                    >
+                      {l.oportunidad_nombre}
+                    </button>
+                    {l.nota && <p className="text-xs text-red-600 italic mt-0.5 truncate">"{l.nota}"</p>}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-red-500">{fechaLabel}</span>
+                      {hace && <span className="text-xs text-gray-400">· {hace}</span>}
+                      {l.recordatorios_enviados > 0 && (
+                        <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">
+                          {l.recordatorios_enviados} recordatorio{l.recordatorios_enviados !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

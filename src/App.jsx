@@ -26,6 +26,7 @@ import { useRealtimeSync } from './hooks/useRealtimeSync';
 import { useNotasStore } from './store/notasStore';
 import { useSeguimientoStore } from './store/seguimientoStore';
 import { useCatalogoEquiposStore } from './store/catalogoEquiposStore';
+import { useLlamadasPendientesStore } from './store/llamadasPendientesStore';
 import Layout from './components/layout/Layout';
 import LoginPage from './modules/auth/LoginPage';
 import NoAccess from './modules/auth/NoAccess';
@@ -69,6 +70,7 @@ function AppInit() {
   const initNotas         = useNotasStore(s => s.initialize);
   const initSeguimiento   = useSeguimientoStore(s => s.initialize);
   const initCatalogoEquipos = useCatalogoEquiposStore(s => s.initialize);
+  const initLlamadasPendientes = useLlamadasPendientesStore(s => s.initialize);
 
   useAppBadge();
   usePushNotifications();
@@ -80,7 +82,7 @@ function AppInit() {
     Promise.all([
       initClientes(), initEquipos(), initOportunidades(), initDemos(),
       initServicios(), initAgenda(), initActividad(),
-      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(), initVisitas(), initNotas(), initSeguimiento(), initCatalogoEquipos(),
+      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(), initVisitas(), initNotas(), initSeguimiento(), initCatalogoEquipos(), initLlamadasPendientes(),
     ]).catch(e => console.error('[AppInit]', e));
   }, [user?.id]);
 
