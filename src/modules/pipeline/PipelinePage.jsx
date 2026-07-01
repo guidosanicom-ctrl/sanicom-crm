@@ -596,17 +596,19 @@ export default function PipelinePage() {
 
       {viewMode === 'kanban' ? (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd} autoScroll={{ enabled: true }}>
-          <div className="hidden sm:flex gap-4 overflow-x-auto pb-4">
-            {ETAPAS_PIPELINE.map(stage => (
-              <KanbanColumn
-                key={stage}
-                stage={stage}
-                opps={oportunidadesFiltradas.filter(o => o.etapa === stage)}
-                clientes={clientes}
-                users={users}
-                onOpen={openDetail}
-              />
-            ))}
+          <div className="hidden sm:block overflow-x-auto pb-4 -mx-6 px-6">
+            <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
+              {ETAPAS_PIPELINE.map(stage => (
+                <KanbanColumn
+                  key={stage}
+                  stage={stage}
+                  opps={oportunidadesFiltradas.filter(o => o.etapa === stage)}
+                  clientes={clientes}
+                  users={users}
+                  onOpen={openDetail}
+                />
+              ))}
+            </div>
           </div>
         </DndContext>
       ) : (
