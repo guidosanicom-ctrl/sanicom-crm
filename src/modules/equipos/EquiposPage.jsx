@@ -5,6 +5,8 @@ import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { useCategoriasStore } from '../../store/categoriasStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
+import { useCatalogoEquiposStore } from '../../store/catalogoEquiposStore';
+import CatalogoEquipoSelect from '../../components/shared/CatalogoEquipoSelect';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import SearchBar from '../../components/shared/SearchBar';
@@ -15,20 +17,34 @@ import Modal from '../../components/ui/Modal';
 import { formatCurrency } from '../../utils/formatters';
 import { Package } from 'lucide-react';
 
-const emptyBase = { nombre: '', marca: '', modelo: '', categoria: '', descripcion: '', precioVenta: '', precioCoste: '', estado: 'Activo', especialidades: [] };
+const emptyBase = { nombre: '', marca: '', modelo: '', categoria: '', subcategoria: '', otroTexto: '', descripcion: '', precioVenta: '', precioCoste: '', estado: 'Activo', especialidades: [] };
 
 function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
   const { categorias } = useCategoriasStore();
   const { especialidades } = useEspecialidadesStore();
-  const [form, setForm] = useState(initial || { ...emptyBase, categoria: categorias[0] || '' });
+  const [form, setForm] = useState(initial || { ...emptyBase });
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (open) {
-      setForm(initial || { ...emptyBase, categoria: categorias[0] || '' });
+      setForm(initial || { ...emptyBase });
       setErrors({});
     }
   }, [open, initial]);
+
+  // catPick tracks the raw catalog selection separate from the saved form values
+  const [catPick, setCatPick] = useState({ categoria: initial?.otroTexto ? 'Otro' : (initial?.categoria || ''), subcategoria: initial?.subcategoria || '', otroTexto: initial?.otroTexto || '' });
+
+  useEffect(() => {
+    if (open) setCatPick({ categoria: initial?.otroTexto ? 'Otro' : (initial?.categoria || ''), subcategoria: initial?.subcategoria || '', otroTexto: initial?.otroTexto || '' });
+  }, [open, initial]);
+
+  const applyCatalogo = (cat, sub, otro) => {
+    const catFinal = cat === 'Otro' ? (otro?.trim() || '') : cat;
+    const nombre = [catFinal, sub].filter(Boolean).join(' ');
+    setCatPick({ categoria: cat, subcategoria: sub, otroTexto: otro });
+    setForm(f => ({ ...f, categoria: catFinal, subcategoria: sub, otroTexto: otro, ...(nombre ? { nombre } : {}) }));
+  };
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -64,9 +80,26 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
       footer={readOnly ? <Button variant="outline" onClick={onClose}>Cerrar</Button> : <><Button variant="outline" onClick={onClose}>Cancelar</Button><Button onClick={handleSave}>{initial ? 'Guardar' : 'Crear'}</Button></>}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">Categoría del catálogo</label>
+          {readOnly ? (
+            <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700">
+              {[form.categoria, form.subcategoria].filter(Boolean).join(' — ') || '-'}
+            </div>
+          ) : (
+            <CatalogoEquipoSelect
+              categoria={catPick.categoria}
+              subcategoria={catPick.subcategoria}
+              otroTexto={catPick.otroTexto}
+              onCategoriaChange={v => applyCatalogo(v, '', '')}
+              onSubcategoriaChange={v => applyCatalogo(catPick.categoria, v, catPick.otroTexto)}
+              onOtroTextoChange={v => applyCatalogo('Otro', catPick.subcategoria, v)}
+            />
+          )}
+        </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Nombre *</label>
-          <input {...inp('nombre')} placeholder="Nombre del equipo" />
+          <input {...inp('nombre')} placeholder="Se rellena automáticamente o escribe manualmente" />
           {errors.nombre && <p className="text-xs text-red-500 mt-1">{errors.nombre}</p>}
         </div>
         <div>
@@ -78,13 +111,6 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
           <label className="block text-xs font-medium text-gray-600 mb-1">Modelo *</label>
           <input {...inp('modelo')} placeholder="Modelo" />
           {errors.modelo && <p className="text-xs text-red-500 mt-1">{errors.modelo}</p>}
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Categoría</label>
-          <select value={form.categoria} onChange={e => set('categoria', e.target.value)} disabled={readOnly}
-            className={`w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none ${readOnly ? 'bg-gray-50' : ''}`}>
-            {categorias.map(c => <option key={c}>{c}</option>)}
-          </select>
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Precio de venta (€)</label>
