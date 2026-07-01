@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
+import { useCatalogoEquiposStore } from '../../store/catalogoEquiposStore';
 import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { useCategoriasStore } from '../../store/categoriasStore';
@@ -19,6 +20,7 @@ import { forceReregisterPushSubscription } from '../../lib/pushSubscription';
 
 const TABS_BASE = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos', 'Tipos de cliente', 'Servicios hospitalarios', 'Enlace Google Drive'];
 const EMAILS_BACKUP = ['administracion@sanicom.es', 'jgovantes@sanicom.es', 'guidorosso@sanicom.es'];
+const EMAILS_CATALOGO = ['jgovantes@sanicom.es', 'guidorosso@sanicom.es'];
 
 const EMPRESA_INIT = { nombre: 'Sanicom S.L.', cif: 'B12345678', direccion: 'C/ Ejemplo, 1, Sevilla', telefono: '954 000 000' };
 
@@ -31,8 +33,14 @@ export default function ConfiguracionPage() {
   const { tipos: tiposCliente, addTipo, updateTipo, deleteTipo } = useTiposClienteStore();
   const { servicios: serviciosHospital, addServicio, updateServicio, deleteServicio } = useServiciosHospitalStore();
   const { driveUrl, saveDriveUrl } = useDriveStore();
+  const { items: catalogoItems, addItem: addCatalogoItem, updateItem: updateCatalogoItem, deleteItem: deleteCatalogoItem, categorias: getCatalogoCats, subcategorias: getCatalogoSubs } = useCatalogoEquiposStore();
   const canBackup = EMAILS_BACKUP.includes(user?.email);
-  const TABS = canBackup ? [...TABS_BASE, 'Copia de seguridad'] : TABS_BASE;
+  const canCatalogo = EMAILS_CATALOGO.includes(user?.email);
+  const TABS = [
+    ...TABS_BASE,
+    ...(canCatalogo ? ['Catálogo de equipos'] : []),
+    ...(canBackup ? ['Copia de seguridad'] : []),
+  ];
   const [activeTab, setActiveTab] = useState(0);
 
   // Pipeline state — copia local editable, se guarda al pulsar "Guardar"
@@ -162,6 +170,34 @@ export default function ConfiguracionPage() {
     setAddingServ(false); setNewServValue('');
   };
   const confirmDeleteServ = () => { deleteServicio(delServ); toast.success(`"${delServ}" eliminado.`); setDelServ(null); };
+
+  // ── Catálogo de equipos CRUD state ───────────────────────────────────────
+  const [editingCatalogo, setEditingCatalogo] = useState(null); // item id being edited
+  const [editingCatalogoVal, setEditingCatalogoVal] = useState({ categoria: '', subcategoria: '' });
+  const [addingCatalogo, setAddingCatalogo] = useState(false);
+  const [newCatalogoVal, setNewCatalogoVal] = useState({ categoria: '', subcategoria: '' });
+  const [delCatalogo, setDelCatalogo] = useState(null);
+
+  const startEditCatalogo = (item) => { setEditingCatalogo(item.id); setEditingCatalogoVal({ categoria: item.categoria, subcategoria: item.subcategoria || '' }); setAddingCatalogo(false); };
+  const cancelEditCatalogo = () => { setEditingCatalogo(null); };
+  const confirmEditCatalogo = async () => {
+    const result = await updateCatalogoItem(editingCatalogo, editingCatalogoVal.categoria, editingCatalogoVal.subcategoria);
+    if (!result.ok) { toast.error(result.error); return; }
+    toast.success('Equipo actualizado.');
+    cancelEditCatalogo();
+  };
+  const confirmAddCatalogo = async () => {
+    const result = await addCatalogoItem(newCatalogoVal.categoria, newCatalogoVal.subcategoria);
+    if (!result.ok) { toast.error(result.error); return; }
+    toast.success('Equipo añadido.');
+    setAddingCatalogo(false); setNewCatalogoVal({ categoria: '', subcategoria: '' });
+  };
+  const confirmDeleteCatalogo = async () => {
+    const result = await deleteCatalogoItem(delCatalogo);
+    if (!result.ok) { toast.error(result.error); return; }
+    toast.success('Eliminado del catálogo.');
+    setDelCatalogo(null);
+  };
 
   const [driveInput, setDriveInput] = useState(driveUrl);
 
@@ -815,6 +851,103 @@ export default function ConfiguracionPage() {
             <Button onClick={handleSaveDrive}>Guardar enlace</Button>
           </div>
         </Card>
+      )}
+
+      {activeTab === TABS.indexOf('Catálogo de equipos') && canCatalogo && (
+        <div className="space-y-4">
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-semibold text-gray-800">Catálogo de equipos</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Equipos disponibles para seleccionar en fichas de clientes y oportunidades</p>
+              </div>
+              {!addingCatalogo && (
+                <Button size="sm" onClick={() => { setAddingCatalogo(true); setEditingCatalogo(null); setNewCatalogoVal({ categoria: '', subcategoria: '' }); }}>
+                  <Plus className="w-4 h-4" />Añadir
+                </Button>
+              )}
+            </div>
+
+            {addingCatalogo && (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 space-y-3">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Nuevo equipo</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Categoría *</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                      value={newCatalogoVal.categoria}
+                      onChange={e => setNewCatalogoVal(v => ({ ...v, categoria: e.target.value }))}
+                      placeholder="Ej: Diatermia"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Subcategoría (opcional)</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                      value={newCatalogoVal.subcategoria}
+                      onChange={e => setNewCatalogoVal(v => ({ ...v, subcategoria: e.target.value }))}
+                      placeholder="Ej: Portátil"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button size="sm" variant="outline" onClick={() => setAddingCatalogo(false)}>Cancelar</Button>
+                  <Button size="sm" onClick={confirmAddCatalogo}>Guardar</Button>
+                </div>
+              </div>
+            )}
+
+            {catalogoItems.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-8">No hay equipos en el catálogo.</p>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {catalogoItems.map(item => (
+                  <div key={item.id} className="py-3 flex items-center gap-3">
+                    {editingCatalogo === item.id ? (
+                      <>
+                        <input
+                          className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          value={editingCatalogoVal.categoria}
+                          onChange={e => setEditingCatalogoVal(v => ({ ...v, categoria: e.target.value }))}
+                          placeholder="Categoría"
+                          autoFocus
+                        />
+                        <input
+                          className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          value={editingCatalogoVal.subcategoria}
+                          onChange={e => setEditingCatalogoVal(v => ({ ...v, subcategoria: e.target.value }))}
+                          placeholder="Subcategoría"
+                        />
+                        <button onClick={confirmEditCatalogo} className="p-1.5 rounded-lg text-green-600 hover:bg-green-50 cursor-pointer flex-shrink-0"><Check className="w-4 h-4" /></button>
+                        <button onClick={cancelEditCatalogo} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 cursor-pointer flex-shrink-0"><X className="w-4 h-4" /></button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-gray-800">{item.categoria}</span>
+                          {item.subcategoria && <span className="text-sm text-gray-500"> — {item.subcategoria}</span>}
+                        </div>
+                        <button onClick={() => startEditCatalogo(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer flex-shrink-0"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={() => setDelCatalogo(item.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 cursor-pointer flex-shrink-0"><Trash2 className="w-4 h-4" /></button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <ConfirmDialog
+            open={delCatalogo !== null}
+            onClose={() => setDelCatalogo(null)}
+            onConfirm={confirmDeleteCatalogo}
+            title="Eliminar equipo del catálogo"
+            message="¿Eliminar este equipo del catálogo? Los datos de clientes existentes no se modificarán."
+            confirmText="Eliminar"
+          />
+        </div>
       )}
 
       {activeTab === TABS.indexOf('Copia de seguridad') && canBackup && <CopiaSeguridad />}

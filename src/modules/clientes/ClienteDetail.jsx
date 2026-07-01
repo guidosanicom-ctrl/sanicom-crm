@@ -4,6 +4,8 @@ import { ArrowLeft, MapPin, Phone, Mail, Globe, Edit, Plus, Trash2, Pencil,
          Package, ShoppingBag, Star, Stethoscope, FileText, ExternalLink,
          CalendarDays, CheckCircle2, Clock, X } from 'lucide-react';
 import { useClientesStore } from '../../store/clientesStore';
+import { useCatalogoEquiposStore } from '../../store/catalogoEquiposStore';
+import CatalogoEquipoSelect from '../../components/shared/CatalogoEquipoSelect';
 import { useAuthStore } from '../../store/authStore';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useDemosStore } from '../../store/demosStore';
@@ -30,8 +32,6 @@ const TIPOS_SERVICIOS = {
   'Centro médico':     { label: 'Especialidades', jefeLabel: 'Responsable'      },
 };
 
-// Categorías de equipos con interés — propias de Sanicom, no el catálogo general de Equipos
-const CATEGORIAS_INTERES = ['Diatermia', 'Onda de Choque', 'Super Inductiva', 'Ecógrafo', 'Otro'];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function genId() { return `id_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`; }
@@ -249,7 +249,7 @@ function EquiposTieneTab({ equipos = [], onSave }) {
 }
 
 // ── Pestaña: Equipos con interés ───────────────────────────────────────────
-const EQUIPO_INTERES_EMPTY = { categoria: '', categoriaOtro: '', modeloMarca: '' };
+const EQUIPO_INTERES_EMPTY = { categoria: '', subcategoria: '', modeloMarca: '' };
 
 function EquiposInteresTab({ equiposInteres = [], onSave }) {
   const [form, setForm] = useState(null);
@@ -257,10 +257,9 @@ function EquiposInteresTab({ equiposInteres = [], onSave }) {
   const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const save = () => {
-    const categoriaFinal = form?.categoria === 'Otro' ? form?.categoriaOtro?.trim() : form?.categoria;
-    if (!categoriaFinal && !form?.modeloMarca?.trim()) return;
-    const nombre = [categoriaFinal, form.modeloMarca].filter(Boolean).join(' — ');
-    onSave([...equiposInteres, { id: genId(), nombre, categoria: categoriaFinal, modeloMarca: form.modeloMarca }]);
+    if (!form?.categoria && !form?.modeloMarca?.trim()) return;
+    const nombre = [form.categoria, form.subcategoria, form.modeloMarca].filter(Boolean).join(' — ');
+    onSave([...equiposInteres, { id: genId(), nombre, categoria: form.categoria, subcategoria: form.subcategoria, modeloMarca: form.modeloMarca }]);
     setForm(null);
   };
   const remove = (idx) => { onSave(equiposInteres.filter((_, j) => j !== idx)); setDelIdx(null); };
@@ -283,15 +282,14 @@ function EquiposInteresTab({ equiposInteres = [], onSave }) {
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-5 space-y-3">
           <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Nuevo equipo de interés</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FRow label="Categoría">
-              <select className={selCls} value={form.categoria} onChange={e => s('categoria', e.target.value)}>
-                <option value="">Sin especificar</option>
-                {CATEGORIAS_INTERES.map(c => <option key={c}>{c}</option>)}
-              </select>
+            <FRow label="Categoría / Subcategoría">
+              <CatalogoEquipoSelect
+                categoria={form.categoria}
+                subcategoria={form.subcategoria}
+                onCategoriaChange={v => s('categoria', v)}
+                onSubcategoriaChange={v => s('subcategoria', v)}
+              />
             </FRow>
-            {form.categoria === 'Otro' && (
-              <FRow label="Especifica la categoría"><input className={inputCls} value={form.categoriaOtro} onChange={e => s('categoriaOtro', e.target.value)} placeholder="Ej: Radiofrecuencia" /></FRow>
-            )}
             <FRow label="Modelo / Marca"><input className={inputCls} value={form.modeloMarca} onChange={e => s('modeloMarca', e.target.value)} placeholder="Ej: GE Voluson E10" /></FRow>
           </div>
           <div className="flex gap-2 justify-end pt-1">
@@ -721,15 +719,14 @@ export default function ClienteDetail() {
       fecha: contactoSegForm.fecha, nota: contactoSegForm.nota,
     });
 
-    const categoriaFinal = contactoSegForm.equipoCategoria === 'Otro'
-      ? contactoSegForm.equipoCategoriaOtro?.trim()
-      : contactoSegForm.equipoCategoria;
+    const categoriaFinal = contactoSegForm.equipoCategoria;
+    const subcategoriaFinal = contactoSegForm.equipoSubcategoria;
 
     if (contactoSegForm.interesado && (categoriaFinal || contactoSegForm.equipoModeloMarca)) {
-      const nombre = [categoriaFinal, contactoSegForm.equipoModeloMarca].filter(Boolean).join(' — ');
+      const nombre = [categoriaFinal, subcategoriaFinal, contactoSegForm.equipoModeloMarca].filter(Boolean).join(' — ');
       saveEquiposInteres([
         ...(cliente.equiposInteres || []),
-        { id: genId(), nombre, categoria: categoriaFinal, modeloMarca: contactoSegForm.equipoModeloMarca },
+        { id: genId(), nombre, categoria: categoriaFinal, subcategoria: subcategoriaFinal, modeloMarca: contactoSegForm.equipoModeloMarca },
       ]);
       toast.success('Contacto registrado y equipo de interés añadido.');
     }
@@ -784,7 +781,7 @@ export default function ClienteDetail() {
         </div>
         <div className="flex gap-2 flex-wrap">
           {carlos && (
-            <Button size="sm" onClick={() => setContactoSegForm({ tipo: 'whatsapp', fecha: new Date().toISOString().slice(0,10), nota: '', interesado: false, equipoCategoria: '', equipoCategoriaOtro: '', equipoModeloMarca: '' })}>
+            <Button size="sm" onClick={() => setContactoSegForm({ tipo: 'whatsapp', fecha: new Date().toISOString().slice(0,10), nota: '', interesado: false, equipoCategoria: '', equipoSubcategoria: '', equipoModeloMarca: '' })}>
               <MessageCircle className="w-4 h-4" />Registrar contacto
             </Button>
           )}
@@ -1232,25 +1229,14 @@ export default function ClienteDetail() {
               <div className="space-y-3 bg-cyan-50/50 border border-cyan-100 rounded-lg p-3">
                 <p className="text-xs font-medium text-gray-600">¿Cuál?</p>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Categoría</label>
-                  <select
-                    value={contactoSegForm.equipoCategoria}
-                    onChange={e => setContactoSegForm(f => ({ ...f, equipoCategoria: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
-                  >
-                    <option value="">Sin especificar</option>
-                    {CATEGORIAS_INTERES.map(c => <option key={c}>{c}</option>)}
-                  </select>
+                  <label className="block text-xs text-gray-500 mb-1">Categoría / Subcategoría</label>
+                  <CatalogoEquipoSelect
+                    categoria={contactoSegForm.equipoCategoria}
+                    subcategoria={contactoSegForm.equipoSubcategoria}
+                    onCategoriaChange={v => setContactoSegForm(f => ({ ...f, equipoCategoria: v, equipoSubcategoria: '' }))}
+                    onSubcategoriaChange={v => setContactoSegForm(f => ({ ...f, equipoSubcategoria: v }))}
+                  />
                 </div>
-                {contactoSegForm.equipoCategoria === 'Otro' && (
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Especifica la categoría</label>
-                    <input type="text" value={contactoSegForm.equipoCategoriaOtro || ''}
-                      onChange={e => setContactoSegForm(f => ({ ...f, equipoCategoriaOtro: e.target.value }))}
-                      placeholder="Ej: Radiofrecuencia"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white" />
-                  </div>
-                )}
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Modelo / Marca</label>
                   <input type="text" value={contactoSegForm.equipoModeloMarca}
