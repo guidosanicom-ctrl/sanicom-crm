@@ -330,7 +330,7 @@ export default function PipelinePage() {
     return { total: oportunidades.length, pipeline, weighted, wonMonth };
   }, [oportunidades]);
 
-  const EQUIPOS_FILTRO = ['Todos', 'Diatermia', 'Onda de Choque', 'Ecógrafo', 'Super Inductiva', 'Otro'];
+  const EQUIPOS_FILTRO = ['Todos', 'Diatermia', 'Onda de Choque', 'Ecógrafo', 'Otro'];
 
   const KEYWORDS = {
     'Diatermia':      ['diatermia', 'tecartherapy', 'tecar', 'indiba', 'hcr'],
