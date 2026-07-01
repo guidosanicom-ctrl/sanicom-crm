@@ -30,14 +30,14 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
   // clienteLibre: true = texto libre, false = buscar existente
   const [clienteLibre, setClienteLibre] = useState(() => !!(initial?.clienteNombreLibre && !initial?.clienteId));
   // selector de equipo pendiente de añadir
-  const [equipoPick, setEquipoPick] = useState({ categoria: '', subcategoria: '' });
+  const [equipoPick, setEquipoPick] = useState({ categoria: '', subcategoria: '', otroTexto: '' });
 
   useEffect(() => {
     if (open) {
       setForm(initial || empty);
       setErrors({});
       setClienteLibre(!!(initial?.clienteNombreLibre && !initial?.clienteId));
-      setEquipoPick({ categoria: '', subcategoria: '' });
+      setEquipoPick({ categoria: '', subcategoria: '', otroTexto: '' });
     }
   }, [open, initial]);
 
@@ -63,13 +63,15 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
 
   const addEquipo = () => {
     if (!equipoPick.categoria) return;
-    const label = [equipoPick.categoria, equipoPick.subcategoria].filter(Boolean).join(' — ');
+    const catFinal = equipoPick.categoria === 'Otro' ? equipoPick.otroTexto?.trim() : equipoPick.categoria;
+    if (!catFinal) return;
+    const label = [catFinal, equipoPick.subcategoria].filter(Boolean).join(' — ');
     const ya = (form.equiposSeleccionados || []).some(e => e.label === label);
     if (ya) return;
     const lista = [...(form.equiposSeleccionados || []), { ...equipoPick, label }];
     set('equiposSeleccionados', lista);
     set('equiposDescripcion', lista.map(e => e.label).join(', '));
-    setEquipoPick({ categoria: '', subcategoria: '' });
+    setEquipoPick({ categoria: '', subcategoria: '', otroTexto: '' });
   };
 
   const removeEquipo = (label) => {
@@ -203,14 +205,23 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
             <div className="flex-1 space-y-1.5">
               <select
                 value={equipoPick.categoria}
-                onChange={e => setEquipoPick({ categoria: e.target.value, subcategoria: '' })}
+                onChange={e => setEquipoPick({ categoria: e.target.value, subcategoria: '', otroTexto: '' })}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
               >
                 <option value="">Categoría...</option>
                 {getCats().map(c => <option key={c} value={c}>{c}</option>)}
                 <option value="Otro">Otro</option>
               </select>
-              {equipoPick.categoria && getSubs(equipoPick.categoria).length > 0 && (
+              {equipoPick.categoria === 'Otro' && (
+                <input
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  value={equipoPick.otroTexto}
+                  onChange={e => setEquipoPick(p => ({ ...p, otroTexto: e.target.value }))}
+                  placeholder="Especifica el equipo..."
+                  autoFocus
+                />
+              )}
+              {equipoPick.categoria && equipoPick.categoria !== 'Otro' && getSubs(equipoPick.categoria).length > 0 && (
                 <select
                   value={equipoPick.subcategoria}
                   onChange={e => setEquipoPick(p => ({ ...p, subcategoria: e.target.value }))}
@@ -224,7 +235,7 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
             <button
               type="button"
               onClick={addEquipo}
-              disabled={!equipoPick.categoria}
+              disabled={!equipoPick.categoria || (equipoPick.categoria === 'Otro' && !equipoPick.otroTexto?.trim())}
               className="px-3 py-2 rounded-lg border border-blue-300 text-blue-700 text-sm font-medium hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
             >
               + Añadir

@@ -249,7 +249,7 @@ function EquiposTieneTab({ equipos = [], onSave }) {
 }
 
 // ── Pestaña: Equipos con interés ───────────────────────────────────────────
-const EQUIPO_INTERES_EMPTY = { categoria: '', subcategoria: '', modeloMarca: '' };
+const EQUIPO_INTERES_EMPTY = { categoria: '', subcategoria: '', otroTexto: '', modeloMarca: '' };
 
 function EquiposInteresTab({ equiposInteres = [], onSave }) {
   const [form, setForm] = useState(null);
@@ -257,9 +257,10 @@ function EquiposInteresTab({ equiposInteres = [], onSave }) {
   const s = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const save = () => {
-    if (!form?.categoria && !form?.modeloMarca?.trim()) return;
-    const nombre = [form.categoria, form.subcategoria, form.modeloMarca].filter(Boolean).join(' — ');
-    onSave([...equiposInteres, { id: genId(), nombre, categoria: form.categoria, subcategoria: form.subcategoria, modeloMarca: form.modeloMarca }]);
+    const catFinal = form?.categoria === 'Otro' ? form?.otroTexto?.trim() : form?.categoria;
+    if (!catFinal && !form?.modeloMarca?.trim()) return;
+    const nombre = [catFinal, form.subcategoria, form.modeloMarca].filter(Boolean).join(' — ');
+    onSave([...equiposInteres, { id: genId(), nombre, categoria: catFinal, subcategoria: form.subcategoria, modeloMarca: form.modeloMarca }]);
     setForm(null);
   };
   const remove = (idx) => { onSave(equiposInteres.filter((_, j) => j !== idx)); setDelIdx(null); };
@@ -286,8 +287,10 @@ function EquiposInteresTab({ equiposInteres = [], onSave }) {
               <CatalogoEquipoSelect
                 categoria={form.categoria}
                 subcategoria={form.subcategoria}
+                otroTexto={form.otroTexto}
                 onCategoriaChange={v => s('categoria', v)}
                 onSubcategoriaChange={v => s('subcategoria', v)}
+                onOtroTextoChange={v => s('otroTexto', v)}
               />
             </FRow>
             <FRow label="Modelo / Marca"><input className={inputCls} value={form.modeloMarca} onChange={e => s('modeloMarca', e.target.value)} placeholder="Ej: GE Voluson E10" /></FRow>
@@ -719,7 +722,9 @@ export default function ClienteDetail() {
       fecha: contactoSegForm.fecha, nota: contactoSegForm.nota,
     });
 
-    const categoriaFinal = contactoSegForm.equipoCategoria;
+    const categoriaFinal = contactoSegForm.equipoCategoria === 'Otro'
+      ? contactoSegForm.equipoOtroTexto?.trim()
+      : contactoSegForm.equipoCategoria;
     const subcategoriaFinal = contactoSegForm.equipoSubcategoria;
 
     if (contactoSegForm.interesado && (categoriaFinal || contactoSegForm.equipoModeloMarca)) {
@@ -781,7 +786,7 @@ export default function ClienteDetail() {
         </div>
         <div className="flex gap-2 flex-wrap">
           {carlos && (
-            <Button size="sm" onClick={() => setContactoSegForm({ tipo: 'whatsapp', fecha: new Date().toISOString().slice(0,10), nota: '', interesado: false, equipoCategoria: '', equipoSubcategoria: '', equipoModeloMarca: '' })}>
+            <Button size="sm" onClick={() => setContactoSegForm({ tipo: 'whatsapp', fecha: new Date().toISOString().slice(0,10), nota: '', interesado: false, equipoCategoria: '', equipoSubcategoria: '', equipoOtroTexto: '', equipoModeloMarca: '' })}>
               <MessageCircle className="w-4 h-4" />Registrar contacto
             </Button>
           )}
@@ -1233,8 +1238,10 @@ export default function ClienteDetail() {
                   <CatalogoEquipoSelect
                     categoria={contactoSegForm.equipoCategoria}
                     subcategoria={contactoSegForm.equipoSubcategoria}
-                    onCategoriaChange={v => setContactoSegForm(f => ({ ...f, equipoCategoria: v, equipoSubcategoria: '' }))}
+                    otroTexto={contactoSegForm.equipoOtroTexto}
+                    onCategoriaChange={v => setContactoSegForm(f => ({ ...f, equipoCategoria: v, equipoSubcategoria: '', equipoOtroTexto: '' }))}
                     onSubcategoriaChange={v => setContactoSegForm(f => ({ ...f, equipoSubcategoria: v }))}
+                    onOtroTextoChange={v => setContactoSegForm(f => ({ ...f, equipoOtroTexto: v }))}
                   />
                 </div>
                 <div>
