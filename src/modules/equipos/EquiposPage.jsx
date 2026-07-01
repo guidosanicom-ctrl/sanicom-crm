@@ -17,7 +17,7 @@ import Modal from '../../components/ui/Modal';
 import { formatCurrency } from '../../utils/formatters';
 import { Package } from 'lucide-react';
 
-const emptyBase = { nombre: '', marca: '', modelo: '', categoria: '', subcategoria: '', otroTexto: '', descripcion: '', precioVenta: '', precioCoste: '', estado: 'Activo', especialidades: [] };
+const emptyBase = { nombre: '', marca: '', modelo: '', unidades: '', categoria: '', subcategoria: '', otroTexto: '', descripcion: '', precioVenta: '', precioCoste: '', estado: 'Activo', especialidades: [] };
 
 function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
   const { categorias } = useCategoriasStore();
@@ -59,7 +59,7 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
 
   const handleSave = () => {
     if (!validate()) return;
-    onSave({ ...form, precioVenta: Number(form.precioVenta) || 0, precioCoste: Number(form.precioCoste) || 0 });
+    onSave({ ...form, precioVenta: Number(form.precioVenta) || 0, precioCoste: Number(form.precioCoste) || 0, unidades: form.unidades !== '' ? Math.max(0, parseInt(form.unidades) || 0) : null });
     onClose();
     setForm(empty);
   };
@@ -113,6 +113,10 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
           {errors.modelo && <p className="text-xs text-red-500 mt-1">{errors.modelo}</p>}
         </div>
         <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Unidades en stock</label>
+          <input {...inp('unidades', 'number')} placeholder="0" min={0} step={1} />
+        </div>
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Precio de venta (€)</label>
           <input {...inp('precioVenta', 'number')} placeholder="0" min={0} />
         </div>
@@ -160,7 +164,7 @@ export default function EquiposPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [delOpen, setDelOpen] = useState(false);
-  const PER_PAGE = 10;
+  const PER_PAGE = 100;
 
   const filtered = useMemo(() => equipos.filter(e => {
     const q = search.toLowerCase();
@@ -197,7 +201,7 @@ export default function EquiposPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {['Nombre', 'Marca', 'Modelo', 'Categoría', 'Precio venta', 'Estado', 'Acciones'].map(h => (
+                    {['Nombre', 'Marca', 'Modelo', 'Uds.', 'Categoría', 'Precio venta', 'Estado', 'Acciones'].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -208,6 +212,7 @@ export default function EquiposPage() {
                       <td className="px-4 py-3 font-medium cursor-pointer text-[#1B4F8A]" onClick={() => { setSelected(e); setFormOpen(true); }}>{e.nombre}</td>
                       <td className="px-4 py-3 text-gray-600">{e.marca}</td>
                       <td className="px-4 py-3 text-gray-500">{e.modelo}</td>
+                      <td className="px-4 py-3 text-center text-gray-700 font-medium">{e.unidades ?? '-'}</td>
                       <td className="px-4 py-3 text-gray-500">{e.categoria}</td>
                       <td className="px-4 py-3 font-semibold text-[#1B4F8A]">{formatCurrency(e.precioVenta)}</td>
                       <td className="px-4 py-3"><Badge color={e.estado === 'Activo' ? 'green' : 'gray'}>{e.estado}</Badge></td>
