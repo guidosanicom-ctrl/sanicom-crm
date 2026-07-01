@@ -245,7 +245,8 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
   const [clienteData, setClienteData] = useState(null);
   const [llamadaForm, setLlamadaForm] = useState(null);
 
-  const canAgendar = user?.email === 'jgovantes@sanicom.es' || user?.email === 'carlosleal@sanicom.es';
+  const canAgendar = (user?.email === 'jgovantes@sanicom.es' || user?.email === 'carlosleal@sanicom.es')
+    && oportunidad?.responsable === user?.id;
 
   const handleAgendarLlamada = async () => {
     if (!llamadaForm?.fechaHora) return;
