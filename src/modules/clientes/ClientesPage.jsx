@@ -281,6 +281,7 @@ export default function ClientesPage() {
   const [filterEstado, setFilterEstado] = useState('');
   const [filterEsp, setFilterEsp] = useState('');
   const [filterSubesp, setFilterSubesp] = useState('');
+  const [filterProvincia, setFilterProvincia] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
   const [formOpen, setFormOpen] = useState(false);
@@ -310,6 +311,12 @@ export default function ClientesPage() {
   const puedeCrearRuta = carlos || user?.email === 'jgovantes@sanicom.es';
   const { refreshing } = useAutoRefresh([makeRefresher(useClientesStore)]);
   const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
+
+  const provinciasOptions = useMemo(() => {
+    const set = new Set();
+    clientes.forEach(c => { if (c.provincia) set.add(c.provincia); });
+    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+  }, [clientes]);
 
   // Mis clientes recientes (últimos 20 clientes accesibles, ordenados por actividad reciente)
   const misRecientes = useMemo(() => {
@@ -345,9 +352,10 @@ export default function ClientesPage() {
       const matchEstado = !filterEstado || c.estado === filterEstado;
       const matchEsp = !filterEsp || c.especialidad === filterEsp;
       const matchSubesp = !filterSubesp || c.subespecialidad === filterSubesp;
-      return matchSearch && matchTipo && matchEstado && matchEsp && matchSubesp;
+      const matchProvincia = !filterProvincia || c.provincia === filterProvincia;
+      return matchSearch && matchTipo && matchEstado && matchEsp && matchSubesp && matchProvincia;
     });
-  }, [clientes, search, filterTipo, filterEstado, filterEsp, filterSubesp, carlos]);
+  }, [clientes, search, filterTipo, filterEstado, filterEsp, filterSubesp, filterProvincia, carlos]);
 
   // Si "Ver seleccionados" está activo, filtra sobre la lista base
   const filtered = useMemo(() => {
@@ -487,6 +495,12 @@ export default function ClientesPage() {
               {subespecialidades.map(s => <option key={s}>{s}</option>)}
             </select>
           )}
+          {provinciasOptions.length > 0 && (
+            <select className={sel} value={filterProvincia} onChange={e => { setFilterProvincia(e.target.value); setPage(1); }}>
+              <option value="">Todas las provincias</option>
+              {provinciasOptions.map(p => <option key={p}>{p}</option>)}
+            </select>
+          )}
         </div>
         <div className="flex gap-2">
           {!carlos && <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>}
@@ -600,6 +614,13 @@ export default function ClientesPage() {
               value={filterSubesp} onChange={e => { setFilterSubesp(e.target.value); setPage(1); }}>
               <option value="">Subespecialidad</option>
               {subespecialidades.map(s => <option key={s}>{s}</option>)}
+            </select>
+          )}
+          {provinciasOptions.length > 0 && (
+            <select className="flex-shrink-0 px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+              value={filterProvincia} onChange={e => { setFilterProvincia(e.target.value); setPage(1); }}>
+              <option value="">Provincia</option>
+              {provinciasOptions.map(p => <option key={p}>{p}</option>)}
             </select>
           )}
         </div>
