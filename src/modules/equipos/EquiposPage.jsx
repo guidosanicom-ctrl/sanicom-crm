@@ -5,7 +5,7 @@ import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
 import { useCategoriasStore } from '../../store/categoriasStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
-import { useCatalogoEquiposStore } from '../../store/catalogoEquiposStore';
+import { useCatalogoEquiposStore, SUBCATEGORIA_LIBRE } from '../../store/catalogoEquiposStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import SearchBar from '../../components/shared/SearchBar';
@@ -50,13 +50,24 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
 
   const handleSubChange = (val) => {
     const catFinal = catSelect === 'Otro' ? (form.otroTexto?.trim() || '') : catSelect;
-    const nombre = [catFinal, val].filter(Boolean).join(' ');
-    setForm(f => ({ ...f, subcategoria: val, nombre: nombre || f.nombre }));
+    // If switching away from SUBCATEGORIA_LIBRE, clear otroTexto
+    const clearOtro = val !== SUBCATEGORIA_LIBRE ? { otroTexto: '' } : {};
+    const displaySub = val === SUBCATEGORIA_LIBRE ? '' : val;
+    const nombre = [catFinal, displaySub].filter(Boolean).join(' ');
+    setForm(f => ({ ...f, subcategoria: val, ...clearOtro, nombre: nombre || f.nombre }));
   };
 
   const handleOtroChange = (val) => {
-    const nombre = [val.trim(), form.subcategoria].filter(Boolean).join(' ');
-    setForm(f => ({ ...f, otroTexto: val, categoria: val.trim(), nombre: nombre || f.nombre }));
+    // Used for both categoria='Otro' text AND subcategoria=SUBCATEGORIA_LIBRE text
+    if (catSelect === 'Otro') {
+      const nombre = [val.trim(), form.subcategoria].filter(Boolean).join(' ');
+      setForm(f => ({ ...f, otroTexto: val, categoria: val.trim(), nombre: nombre || f.nombre }));
+    } else {
+      // SUBCATEGORIA_LIBRE case — store free text in otroTexto, nombre = cat + free text
+      const catFinal = catSelect;
+      const nombre = [catFinal, val.trim()].filter(Boolean).join(' — ');
+      setForm(f => ({ ...f, otroTexto: val, nombre: nombre || f.nombre }));
+    }
   };
 
   const validate = () => {
@@ -123,9 +134,18 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
                   onChange={e => handleSubChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
                 >
-                  <option value="">Subcategoría (opcional)</option>
+                  <option value="">Modelo / subcategoría (opcional)</option>
                   {getSubs(catSelect).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
+              )}
+              {form.subcategoria === SUBCATEGORIA_LIBRE && (
+                <input
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  value={form.otroTexto || ''}
+                  onChange={e => handleOtroChange(e.target.value)}
+                  placeholder="Marca y modelo..."
+                  autoFocus
+                />
               )}
             </div>
           )}

@@ -4,7 +4,7 @@ import { ArrowLeft, MapPin, Phone, Mail, Globe, Edit, Plus, Trash2, Pencil,
          Package, ShoppingBag, Star, Stethoscope, FileText, ExternalLink,
          CalendarDays, CheckCircle2, Clock, X } from 'lucide-react';
 import { useClientesStore } from '../../store/clientesStore';
-import { useCatalogoEquiposStore } from '../../store/catalogoEquiposStore';
+import { useCatalogoEquiposStore, SUBCATEGORIA_LIBRE } from '../../store/catalogoEquiposStore';
 import CatalogoEquipoSelect from '../../components/shared/CatalogoEquipoSelect';
 import { useAuthStore } from '../../store/authStore';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
@@ -259,7 +259,8 @@ function EquiposInteresTab({ equiposInteres = [], onSave }) {
   const save = () => {
     const catFinal = form?.categoria === 'Otro' ? form?.otroTexto?.trim() : form?.categoria;
     if (!catFinal && !form?.modeloMarca?.trim()) return;
-    const nombre = [catFinal, form.subcategoria, form.modeloMarca].filter(Boolean).join(' — ');
+    const subFinal = form.subcategoria === SUBCATEGORIA_LIBRE ? (form.otroTexto?.trim() || SUBCATEGORIA_LIBRE) : form.subcategoria;
+    const nombre = [catFinal, subFinal, form.modeloMarca].filter(Boolean).join(' — ');
     onSave([...equiposInteres, { id: genId(), nombre, categoria: catFinal, subcategoria: form.subcategoria, modeloMarca: form.modeloMarca }]);
     setForm(null);
   };
@@ -725,7 +726,9 @@ export default function ClienteDetail() {
     const categoriaFinal = contactoSegForm.equipoCategoria === 'Otro'
       ? contactoSegForm.equipoOtroTexto?.trim()
       : contactoSegForm.equipoCategoria;
-    const subcategoriaFinal = contactoSegForm.equipoSubcategoria;
+    const subcategoriaFinal = contactoSegForm.equipoSubcategoria === SUBCATEGORIA_LIBRE
+      ? (contactoSegForm.equipoOtroTexto?.trim() || SUBCATEGORIA_LIBRE)
+      : contactoSegForm.equipoSubcategoria;
 
     if (contactoSegForm.interesado && (categoriaFinal || contactoSegForm.equipoModeloMarca)) {
       const nombre = [categoriaFinal, subcategoriaFinal, contactoSegForm.equipoModeloMarca].filter(Boolean).join(' — ');

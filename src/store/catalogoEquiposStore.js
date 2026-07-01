@@ -3,18 +3,25 @@ import { supabase } from '../lib/supabase';
 
 const TABLE = 'catalogo_equipos';
 
+export const SUBCATEGORIA_LIBRE = 'Ocasión / Otra marca';
+
 const INICIAL = [
-  { categoria: 'Diatermia',      subcategoria: 'Consola',      orden: 10 },
-  { categoria: 'Diatermia',      subcategoria: 'Portátil',     orden: 11 },
-  { categoria: 'Onda de Choque', subcategoria: 'Radial',       orden: 20 },
-  { categoria: 'Onda de Choque', subcategoria: 'Focal',        orden: 21 },
-  { categoria: 'Ecógrafo',       subcategoria: 'Humanos',      orden: 30 },
-  { categoria: 'Ecógrafo',       subcategoria: 'Veterinaria',  orden: 31 },
-  { categoria: 'Super Inductiva', subcategoria: 'Simple',      orden: 40 },
-  { categoria: 'Super Inductiva', subcategoria: 'Doble',       orden: 41 },
-  { categoria: 'Magneto',        subcategoria: null,           orden: 50 },
-  { categoria: 'Láser',          subcategoria: null,           orden: 60 },
-  { categoria: 'Fluoroscopio',   subcategoria: null,           orden: 70 },
+  { categoria: 'Láser',          subcategoria: null,                      orden: 10 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape X11 (humanos)', orden: 20 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape X3 (humanos)',  orden: 21 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape P12 Elite (humanos)', orden: 22 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape P25 Elite (humanos)', orden: 23 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape E3 (veterinario)',    orden: 24 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape E11 (veterinario)',   orden: 25 },
+  { categoria: 'Ecógrafos',      subcategoria: SUBCATEGORIA_LIBRE,        orden: 26 },
+  { categoria: 'Fluoroscopio',   subcategoria: null,                      orden: 30 },
+  { categoria: 'Onda de Choque', subcategoria: 'Radial',                  orden: 40 },
+  { categoria: 'Onda de Choque', subcategoria: 'Focal',                   orden: 41 },
+  { categoria: 'Diatermia',      subcategoria: 'Consola',                 orden: 50 },
+  { categoria: 'Diatermia',      subcategoria: 'Portátil',                orden: 51 },
+  { categoria: 'Magneto',        subcategoria: null,                      orden: 60 },
+  { categoria: 'Super Inductiva', subcategoria: 'Simple',                 orden: 70 },
+  { categoria: 'Super Inductiva', subcategoria: 'Doble',                  orden: 71 },
 ];
 
 export const useCatalogoEquiposStore = create((set, get) => ({

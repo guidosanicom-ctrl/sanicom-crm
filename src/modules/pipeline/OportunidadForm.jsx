@@ -6,7 +6,7 @@ import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import { ORIGENES_OPP, REDES_SOCIALES, etapaLabel } from '../../utils/constants';
 import { usePipelineStore } from '../../store/pipelineStore';
-import { useCatalogoEquiposStore } from '../../store/catalogoEquiposStore';
+import { useCatalogoEquiposStore, SUBCATEGORIA_LIBRE } from '../../store/catalogoEquiposStore';
 import { X } from 'lucide-react';
 
 const ESTADOS_CLIENTE = ['Evaluando opciones', 'Esperando aprobación', 'Consultando dirección', 'Silencio', 'Listo para decidir'];
@@ -68,7 +68,10 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
     if (!equipoPick.categoria) return;
     const catFinal = equipoPick.categoria === 'Otro' ? equipoPick.otroTexto?.trim() : equipoPick.categoria;
     if (!catFinal) return;
-    const label = [catFinal, equipoPick.subcategoria].filter(Boolean).join(' — ');
+    const subFinal = equipoPick.subcategoria === SUBCATEGORIA_LIBRE
+      ? (equipoPick.otroTexto?.trim() || SUBCATEGORIA_LIBRE)
+      : equipoPick.subcategoria;
+    const label = [catFinal, subFinal].filter(Boolean).join(' — ');
     const ya = (form.equiposSeleccionados || []).some(e => e.label === label);
     if (ya) return;
     const lista = [...(form.equiposSeleccionados || []), { ...equipoPick, label }];
@@ -244,12 +247,21 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
               {equipoPick.categoria && equipoPick.categoria !== 'Otro' && getSubs(equipoPick.categoria).length > 0 && (
                 <select
                   value={equipoPick.subcategoria}
-                  onChange={e => setEquipoPick(p => ({ ...p, subcategoria: e.target.value }))}
+                  onChange={e => setEquipoPick(p => ({ ...p, subcategoria: e.target.value, otroTexto: '' }))}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
                 >
-                  <option value="">Subcategoría (opcional)</option>
+                  <option value="">Modelo / subcategoría (opcional)</option>
                   {getSubs(equipoPick.categoria).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
+              )}
+              {equipoPick.subcategoria === SUBCATEGORIA_LIBRE && (
+                <input
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  value={equipoPick.otroTexto}
+                  onChange={e => setEquipoPick(p => ({ ...p, otroTexto: e.target.value }))}
+                  placeholder="Marca y modelo..."
+                  autoFocus
+                />
               )}
             </div>
             <button
