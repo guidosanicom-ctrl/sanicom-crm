@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useOpenFromUrl } from '../../hooks/useOpenFromUrl';
 import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
 import RefreshIndicator from '../../components/ui/RefreshIndicator';
 import { DndContext, PointerSensor, useSensor, useSensors, useDroppable, useDraggable } from '@dnd-kit/core';
-import { Plus, Euro, TrendingUp, LayoutGrid, List, X, ArrowLeftRight, Check } from 'lucide-react';
+import { Plus, Euro, TrendingUp, LayoutGrid, List, X, ArrowLeftRight, Check, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useClientesStore } from '../../store/clientesStore';
@@ -17,6 +17,59 @@ import DemoForm from '../demostraciones/DemoForm';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { usePipelineStore } from '../../store/pipelineStore';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
+
+// Dropdown con búsqueda reutilizable
+function SearchableSelect({ value, onChange, options, placeholder, allLabel = 'Todos' }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 50); }, [open]);
+
+  const filtered = q.length >= 1 ? options.filter(o => o.toLowerCase().includes(q.toLowerCase())) : options;
+  const label = value || placeholder;
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1 px-3 py-1.5 text-sm border rounded-lg bg-white focus:outline-none cursor-pointer whitespace-nowrap transition-colors
+          ${value ? 'border-[#1B4F8A] text-[#1B4F8A] font-medium' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+      >
+        <span>{label}</span>
+        <ChevronDown className="w-3.5 h-3.5 flex-shrink-0 opacity-50" />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-10 z-50 bg-white border border-gray-200 rounded-xl shadow-xl w-52">
+          <div className="p-2 border-b border-gray-100">
+            <input ref={inputRef} type="text" value={q} onChange={e => setQ(e.target.value)}
+              placeholder="Buscar..." className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300" />
+          </div>
+          <div className="max-h-52 overflow-y-auto py-1">
+            <button onClick={() => { onChange(''); setOpen(false); setQ(''); }}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer ${!value ? 'font-semibold text-[#1B4F8A]' : 'text-gray-600'}`}>
+              {allLabel}
+            </button>
+            {filtered.map(opt => (
+              <button key={opt} onClick={() => { onChange(opt); setOpen(false); setQ(''); }}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer ${value === opt ? 'font-semibold text-[#1B4F8A] bg-blue-50' : 'text-gray-700'}`}>
+                {opt}
+              </button>
+            ))}
+            {filtered.length === 0 && <p className="text-xs text-gray-400 text-center py-3">Sin resultados</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STAGE_COLORS = {
   'Prospecto': 'bg-gray-100 border-gray-200',
@@ -271,7 +324,10 @@ export default function PipelinePage() {
   const [mobileTab, setMobileTab] = useState(() => ETAPAS_PIPELINE[0] || '');
   const [moveSheet, setMoveSheet] = useState(null);
   const [demoFormOpen, setDemoFormOpen] = useState(false);
-  const [equipoFiltro, setEquipoFiltro] = useState('Todos');
+  const [equipoFiltro, setEquipoFiltro] = useState('');
+  const [responsableFiltro, setResponsableFiltro] = useState('');
+  const [ciudadFiltro, setCiudadFiltro] = useState('');
+  const [especialidadFiltro, setEspecialidadFiltro] = useState('');
 
   // Sincronizar mobileTab cuando cargan las etapas
   useEffect(() => { if (!mobileTab && ETAPAS_PIPELINE.length) setMobileTab(ETAPAS_PIPELINE[0]); }, [ETAPAS_PIPELINE]);
@@ -332,28 +388,67 @@ export default function PipelinePage() {
     return { total: oportunidades.length, pipeline, weighted, wonMonth };
   }, [oportunidades]);
 
-  const EQUIPOS_FILTRO = ['Todos', 'Diatermia', 'Onda de Choque', 'Ecógrafo', 'Otro'];
+  const EQUIPOS_FILTRO = ['Diatermia', 'Onda de Choque', 'Ecógrafo', 'Otro'];
 
   const KEYWORDS = {
-    'Diatermia':      ['diatermia', 'tecartherapy', 'tecar', 'indiba', 'hcr'],
-    'Onda de Choque': ['onda de choque', 'ondas de choque', 'shockwave', 'shock wave', 'eswt'],
-    'Ecógrafo':       ['eco', 'ecógrafo', 'ecografo', 'ultrasonido', 'sonoscape', 'mindray', 'esaote', 'mylab', 'voluson', 'sonda', 'sondas', 'convex', 'musculoesqueletica', 'veterinaria eco', 'p25', 'elite'],
+    'Diatermia':       ['diatermia', 'tecartherapy', 'tecar', 'indiba', 'hcr'],
+    'Onda de Choque':  ['onda de choque', 'ondas de choque', 'shockwave', 'shock wave', 'eswt'],
+    'Ecógrafo':        ['eco', 'ecógrafo', 'ecografo', 'ultrasonido', 'sonoscape', 'mindray', 'esaote', 'mylab', 'voluson', 'sonda', 'sondas', 'convex', 'musculoesqueletica', 'veterinaria eco', 'p25', 'elite'],
     'Super Inductiva': ['super inductiva', 'superinductiva', 'isi', 'btl super'],
   };
 
-  const matchesCategory = (haystack, cat) =>
-    KEYWORDS[cat].some(k => haystack.includes(k));
+  const matchesCategory = (haystack, cat) => KEYWORDS[cat].some(k => haystack.includes(k));
+
+  // Opciones dinámicas para Ciudad y Especialidad
+  const ciudadesOptions = useMemo(() => {
+    const set = new Set();
+    oportunidades.forEach(o => {
+      const cliente = clientes.find(c => c.id === o.clienteId);
+      const ciudad = cliente?.ciudad || o.ciudad;
+      if (ciudad) set.add(ciudad);
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+  }, [oportunidades, clientes]);
+
+  const especialidadesOptions = useMemo(() => {
+    const set = new Set();
+    oportunidades.forEach(o => {
+      const cliente = clientes.find(c => c.id === o.clienteId);
+      if (cliente?.especialidad) set.add(cliente.especialidad);
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+  }, [oportunidades, clientes]);
 
   const oportunidadesFiltradas = useMemo(() => {
-    if (equipoFiltro === 'Todos') return oportunidades;
     return oportunidades.filter(o => {
-      const haystack = `${o.nombre || ''} ${o.equiposDescripcion || ''} ${o.descripcion || ''}`.toLowerCase();
-      if (equipoFiltro === 'Otro') {
-        return !Object.keys(KEYWORDS).some(cat => matchesCategory(haystack, cat));
+      // Filtro equipo
+      if (equipoFiltro) {
+        const haystack = `${o.nombre || ''} ${o.equiposDescripcion || ''} ${o.descripcion || ''}`.toLowerCase();
+        if (equipoFiltro === 'Otro') {
+          if (Object.keys(KEYWORDS).some(cat => matchesCategory(haystack, cat))) return false;
+        } else {
+          if (!matchesCategory(haystack, equipoFiltro)) return false;
+        }
       }
-      return matchesCategory(haystack, equipoFiltro);
+      // Filtro responsable (responsableFiltro es el nombre; o.responsable es el userId)
+      if (responsableFiltro) {
+        const u = users.find(u => u.name === responsableFiltro);
+        if (!u || o.responsable !== u.id) return false;
+      }
+      // Filtro ciudad
+      if (ciudadFiltro) {
+        const cliente = clientes.find(c => c.id === o.clienteId);
+        const ciudad = cliente?.ciudad || o.ciudad || '';
+        if (ciudad !== ciudadFiltro) return false;
+      }
+      // Filtro especialidad
+      if (especialidadFiltro) {
+        const cliente = clientes.find(c => c.id === o.clienteId);
+        if (cliente?.especialidad !== especialidadFiltro) return false;
+      }
+      return true;
     });
-  }, [oportunidades, equipoFiltro]);
+  }, [oportunidades, clientes, equipoFiltro, responsableFiltro, ciudadFiltro, especialidadFiltro]);
 
   return (
     <div className="space-y-6">
@@ -374,32 +469,46 @@ export default function PipelinePage() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1 bg-white rounded-lg border border-gray-200 p-1">
-          <button onClick={() => setViewMode('kanban')} className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${viewMode === 'kanban' ? 'bg-[#1B4F8A] text-white' : 'text-gray-500 hover:text-gray-700'}`}>
-            <LayoutGrid className="w-4 h-4" />
-          </button>
-          <button onClick={() => setViewMode('table')} className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${viewMode === 'table' ? 'bg-[#1B4F8A] text-white' : 'text-gray-500 hover:text-gray-700'}`}>
-            <List className="w-4 h-4" />
-          </button>
+      <div className="flex flex-wrap items-center gap-2 justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Vista */}
+          <div className="flex gap-1 bg-white rounded-lg border border-gray-200 p-1">
+            <button onClick={() => setViewMode('kanban')} className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${viewMode === 'kanban' ? 'bg-[#1B4F8A] text-white' : 'text-gray-500 hover:text-gray-700'}`}>
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button onClick={() => setViewMode('table')} className={`px-3 py-1.5 rounded text-sm cursor-pointer transition-colors ${viewMode === 'table' ? 'bg-[#1B4F8A] text-white' : 'text-gray-500 hover:text-gray-700'}`}>
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Filtros */}
+          <SearchableSelect value={equipoFiltro} onChange={setEquipoFiltro}
+            options={EQUIPOS_FILTRO} placeholder="Equipo" allLabel="Todos los equipos" />
+
+          <SearchableSelect value={responsableFiltro} onChange={setResponsableFiltro}
+            options={users.map(u => u.name)} placeholder="Responsable" allLabel="Todos los responsables" />
+
+          {ciudadesOptions.length > 0 && (
+            <SearchableSelect value={ciudadFiltro} onChange={setCiudadFiltro}
+              options={ciudadesOptions} placeholder="Ciudad" allLabel="Todas las ciudades" />
+          )}
+
+          {especialidadesOptions.length > 0 && (
+            <SearchableSelect value={especialidadFiltro} onChange={setEspecialidadFiltro}
+              options={especialidadesOptions} placeholder="Especialidad" allLabel="Todas las especialidades" />
+          )}
+
+          {/* Indicador de filtros activos */}
+          {(equipoFiltro || responsableFiltro || ciudadFiltro || especialidadFiltro) && (
+            <button
+              onClick={() => { setEquipoFiltro(''); setResponsableFiltro(''); setCiudadFiltro(''); setEspecialidadFiltro(''); }}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-red-500 border border-red-200 rounded-lg hover:bg-red-50 cursor-pointer transition-colors"
+            >
+              <X className="w-3 h-3" /> Limpiar filtros
+            </button>
+          )}
         </div>
         <Button onClick={openNew}><Plus className="w-4 h-4" />Nueva oportunidad</Button>
-      </div>
-
-      {/* Filtro por equipo */}
-      <div className="flex flex-wrap gap-1.5">
-        {EQUIPOS_FILTRO.map(eq => (
-          <button
-            key={eq}
-            onClick={() => setEquipoFiltro(eq)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer
-              ${equipoFiltro === eq
-                ? 'bg-[#1B4F8A] text-white'
-                : 'bg-white border border-gray-200 text-gray-600 hover:border-[#1B4F8A] hover:text-[#1B4F8A]'}`}
-          >
-            {eq}
-          </button>
-        ))}
       </div>
 
       {/* ── Vista móvil (< 640px) ── */}
