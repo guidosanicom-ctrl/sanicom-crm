@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { useAgendaStore } from './agendaStore';
 
 const TABLE = 'llamadas_pendientes';
 
@@ -31,11 +32,16 @@ export const useLlamadasPendientesStore = create((set, get) => ({
   },
 
   confirmar: async (id) => {
+    const llamada = get().llamadas.find(l => l.id === id);
     const { error } = await supabase.from(TABLE).update({
       confirmada: true,
       confirmada_at: new Date().toISOString(),
     }).eq('id', id);
     if (error) { console.error('[llamadasPendientesStore.confirmar]', error); return; }
+    // Eliminar el evento de agenda vinculado
+    if (llamada?.evento_id) {
+      useAgendaStore.getState().deleteEvento(llamada.evento_id);
+    }
     set(s => ({ llamadas: s.llamadas.filter(l => l.id !== id) }));
   },
 

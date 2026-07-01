@@ -250,7 +250,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
   const handleAgendarLlamada = async () => {
     if (!llamadaForm?.fechaHora) return;
     const [fecha, hora] = llamadaForm.fechaHora.split('T');
-    addEvento({
+    const evento = addEvento({
       tipo: 'Llamada/Seguimiento',
       titulo: `📞 Llamada — ${oportunidad.nombre}`,
       inicio: llamadaForm.fechaHora,
@@ -267,6 +267,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
       usuario_id: user?.id,
       confirmada: false,
       recordatorios_enviados: 0,
+      evento_id: evento?.id || null,
     });
     setLlamadaForm(null);
     toast.success('Llamada agendada. Te llegará un aviso a la hora indicada.');
