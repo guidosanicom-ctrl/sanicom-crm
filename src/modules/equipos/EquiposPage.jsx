@@ -223,7 +223,7 @@ export default function EquiposPage() {
     const q = search.toLowerCase();
     const matchSearch = !q || e.nombre?.toLowerCase().includes(q) || e.marca?.toLowerCase().includes(q) || e.modelo?.toLowerCase().includes(q);
     return matchSearch && (!filterCat || e.categoria === filterCat) && (!filterEstado || e.estado === filterEstado);
-  }), [equipos, search, filterCat, filterEstado]);
+  }).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es')), [equipos, search, filterCat, filterEstado]);
 
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
   const sel = `px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white`;
