@@ -7,12 +7,12 @@ export const SUBCATEGORIA_LIBRE = 'Ocasión / Otra marca';
 
 const INICIAL = [
   { categoria: 'Láser',          subcategoria: null,                      orden: 10 },
-  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape X11 (humanos)', orden: 20 },
-  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape X3 (humanos)',  orden: 21 },
-  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape P12 Elite (humanos)', orden: 22 },
-  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape P25 Elite (humanos)', orden: 23 },
-  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape E3 (veterinario)',    orden: 24 },
-  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape E11 (veterinario)',   orden: 25 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape X11',    orden: 20 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape X3',     orden: 21 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape P12 Elite', orden: 22 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape P25 Elite', orden: 23 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape E3',     orden: 24 },
+  { categoria: 'Ecógrafos',      subcategoria: 'SonoScape E11',    orden: 25 },
   { categoria: 'Ecógrafos',      subcategoria: SUBCATEGORIA_LIBRE,        orden: 26 },
   { categoria: 'Fluoroscopio',   subcategoria: null,                      orden: 30 },
   { categoria: 'Onda de Choque', subcategoria: 'Radial',                  orden: 40 },
