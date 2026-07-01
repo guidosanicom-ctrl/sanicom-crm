@@ -74,6 +74,24 @@ serve(async (req) => {
         continue;
       }
 
+      // Notificación interna (campanita del CRM)
+      const notifId = crypto.randomUUID();
+      const notifData = {
+        id: notifId,
+        fechaHora: now.toISOString(),
+        leida: false,
+        userId: llamada.usuario_id,
+        tipo: 'llamada',
+        mensaje: `📞 ${title}: ${body}`,
+        enlace: '/pipeline',
+        registroId: llamada.oportunidad_id,
+      };
+      await supabase.from('notificaciones').insert({
+        id: notifId,
+        user_id: llamada.usuario_id,
+        data: notifData,
+      });
+
       // Actualizar contadores
       await supabase
         .from('llamadas_pendientes')
