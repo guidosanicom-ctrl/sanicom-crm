@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import {
   LayoutDashboard, Users, Calendar, TrendingUp, PlaySquare,
-  Wrench, Package, FolderOpen, Settings, LogOut, X
+  Wrench, Package, FolderOpen, Settings, LogOut, X, GraduationCap
 } from 'lucide-react';
 import logo from '../../assets/sanicom_logo.png';
 import UserAvatar from '../ui/UserAvatar';
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { path: '/demostraciones', label: 'Demostraciones', icon: PlaySquare, module: 'demostraciones' },
   { path: '/servicio-tecnico', label: 'Servicio Técnico', icon: Wrench, module: 'servicio-tecnico' },
   { path: '/equipos', label: 'Equipos en stock', icon: Package, module: 'equipos' },
+  { path: '/cursos', label: 'Cursos Formativos', icon: GraduationCap, module: 'cursos', onlyIfAccess: true },
   { path: '/documentos', label: 'Documentos', icon: FolderOpen, module: null },
   { path: '/configuracion', label: 'Configuración', icon: Settings, module: 'configuracion' },
 ];
@@ -48,8 +49,9 @@ export default function Sidebar({ open, onClose }) {
         {/* Navigation — scroll solo aquí, con soporte iOS */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
           <p className="text-white/40 text-xs font-semibold uppercase tracking-wider px-3 mb-2">Menú principal</p>
-          {NAV_ITEMS.map(({ path, label, icon: Icon, module }) => {
+          {NAV_ITEMS.map(({ path, label, icon: Icon, module, onlyIfAccess }) => {
             const accessible = canAccess(module);
+            if (onlyIfAccess && !accessible) return null;
             return (
               <NavLink
                 key={path}

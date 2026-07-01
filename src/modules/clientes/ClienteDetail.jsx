@@ -14,6 +14,7 @@ import { useVisitasStore } from '../../store/visitasStore';
 import { useNotasStore } from '../../store/notasStore';
 import { useAgendaStore } from '../../store/agendaStore';
 import { useSeguimientoStore } from '../../store/seguimientoStore';
+import { useCursosStore } from '../../store/cursosStore';
 import { MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../../components/ui/Button';
@@ -637,10 +638,12 @@ export default function ClienteDetail() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [contactoSegForm, setContactoSegForm] = useState(null);
   const [llamadaForm, setLlamadaForm] = useState(null);
+  const [cursoForm, setCursoForm] = useState(null);
 
   const { user, users, isCarlos, isGuido, CARLOS_ESPECIALIDADES } = useAuthStore();
   const carlos = isCarlos();
   const javier = user?.email === 'jgovantes@sanicom.es';
+  const { add: addCurso, update: updateCurso, hasCliente: estaEnCurso, inscripciones: cursosInscrip } = useCursosStore();
 
   const cliente = getCliente(id);
   if (!cliente) return <div className="p-8 text-gray-400">Cliente no encontrado.</div>;
@@ -715,6 +718,25 @@ export default function ClienteDetail() {
 
     setLlamadaForm(null);
     toast.success('Llamada agendada. Te llegará un aviso el día indicado.');
+  };
+
+  const handleGuardarCurso = async () => {
+    if (!cursoForm) return;
+    const existing = cursosInscrip.find(i => i.cliente_id === id);
+    if (existing) {
+      await updateCurso(existing.id, { estado: cursoForm.estado, notas: cursoForm.notas || null });
+      toast.success('Inscripción actualizada.');
+    } else {
+      await addCurso({
+        cliente_id: id,
+        estado: cursoForm.estado,
+        notas: cursoForm.notas || null,
+        fecha: new Date().toISOString().slice(0, 10),
+        usuario_id: user?.id,
+      });
+      toast.success('Cliente añadido al curso.');
+    }
+    setCursoForm(null);
   };
 
   const handleGuardarContacto = async () => {
@@ -797,6 +819,14 @@ export default function ClienteDetail() {
           {(carlos || javier) && (
             <Button variant="outline" size="sm" onClick={() => setLlamadaForm({ fechaHora: new Date().toISOString().slice(0, 16), nota: '' })}>
               📞 Agendar llamada
+            </Button>
+          )}
+          {(carlos || javier) && (
+            <Button variant="outline" size="sm" onClick={() => {
+              const existing = cursosInscrip.find(i => i.cliente_id === id);
+              setCursoForm({ estado: existing?.estado || 'Interesado', notas: existing?.notas || '' });
+            }}>
+              🎓 {estaEnCurso(id) ? 'Editar en curso' : 'Añadir a curso'}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}><Edit className="w-4 h-4" />Editar</Button>
@@ -1158,6 +1188,45 @@ export default function ClienteDetail() {
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="outline" size="sm" onClick={() => setLlamadaForm(null)}>Cancelar</Button>
               <Button size="sm" onClick={handleAgendarLlamada} disabled={!llamadaForm.fechaHora}>Agendar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mini modal: añadir/editar en curso */}
+      {cursoForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setCursoForm(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-800">🎓 {estaEnCurso(id) ? 'Editar en curso' : 'Añadir a curso formativo'}</h3>
+              <button onClick={() => setCursoForm(null)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+              <select
+                value={cursoForm.estado}
+                onChange={e => setCursoForm(f => ({ ...f, estado: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white"
+              >
+                <option>Interesado</option>
+                <option>Confirmado</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Notas (opcional)</label>
+              <textarea
+                rows={2}
+                value={cursoForm.notas}
+                onChange={e => setCursoForm(f => ({ ...f, notas: e.target.value }))}
+                placeholder="Observaciones..."
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" size="sm" onClick={() => setCursoForm(null)}>Cancelar</Button>
+              <Button size="sm" onClick={handleGuardarCurso}>Guardar</Button>
             </div>
           </div>
         </div>

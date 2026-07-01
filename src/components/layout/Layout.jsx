@@ -12,6 +12,7 @@ const TITLES = {
   '/demostraciones': 'Demostraciones',
   '/servicio-tecnico': 'Servicio Técnico',
   '/equipos': 'Equipos en stock',
+  '/cursos': 'Cursos Formativos',
   '/documentos': 'Documentos',
   '/configuracion': 'Configuración',
   '/notificaciones': 'Notificaciones',

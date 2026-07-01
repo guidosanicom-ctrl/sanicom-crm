@@ -27,6 +27,8 @@ import { useNotasStore } from './store/notasStore';
 import { useSeguimientoStore } from './store/seguimientoStore';
 import { useCatalogoEquiposStore } from './store/catalogoEquiposStore';
 import { useLlamadasPendientesStore } from './store/llamadasPendientesStore';
+import { useCursosStore } from './store/cursosStore';
+import CursosPage from './modules/cursos/CursosPage';
 import Layout from './components/layout/Layout';
 import LoginPage from './modules/auth/LoginPage';
 import NoAccess from './modules/auth/NoAccess';
@@ -71,6 +73,7 @@ function AppInit() {
   const initSeguimiento   = useSeguimientoStore(s => s.initialize);
   const initCatalogoEquipos = useCatalogoEquiposStore(s => s.initialize);
   const initLlamadasPendientes = useLlamadasPendientesStore(s => s.initialize);
+  const initCursos = useCursosStore(s => s.initialize);
 
   useAppBadge();
   usePushNotifications();
@@ -82,7 +85,7 @@ function AppInit() {
     Promise.all([
       initClientes(), initEquipos(), initOportunidades(), initDemos(),
       initServicios(), initAgenda(), initActividad(),
-      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(), initVisitas(), initNotas(), initSeguimiento(), initCatalogoEquipos(), initLlamadasPendientes(),
+      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(), initVisitas(), initNotas(), initSeguimiento(), initCatalogoEquipos(), initLlamadasPendientes(), initCursos(),
     ]).catch(e => console.error('[AppInit]', e));
   }, [user?.id]);
 
@@ -145,6 +148,7 @@ export default function App() {
           <Route path="/demostraciones" element={<ProtectedRoute module="demostraciones"><DemostracionesPage /></ProtectedRoute>} />
           <Route path="/servicio-tecnico" element={<ProtectedRoute module="servicio-tecnico"><ServicioTecnicoPage /></ProtectedRoute>} />
           <Route path="/equipos" element={<ProtectedRoute module="equipos"><EquiposPage /></ProtectedRoute>} />
+          <Route path="/cursos" element={<ProtectedRoute module="cursos"><CursosPage /></ProtectedRoute>} />
           <Route path="/documentos" element={<DocumentosPage />} />
           <Route path="/configuracion" element={<ProtectedRoute module="configuracion"><ConfiguracionPage /></ProtectedRoute>} />
           <Route path="/notificaciones" element={<NotificacionesPage />} />
