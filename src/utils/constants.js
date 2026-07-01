@@ -4,6 +4,10 @@ export const ESPECIALIDADES = ['Cardiología', 'Radiología', 'Urgencias', 'Pedi
 export const ESTADOS_CLIENTE = ['Activo', 'Inactivo'];
 export const CATEGORIAS_EQUIPO = ['Diagnóstico por imagen', 'Monitorización', 'Laboratorio', 'Electromedicina', 'Mobiliario clínico', 'Esterilización', 'Óptica y oftalmología', 'Otro'];
 export const ETAPAS_PIPELINE = ['Prospecto', 'Interesado', 'Propuesta enviada', 'Negociación', 'Ganado', 'Perdido'];
+
+// Mapa de alias visuales para etapas — el valor en BD no cambia, solo el texto mostrado
+export const ETAPA_LABEL = { 'Prospecto': 'Solicitud info' };
+export const etapaLabel = (etapa) => ETAPA_LABEL[etapa] || etapa;
 export const TIPOS_EVENTO = ['Visita comercial', 'Mantenimiento preventivo', 'Reparación/Servicio técnico', 'Llamada/Seguimiento', 'Demo de equipo', 'Cierre de venta con cliente'];
 export const TIPOS_SERVICIO = ['Mantenimiento preventivo', 'Reparación correctiva', 'Instalación', 'Calibración/Verificación', 'Garantía', 'Asesoramiento técnico'];
 export const PRIORIDADES_SERVICIO = ['Baja', 'Normal', 'Alta', 'Urgente'];

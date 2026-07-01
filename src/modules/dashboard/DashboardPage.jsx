@@ -34,7 +34,7 @@ const TIPO_COLOR = {
 };
 
 const FUNNEL_CONFIG = [
-  { etapa: 'Prospecto',         label: 'Prospecto',      bg: '#E6F1FB', textColor: '#1e3a5f', dot: '#38BDF8' },
+  { etapa: 'Prospecto',         label: 'Solicitud info', bg: '#E6F1FB', textColor: '#1e3a5f', dot: '#38BDF8' },
   { etapa: 'Interesado',        label: 'Interesado',     bg: '#B5D4F4', textColor: '#1e3a5f', dot: '#3B82F6' },
   { etapa: 'Propuesta enviada', label: 'Oferta enviada', bg: '#85B7EB', textColor: '#1e3a5f', dot: '#1B4F8A' },
   { etapa: 'Negociación',       label: 'Negociación',    bg: '#378ADD', textColor: '#ffffff',  dot: '#F59E0B' },

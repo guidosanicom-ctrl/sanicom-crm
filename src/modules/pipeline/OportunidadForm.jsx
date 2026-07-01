@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import ClienteSearchInput from '../../components/ui/ClienteSearchInput';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
-import { ORIGENES_OPP, REDES_SOCIALES } from '../../utils/constants';
+import { ORIGENES_OPP, REDES_SOCIALES, etapaLabel } from '../../utils/constants';
 import { usePipelineStore } from '../../store/pipelineStore';
 
 const ESTADOS_CLIENTE = ['Evaluando opciones', 'Esperando aprobación', 'Consultando dirección', 'Silencio', 'Listo para decidir'];
@@ -117,7 +117,7 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Etapa *</label>
           <select value={form.etapa} onChange={e => set('etapa', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none">
-            {ETAPAS_PIPELINE.map(s => <option key={s}>{s}</option>)}
+            {ETAPAS_PIPELINE.map(s => <option key={s} value={s}>{etapaLabel(s)}</option>)}
           </select>
         </div>
         <div>

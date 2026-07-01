@@ -17,6 +17,7 @@ import DemoForm from '../demostraciones/DemoForm';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { usePipelineStore } from '../../store/pipelineStore';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
+import { etapaLabel } from '../../utils/constants';
 
 // Dropdown con búsqueda reutilizable
 function SearchableSelect({ value, onChange, options, placeholder, allLabel = 'Todos' }) {
@@ -139,7 +140,7 @@ function MoveBottomSheet({ opp, etapas, onMove, onClose }) {
                     ? 'text-[#1B4F8A] font-semibold bg-blue-50'
                     : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'}`}
               >
-                <span>{etapa}</span>
+                <span>{etapaLabel(etapa)}</span>
                 {isCurrent && <Check className="w-4 h-4 text-[#1B4F8A]" />}
               </button>
             );
@@ -292,7 +293,7 @@ function KanbanColumn({ stage, opps, clientes, users, onOpen }) {
     <div className="flex-shrink-0 w-72">
       <div className={`rounded-xl border p-3 ${STAGE_COLORS[stage] || 'bg-gray-50 border-gray-100'}`}>
         <div className="flex items-center justify-between mb-3">
-          <span className={`text-sm font-semibold ${STAGE_HEADER[stage] || 'text-gray-700'}`}>{stage}</span>
+          <span className={`text-sm font-semibold ${STAGE_HEADER[stage] || 'text-gray-700'}`}>{etapaLabel(stage)}</span>
           <span className="text-xs bg-white/70 px-2 py-0.5 rounded-full font-medium text-gray-500">{opps.length}</span>
         </div>
         <div
@@ -530,7 +531,7 @@ export default function PipelinePage() {
                     <button key={etapa} onClick={() => setMobileTab(etapa)}
                       className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg text-xs font-medium transition-colors cursor-pointer
                         ${active ? 'bg-[#1B4F8A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                      <span>{ETAPA_SHORT[etapa] ?? etapa}</span>
+                      <span>{ETAPA_SHORT[etapa] ?? etapaLabel(etapa)}</span>
                       <span className={`text-xs font-bold mt-0.5 ${active ? 'text-white/80' : 'text-gray-400'}`}>{count}</span>
                     </button>
                   );
@@ -603,7 +604,7 @@ export default function PipelinePage() {
                     <td className="px-4 py-3 font-semibold text-[#1B4F8A]">{formatCurrency(o.valor)}</td>
                     <td className="px-4 py-3">{o.probabilidad}%</td>
                     <td className="px-4 py-3">
-                      <Badge color={o.etapa === 'Ganado' ? 'green' : o.etapa === 'Perdido' ? 'gray' : 'blue'}>{o.etapa}</Badge>
+                      <Badge color={o.etapa === 'Ganado' ? 'green' : o.etapa === 'Perdido' ? 'gray' : 'blue'}>{etapaLabel(o.etapa)}</Badge>
                     </td>
                     <td className="px-4 py-3 text-gray-500">{formatDate(o.fechaCierre)}</td>
                     <td className="px-4 py-3">
@@ -661,7 +662,7 @@ export default function PipelinePage() {
           etapas={ETAPAS_PIPELINE}
           onMove={(etapa) => {
             updateOportunidad(moveSheet.id, { etapa });
-            toast.success(`Movido a "${etapa}"`);
+            toast.success(`Movido a "${etapaLabel(etapa)}"`);
             setMoveSheet(null);
           }}
           onClose={() => setMoveSheet(null)}

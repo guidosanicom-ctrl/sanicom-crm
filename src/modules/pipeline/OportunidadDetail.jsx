@@ -13,6 +13,7 @@ import { Edit, Trash2, Phone, Mail, MapPin, User, PlaySquare,
          CheckCircle2, Circle, Clock, Plus, Trophy } from 'lucide-react';
 import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useDemosStore } from '../../store/demosStore';
+import { etapaLabel } from '../../utils/constants';
 
 const STAGE_COLOR = {
   'Prospecto': 'gray', 'Interesado': 'blue', 'Propuesta enviada': 'purple',
@@ -276,7 +277,7 @@ export default function OportunidadDetail({ open, onClose, oportunidad, onEdit, 
         {/* Datos principales */}
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <Badge color={STAGE_COLOR[oportunidad.etapa] || 'gray'}>{oportunidad.etapa}</Badge>
+            <Badge color={STAGE_COLOR[oportunidad.etapa] || 'gray'}>{etapaLabel(oportunidad.etapa)}</Badge>
             <span className="text-xl font-bold text-[#1B4F8A]">{formatCurrency(oportunidad.valor)}</span>
             <span className="text-sm text-gray-500">· {oportunidad.probabilidad}% prob.</span>
             {oportunidad.temperatura && (
