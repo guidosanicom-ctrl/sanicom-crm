@@ -176,7 +176,7 @@ export default function DemostracionesPage() {
                 const equipoLabel = d.equipoNombre || equipos.find(e => e.id === d.equipoId)?.nombre;
                 const resp = users.find(u => u.id === d.responsable);
                 return (
-                  <div key={d.id} className="px-4 py-3 cursor-pointer active:bg-gray-50" onClick={() => openDetail(d)}>
+                  <div key={d.id} className={`px-4 py-3 cursor-pointer active:bg-gray-50 ${d.estado === 'Realizada' ? 'bg-green-50' : ''}`} onClick={() => openDetail(d)}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -218,7 +218,7 @@ export default function DemostracionesPage() {
                     const equipoLabel = d.equipoNombre || equipos.find(e => e.id === d.equipoId)?.nombre;
                     const user = users.find(u => u.id === d.responsable);
                     return (
-                      <tr key={d.id} className="hover:bg-gray-50">
+                      <tr key={d.id} className={d.estado === 'Realizada' ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'}>
                         <td className="px-4 py-3">
                           <button onClick={() => openDetail(d)} className="font-mono text-xs text-[#1B4F8A] hover:underline cursor-pointer">{d.numero}</button>
                         </td>
