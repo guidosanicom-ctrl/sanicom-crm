@@ -269,6 +269,7 @@ export default function PipelinePage() {
   const [mobileTab, setMobileTab] = useState(() => ETAPAS_PIPELINE[0] || '');
   const [moveSheet, setMoveSheet] = useState(null);
   const [demoFormOpen, setDemoFormOpen] = useState(false);
+  const [equipoFiltro, setEquipoFiltro] = useState('Todos');
 
   // Sincronizar mobileTab cuando cargan las etapas
   useEffect(() => { if (!mobileTab && ETAPAS_PIPELINE.length) setMobileTab(ETAPAS_PIPELINE[0]); }, [ETAPAS_PIPELINE]);
@@ -329,6 +330,19 @@ export default function PipelinePage() {
     return { total: oportunidades.length, pipeline, weighted, wonMonth };
   }, [oportunidades]);
 
+  const EQUIPOS_FILTRO = ['Todos', 'Diatermia', 'Onda de Choque', 'Ecógrafo', 'Super Inductiva', 'Otro'];
+
+  const oportunidadesFiltradas = useMemo(() => {
+    if (equipoFiltro === 'Todos') return oportunidades;
+    const term = equipoFiltro.toLowerCase();
+    const otros = ['diatermia', 'onda de choque', 'ecógrafo', 'super inductiva'];
+    return oportunidades.filter(o => {
+      const haystack = `${o.nombre || ''} ${o.equiposDescripcion || ''}`.toLowerCase();
+      if (equipoFiltro === 'Otro') return !otros.some(k => haystack.includes(k));
+      return haystack.includes(term);
+    });
+  }, [oportunidades, equipoFiltro]);
+
   return (
     <div className="space-y-6">
       <RefreshIndicator show={refreshing} />
@@ -358,6 +372,22 @@ export default function PipelinePage() {
           </button>
         </div>
         <Button onClick={openNew}><Plus className="w-4 h-4" />Nueva oportunidad</Button>
+      </div>
+
+      {/* Filtro por equipo */}
+      <div className="flex flex-wrap gap-1.5">
+        {EQUIPOS_FILTRO.map(eq => (
+          <button
+            key={eq}
+            onClick={() => setEquipoFiltro(eq)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer
+              ${equipoFiltro === eq
+                ? 'bg-[#1B4F8A] text-white'
+                : 'bg-white border border-gray-200 text-gray-600 hover:border-[#1B4F8A] hover:text-[#1B4F8A]'}`}
+          >
+            {eq}
+          </button>
+        ))}
       </div>
 
       {/* ── Vista móvil (< 640px) ── */}
@@ -390,7 +420,7 @@ export default function PipelinePage() {
 
           {/* Tarjetas de la etapa activa */}
           {(() => {
-            const cards = oportunidades.filter(o => o.etapa === mobileTab);
+            const cards = oportunidadesFiltradas.filter(o => o.etapa === mobileTab);
             if (cards.length === 0) return (
               <div className="text-center py-10 text-gray-400 text-sm">
                 No hay oportunidades en esta etapa
@@ -421,7 +451,7 @@ export default function PipelinePage() {
               <KanbanColumn
                 key={stage}
                 stage={stage}
-                opps={oportunidades.filter(o => o.etapa === stage)}
+                opps={oportunidadesFiltradas.filter(o => o.etapa === stage)}
                 clientes={clientes}
                 users={users}
                 onOpen={openDetail}
@@ -440,7 +470,7 @@ export default function PipelinePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {oportunidades.map(o => {
+              {oportunidadesFiltradas.map(o => {
                 const client = clientes.find(c => c.id === o.clienteId);
                 return (
                   <tr key={o.id} className="hover:bg-gray-50">
