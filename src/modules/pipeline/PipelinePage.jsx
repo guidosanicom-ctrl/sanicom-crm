@@ -332,14 +332,24 @@ export default function PipelinePage() {
 
   const EQUIPOS_FILTRO = ['Todos', 'Diatermia', 'Onda de Choque', 'Ecógrafo', 'Super Inductiva', 'Otro'];
 
+  const KEYWORDS = {
+    'Diatermia':      ['diatermia', 'tecartherapy', 'tecar', 'indiba', 'hcr'],
+    'Onda de Choque': ['onda de choque', 'ondas de choque', 'shockwave', 'shock wave', 'eswt'],
+    'Ecógrafo':       ['eco', 'ecógrafo', 'ecografo', 'ultrasonido', 'sonoscape', 'mindray', 'esaote', 'mylab', 'voluson', 'sonda', 'convex', 'musculoesqueletica', 'veterinaria eco'],
+    'Super Inductiva': ['super inductiva', 'superinductiva', 'isi', 'btl super'],
+  };
+
+  const matchesCategory = (haystack, cat) =>
+    KEYWORDS[cat].some(k => haystack.includes(k));
+
   const oportunidadesFiltradas = useMemo(() => {
     if (equipoFiltro === 'Todos') return oportunidades;
-    const term = equipoFiltro.toLowerCase();
-    const otros = ['diatermia', 'onda de choque', 'ecógrafo', 'super inductiva'];
     return oportunidades.filter(o => {
       const haystack = `${o.nombre || ''} ${o.equiposDescripcion || ''}`.toLowerCase();
-      if (equipoFiltro === 'Otro') return !otros.some(k => haystack.includes(k));
-      return haystack.includes(term);
+      if (equipoFiltro === 'Otro') {
+        return !Object.keys(KEYWORDS).some(cat => matchesCategory(haystack, cat));
+      }
+      return matchesCategory(haystack, equipoFiltro);
     });
   }, [oportunidades, equipoFiltro]);
 
