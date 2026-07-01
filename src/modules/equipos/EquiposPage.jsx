@@ -6,7 +6,6 @@ import { useAuthStore } from '../../store/authStore';
 import { useCategoriasStore } from '../../store/categoriasStore';
 import { useEspecialidadesStore } from '../../store/especialidadesStore';
 import { useCatalogoEquiposStore } from '../../store/catalogoEquiposStore';
-import CatalogoEquipoSelect from '../../components/shared/CatalogoEquipoSelect';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import SearchBar from '../../components/shared/SearchBar';
@@ -20,33 +19,45 @@ import { Package } from 'lucide-react';
 const emptyBase = { nombre: '', marca: '', modelo: '', unidades: '', categoria: '', subcategoria: '', otroTexto: '', descripcion: '', precioVenta: '', precioCoste: '', estado: 'Activo', especialidades: [] };
 
 function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
-  const { categorias } = useCategoriasStore();
   const { especialidades } = useEspecialidadesStore();
+  const { categorias: getCats, subcategorias: getSubs } = useCatalogoEquiposStore();
+  // catSelect = raw catalog pick ('Otro' stays as 'Otro'); form.categoria = valor final guardado
+  const [catSelect, setCatSelect] = useState('');
   const [form, setForm] = useState(initial || { ...emptyBase });
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (open) {
-      setForm(initial || { ...emptyBase });
+      const f = initial || { ...emptyBase };
+      setForm(f);
       setErrors({});
+      // if saved with otroTexto, restore 'Otro' in the picker
+      setCatSelect(f.otroTexto ? 'Otro' : (f.categoria || ''));
     }
   }, [open, initial]);
 
-  // catPick tracks the raw catalog selection separate from the saved form values
-  const [catPick, setCatPick] = useState({ categoria: initial?.otroTexto ? 'Otro' : (initial?.categoria || ''), subcategoria: initial?.subcategoria || '', otroTexto: initial?.otroTexto || '' });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  useEffect(() => {
-    if (open) setCatPick({ categoria: initial?.otroTexto ? 'Otro' : (initial?.categoria || ''), subcategoria: initial?.subcategoria || '', otroTexto: initial?.otroTexto || '' });
-  }, [open, initial]);
-
-  const applyCatalogo = (cat, sub, otro) => {
-    const catFinal = cat === 'Otro' ? (otro?.trim() || '') : cat;
-    const nombre = [catFinal, sub].filter(Boolean).join(' ');
-    setCatPick({ categoria: cat, subcategoria: sub, otroTexto: otro });
-    setForm(f => ({ ...f, categoria: catFinal, subcategoria: sub, otroTexto: otro, ...(nombre ? { nombre } : {}) }));
+  const handleCatChange = (val) => {
+    setCatSelect(val);
+    if (val === 'Otro') {
+      setForm(f => ({ ...f, categoria: '', subcategoria: '', otroTexto: '' }));
+    } else {
+      const nombre = val; // subcategoria not chosen yet
+      setForm(f => ({ ...f, categoria: val, subcategoria: '', otroTexto: '', nombre: val || f.nombre }));
+    }
   };
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const handleSubChange = (val) => {
+    const catFinal = catSelect === 'Otro' ? (form.otroTexto?.trim() || '') : catSelect;
+    const nombre = [catFinal, val].filter(Boolean).join(' ');
+    setForm(f => ({ ...f, subcategoria: val, nombre: nombre || f.nombre }));
+  };
+
+  const handleOtroChange = (val) => {
+    const nombre = [val.trim(), form.subcategoria].filter(Boolean).join(' ');
+    setForm(f => ({ ...f, otroTexto: val, categoria: val.trim(), nombre: nombre || f.nombre }));
+  };
 
   const validate = () => {
     const e = {};
@@ -87,14 +98,36 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
               {[form.categoria, form.subcategoria].filter(Boolean).join(' — ') || '-'}
             </div>
           ) : (
-            <CatalogoEquipoSelect
-              categoria={catPick.categoria}
-              subcategoria={catPick.subcategoria}
-              otroTexto={catPick.otroTexto}
-              onCategoriaChange={v => applyCatalogo(v, '', '')}
-              onSubcategoriaChange={v => applyCatalogo(catPick.categoria, v, catPick.otroTexto)}
-              onOtroTextoChange={v => applyCatalogo('Otro', catPick.subcategoria, v)}
-            />
+            <div className="space-y-2">
+              <select
+                value={catSelect}
+                onChange={e => handleCatChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+              >
+                <option value="">Sin especificar</option>
+                {getCats().map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="Otro">Otro</option>
+              </select>
+              {catSelect === 'Otro' && (
+                <input
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  value={form.otroTexto || ''}
+                  onChange={e => handleOtroChange(e.target.value)}
+                  placeholder="Especifica la categoría..."
+                  autoFocus
+                />
+              )}
+              {catSelect && catSelect !== 'Otro' && getSubs(catSelect).length > 0 && (
+                <select
+                  value={form.subcategoria || ''}
+                  onChange={e => handleSubChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                >
+                  <option value="">Subcategoría (opcional)</option>
+                  {getSubs(catSelect).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              )}
+            </div>
           )}
         </div>
         <div>
