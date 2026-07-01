@@ -6,6 +6,8 @@ import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import { ORIGENES_OPP, REDES_SOCIALES, etapaLabel } from '../../utils/constants';
 import { usePipelineStore } from '../../store/pipelineStore';
+import { useCatalogoEquiposStore } from '../../store/catalogoEquiposStore';
+import { X } from 'lucide-react';
 
 const ESTADOS_CLIENTE = ['Evaluando opciones', 'Esperando aprobación', 'Consultando dirección', 'Silencio', 'Listo para decidir'];
 const FINANCIACIONES = ['Propia', 'Financiación bancaria', 'Leasing', 'Subvención', 'Por definir'];
@@ -18,20 +20,24 @@ function addMonths(months) {
   return d.toISOString().slice(0, 10);
 }
 
-const empty = { nombre: '', clienteId: '', clienteNombreLibre: '', equiposDescripcion: '', valor: '', probabilidad: 50, etapa: 'Prospecto', fechaCierre: '', responsable: '', origen: '', descripcion: '', estadoCliente: '', financiacion: '', temperatura: '', notaSeguimiento: '' };
+const empty = { nombre: '', clienteId: '', clienteNombreLibre: '', equiposDescripcion: '', equiposSeleccionados: [], valor: '', probabilidad: 50, etapa: 'Prospecto', fechaCierre: '', responsable: '', origen: '', descripcion: '', estadoCliente: '', financiacion: '', temperatura: '', notaSeguimiento: '' };
 
 export default function OportunidadForm({ open, onClose, onSave, initial }) {
   const { etapas: ETAPAS_PIPELINE } = usePipelineStore();
+  const { categorias: getCats, subcategorias: getSubs } = useCatalogoEquiposStore();
   const [form, setForm] = useState(initial || empty);
   const [errors, setErrors] = useState({});
   // clienteLibre: true = texto libre, false = buscar existente
   const [clienteLibre, setClienteLibre] = useState(() => !!(initial?.clienteNombreLibre && !initial?.clienteId));
+  // selector de equipo pendiente de añadir
+  const [equipoPick, setEquipoPick] = useState({ categoria: '', subcategoria: '' });
 
   useEffect(() => {
     if (open) {
       setForm(initial || empty);
       setErrors({});
       setClienteLibre(!!(initial?.clienteNombreLibre && !initial?.clienteId));
+      setEquipoPick({ categoria: '', subcategoria: '' });
     }
   }, [open, initial]);
 
@@ -53,6 +59,23 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
     if (!form.responsable) e.responsable = 'Requerido';
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  const addEquipo = () => {
+    if (!equipoPick.categoria) return;
+    const label = [equipoPick.categoria, equipoPick.subcategoria].filter(Boolean).join(' — ');
+    const ya = (form.equiposSeleccionados || []).some(e => e.label === label);
+    if (ya) return;
+    const lista = [...(form.equiposSeleccionados || []), { ...equipoPick, label }];
+    set('equiposSeleccionados', lista);
+    set('equiposDescripcion', lista.map(e => e.label).join(', '));
+    setEquipoPick({ categoria: '', subcategoria: '' });
+  };
+
+  const removeEquipo = (label) => {
+    const lista = (form.equiposSeleccionados || []).filter(e => e.label !== label);
+    set('equiposSeleccionados', lista);
+    set('equiposDescripcion', lista.map(e => e.label).join(', '));
   };
 
   const handleSave = () => {
@@ -164,7 +187,49 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
         </div>
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-1">Equipos de interés</label>
-          <input type="text" value={form.equiposDescripcion || ''} onChange={e => set('equiposDescripcion', e.target.value)} placeholder="Ej: Láser CO2, Ultrasonido terapéutico..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+          {/* Tags de equipos seleccionados */}
+          {(form.equiposSeleccionados || []).length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {form.equiposSeleccionados.map(e => (
+                <span key={e.label} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                  {e.label}
+                  <button type="button" onClick={() => removeEquipo(e.label)} className="ml-0.5 hover:text-blue-900 cursor-pointer"><X className="w-3 h-3" /></button>
+                </span>
+              ))}
+            </div>
+          )}
+          {/* Selector cascada + botón añadir */}
+          <div className="flex gap-2 items-start">
+            <div className="flex-1 space-y-1.5">
+              <select
+                value={equipoPick.categoria}
+                onChange={e => setEquipoPick({ categoria: e.target.value, subcategoria: '' })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+              >
+                <option value="">Categoría...</option>
+                {getCats().map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="Otro">Otro</option>
+              </select>
+              {equipoPick.categoria && getSubs(equipoPick.categoria).length > 0 && (
+                <select
+                  value={equipoPick.subcategoria}
+                  onChange={e => setEquipoPick(p => ({ ...p, subcategoria: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                >
+                  <option value="">Subcategoría (opcional)</option>
+                  {getSubs(equipoPick.categoria).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={addEquipo}
+              disabled={!equipoPick.categoria}
+              className="px-3 py-2 rounded-lg border border-blue-300 text-blue-700 text-sm font-medium hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+            >
+              + Añadir
+            </button>
+          </div>
         </div>
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-1">Descripción</label>
