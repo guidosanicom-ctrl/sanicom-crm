@@ -312,6 +312,8 @@ function KanbanCard({ opp, clients, users, onOpen, hasPendingLlamada }) {
 // ── Columna droppable (dnd-kit) ───────────────────────────────────────────────
 function KanbanColumn({ stage, opps, clientes, users, onOpen }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage });
+  const { oportunidadesConLlamadaPendiente } = useLlamadasPendientesStore();
+  const pendingLlamadasSet = oportunidadesConLlamadaPendiente();
   return (
     <div className="flex-shrink-0 w-72">
       <div className={`rounded-xl border p-3 ${STAGE_COLORS[stage] || 'bg-gray-50 border-gray-100'}`}>
