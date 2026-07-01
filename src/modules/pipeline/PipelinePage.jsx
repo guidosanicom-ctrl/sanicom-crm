@@ -335,7 +335,7 @@ export default function PipelinePage() {
   const KEYWORDS = {
     'Diatermia':      ['diatermia', 'tecartherapy', 'tecar', 'indiba', 'hcr'],
     'Onda de Choque': ['onda de choque', 'ondas de choque', 'shockwave', 'shock wave', 'eswt'],
-    'Ecógrafo':       ['eco', 'ecógrafo', 'ecografo', 'ultrasonido', 'sonoscape', 'mindray', 'esaote', 'mylab', 'voluson', 'sonda', 'convex', 'musculoesqueletica', 'veterinaria eco'],
+    'Ecógrafo':       ['eco', 'ecógrafo', 'ecografo', 'ultrasonido', 'sonoscape', 'mindray', 'esaote', 'mylab', 'voluson', 'sonda', 'sondas', 'convex', 'musculoesqueletica', 'veterinaria eco', 'p25', 'elite'],
     'Super Inductiva': ['super inductiva', 'superinductiva', 'isi', 'btl super'],
   };
 
@@ -345,7 +345,7 @@ export default function PipelinePage() {
   const oportunidadesFiltradas = useMemo(() => {
     if (equipoFiltro === 'Todos') return oportunidades;
     return oportunidades.filter(o => {
-      const haystack = `${o.nombre || ''} ${o.equiposDescripcion || ''}`.toLowerCase();
+      const haystack = `${o.nombre || ''} ${o.equiposDescripcion || ''} ${o.descripcion || ''}`.toLowerCase();
       if (equipoFiltro === 'Otro') {
         return !Object.keys(KEYWORDS).some(cat => matchesCategory(haystack, cat));
       }
