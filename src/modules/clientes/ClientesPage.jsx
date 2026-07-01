@@ -26,6 +26,85 @@ import { useSubespecialidadesStore } from '../../store/subespecialidadesStore';
 import { useTiposClienteStore } from '../../store/tiposClienteStore';
 import { useSeguimientoStore } from '../../store/seguimientoStore';
 
+const PROVINCIAS_ES = [
+  'Álava','Albacete','Alicante','Almería','Asturias','Ávila','Badajoz','Barcelona',
+  'Burgos','Cáceres','Cádiz','Cantabria','Castellón','Ciudad Real','Córdoba',
+  'Cuenca','Gerona','Granada','Guadalajara','Guipúzcoa','Huelva','Huesca',
+  'Islas Baleares','Jaén','La Coruña','La Rioja','Las Palmas','León','Lérida',
+  'Lugo','Madrid','Málaga','Murcia','Navarra','Orense','Palencia','Pontevedra',
+  'Salamanca','Santa Cruz de Tenerife','Segovia','Sevilla','Soria','Tarragona',
+  'Teruel','Toledo','Valencia','Valladolid','Vizcaya','Zamora','Zaragoza',
+  'Ceuta','Melilla',
+];
+
+function ProvinciaSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 50); }, [open]);
+
+  const filtered = q.length >= 1
+    ? PROVINCIAS_ES.filter(p => p.toLowerCase().includes(q.toLowerCase()))
+    : PROVINCIAS_ES;
+
+  const label = value || 'Provincia';
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-600 focus:outline-none cursor-pointer hover:border-gray-300 whitespace-nowrap"
+      >
+        <span className={value ? 'text-gray-800 font-medium' : ''}>{label}</span>
+        <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-10 z-50 bg-white border border-gray-200 rounded-xl shadow-xl w-56">
+          <div className="p-2 border-b border-gray-100">
+            <input
+              ref={inputRef}
+              type="text"
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              placeholder="Buscar provincia..."
+              className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-300"
+            />
+          </div>
+          <div className="max-h-52 overflow-y-auto py-1">
+            <button
+              onClick={() => { onChange(''); setOpen(false); setQ(''); }}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer ${!value ? 'font-semibold text-[#1B4F8A]' : 'text-gray-600'}`}
+            >
+              Todas las provincias
+            </button>
+            {filtered.map(p => (
+              <button
+                key={p}
+                onClick={() => { onChange(p); setOpen(false); setQ(''); }}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer ${value === p ? 'font-semibold text-[#1B4F8A] bg-blue-50' : 'text-gray-700'}`}
+              >
+                {p}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <p className="text-xs text-gray-400 text-center py-3">Sin resultados</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const TIPO_CONFIG = {
   whatsapp: { label: 'WhatsApp', color: '#25D366', bg: '#dcfce7', border: '#86efac', icon: '●' },
   email:    { label: 'Email',    color: '#1B4F8A', bg: '#eff6ff', border: '#93c5fd', icon: '●' },
@@ -312,11 +391,6 @@ export default function ClientesPage() {
   const { refreshing } = useAutoRefresh([makeRefresher(useClientesStore)]);
   const espOptions = carlos ? CARLOS_ESPECIALIDADES.filter(e => especialidades.includes(e)) : especialidades;
 
-  const provinciasOptions = useMemo(() => {
-    const set = new Set();
-    clientes.forEach(c => { if (c.provincia) set.add(c.provincia); });
-    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
-  }, [clientes]);
 
   // Mis clientes recientes (últimos 20 clientes accesibles, ordenados por actividad reciente)
   const misRecientes = useMemo(() => {
@@ -495,12 +569,7 @@ export default function ClientesPage() {
               {subespecialidades.map(s => <option key={s}>{s}</option>)}
             </select>
           )}
-          {provinciasOptions.length > 0 && (
-            <select className={sel} value={filterProvincia} onChange={e => { setFilterProvincia(e.target.value); setPage(1); }}>
-              <option value="">Todas las provincias</option>
-              {provinciasOptions.map(p => <option key={p}>{p}</option>)}
-            </select>
-          )}
+          <ProvinciaSelect value={filterProvincia} onChange={v => { setFilterProvincia(v); setPage(1); }} />
         </div>
         <div className="flex gap-2">
           {!carlos && <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>}
@@ -616,13 +685,11 @@ export default function ClientesPage() {
               {subespecialidades.map(s => <option key={s}>{s}</option>)}
             </select>
           )}
-          {provinciasOptions.length > 0 && (
-            <select className="flex-shrink-0 px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
-              value={filterProvincia} onChange={e => { setFilterProvincia(e.target.value); setPage(1); }}>
-              <option value="">Provincia</option>
-              {provinciasOptions.map(p => <option key={p}>{p}</option>)}
-            </select>
-          )}
+          <select className="flex-shrink-0 px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+            value={filterProvincia} onChange={e => { setFilterProvincia(e.target.value); setPage(1); }}>
+            <option value="">Provincia</option>
+            {PROVINCIAS_ES.map(p => <option key={p}>{p}</option>)}
+          </select>
         </div>
         {/* Fila 3: Seguimiento (solo Carlos) */}
         {carlos && (
