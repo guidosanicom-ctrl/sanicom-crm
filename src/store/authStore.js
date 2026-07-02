@@ -34,8 +34,11 @@ export const useAuthStore = create((set, get) => ({
   canAccess: (module) => {
     const { user } = get();
     if (!user) return false;
-    if (module === 'cursos' || module === 'mapa') {
+    if (module === 'cursos') {
       return ['jgovantes@sanicom.es', 'carlosleal@sanicom.es'].includes(user.email);
+    }
+    if (module === 'mapa') {
+      return user.email === 'guidorosso@sanicom.es';
     }
     if (user.role === 'Administración' || user.role === 'Técnico') return true;
     if (user.role === 'Comercial Restringido') {
