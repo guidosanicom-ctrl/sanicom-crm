@@ -557,7 +557,7 @@ export default function ClientesPage() {
           </select>
           <select className={sel} value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1); }}>
             <option value="">Todos los estados</option>
-            <option>Activo</option><option>Inactivo</option>
+            <option>Activo</option><option>Inactivo</option><option>No disponible</option>
           </select>
           <select className={sel} value={filterEsp} onChange={e => { setFilterEsp(e.target.value); setFilterSubesp(''); setPage(1); }}>
             <option value="">Todas las especialidades</option>
@@ -671,7 +671,7 @@ export default function ClientesPage() {
           <select className="flex-shrink-0 px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
             value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setPage(1); }}>
             <option value="">Estado</option>
-            <option>Activo</option><option>Inactivo</option>
+            <option>Activo</option><option>Inactivo</option><option>No disponible</option>
           </select>
           <select className="flex-shrink-0 px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
             value={filterEsp} onChange={e => { setFilterEsp(e.target.value); setFilterSubesp(''); setPage(1); }}>
@@ -810,7 +810,7 @@ export default function ClientesPage() {
                           <p className="text-xs text-gray-400 truncate">{[c.especialidad, c.ciudad].filter(Boolean).join(' · ')}</p>
                           {c.telefono && <p className="text-xs text-gray-500 mt-0.5">{c.telefono}</p>}
                         </div>
-                        <Badge color={c.estado === 'Activo' ? 'green' : 'gray'}>{c.estado}</Badge>
+                        <Badge color={c.estado === 'Activo' ? 'green' : c.estado === 'No disponible' ? 'orange' : 'gray'}>{c.estado}</Badge>
                       </div>
                     </div>
                   );
@@ -856,7 +856,7 @@ export default function ClientesPage() {
                           <td className="px-4 py-3 text-gray-500">{c.pais || 'España'}</td>
                           <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{formatDate(c.fechaAlta)}</td>
                           <td className="px-4 py-3">
-                            <Badge color={c.estado === 'Activo' ? 'green' : 'gray'}>{c.estado}</Badge>
+                            <Badge color={c.estado === 'Activo' ? 'green' : c.estado === 'No disponible' ? 'orange' : 'gray'}>{c.estado}</Badge>
                           </td>
                         </tr>
                       );

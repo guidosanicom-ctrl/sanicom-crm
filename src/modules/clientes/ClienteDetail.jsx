@@ -800,9 +800,12 @@ export default function ClienteDetail() {
           <div>
             <h2 className="text-xl font-bold text-gray-900">{cliente.nombre}</h2>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <Badge color={cliente.estado === 'Activo' ? 'green' : 'gray'}>{cliente.estado}</Badge>
+              <Badge color={cliente.estado === 'Activo' ? 'green' : cliente.estado === 'No disponible' ? 'orange' : 'gray'}>{cliente.estado}</Badge>
               <span className="text-sm text-gray-500">{cliente.tipo}</span>
               {cliente.especialidad && <span className="text-sm text-gray-400">· {cliente.especialidad}</span>}
+              {cliente.estado === 'No disponible' && cliente.motivoNoDisponible && (
+                <span className="text-xs text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">{cliente.motivoNoDisponible}</span>
+              )}
               {estaContactado
                 ? <span className="inline-flex items-center gap-1 text-xs font-semibold bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">Contactado ✅</span>
                 : <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">No contactado ⏳</span>

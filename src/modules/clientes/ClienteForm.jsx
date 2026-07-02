@@ -240,6 +240,12 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
               <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
               <select {...sel('estado')}>{ESTADOS_CLIENTE.map(e => <option key={e}>{e}</option>)}</select>
             </div>
+            {form.estado === 'No disponible' && (
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Motivo (opcional)</label>
+                <input {...inp('motivoNoDisponible')} placeholder="Ej: Tiene convenio con otro proveedor" />
+              </div>
+            )}
           </div>
         </div>
 
