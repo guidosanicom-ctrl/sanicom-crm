@@ -73,15 +73,31 @@ function buildInfoContent(c, routeIds) {
 }
 
 // ── Carga del script de Google Maps (singleton a nivel de módulo) ────────────
-// Garantiza que el script se inyecta una sola vez y los suscriptores reciben
-// la notificación aunque el componente haya montado/desmontado mientras cargaba.
 const GM_CALLBACKS = new Set();
+const GM_ERROR_CALLBACKS = new Set();
 let gmReady = false;
+let gmError = null;
 
 function ensureGoogleMapsScript() {
-  if (gmReady) return;
-  if (window.google?.maps) { gmReady = true; GM_CALLBACKS.forEach(fn => fn()); GM_CALLBACKS.clear(); return; }
-  if (document.getElementById('gm-script')) return; // ya inyectado, esperamos
+  if (gmReady || gmError) return;
+  if (window.google?.maps) {
+    gmReady = true;
+    GM_CALLBACKS.forEach(fn => fn());
+    GM_CALLBACKS.clear();
+    return;
+  }
+  if (document.getElementById('gm-script')) return;
+
+  // Google Maps llama a este callback cuando la API key es inválida o el
+  // dominio no está autorizado — es la única forma de capturar ese error.
+  window.gm_authFailure = () => {
+    gmError = 'API key inválida o dominio no autorizado en Google Cloud Console. ' +
+              'Ve a console.cloud.google.com → APIs → Maps JavaScript API → Credenciales ' +
+              'y añade este dominio a las restricciones HTTP, o elimina las restricciones temporalmente.';
+    console.error('[MapaPage] gm_authFailure:', gmError);
+    GM_ERROR_CALLBACKS.forEach(fn => fn(gmError));
+    GM_ERROR_CALLBACKS.clear();
+  };
 
   window.__gmInit = () => {
     gmReady = true;
@@ -94,15 +110,23 @@ function ensureGoogleMapsScript() {
   script.id    = 'gm-script';
   script.async = true;
   script.src   = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=__gmInit`;
-  script.onerror = () => console.error('[MapaPage] Error al cargar el script de Google Maps. Verifica la API key.');
+  script.onerror = () => {
+    const msg = 'No se pudo cargar el script de Google Maps (error de red o URL inválida).';
+    gmError = msg;
+    console.error('[MapaPage]', msg);
+    GM_ERROR_CALLBACKS.forEach(fn => fn(msg));
+    GM_ERROR_CALLBACKS.clear();
+  };
   document.head.appendChild(script);
 }
 
-function onGoogleMapsReady(fn) {
-  if (gmReady) { fn(); return () => {}; }
-  GM_CALLBACKS.add(fn);
+function onGoogleMapsReady(onLoad, onErr) {
+  if (gmReady)  { onLoad(); return () => {}; }
+  if (gmError)  { onErr(gmError); return () => {}; }
+  GM_CALLBACKS.add(onLoad);
+  GM_ERROR_CALLBACKS.add(onErr);
   ensureGoogleMapsScript();
-  return () => GM_CALLBACKS.delete(fn);
+  return () => { GM_CALLBACKS.delete(onLoad); GM_ERROR_CALLBACKS.delete(onErr); };
 }
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -112,6 +136,7 @@ export default function MapaPage() {
   const navigate = useNavigate();
 
   const [gmLoaded, setGmLoaded]     = useState(gmReady);
+  const [gmErr, setGmErr]           = useState(gmError);
   const [filterEsp, setFilterEsp]   = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterEquipo, setFilterEquipo] = useState('');
@@ -150,7 +175,10 @@ export default function MapaPage() {
 
   // ── 1. Suscribirse a la carga del script ────────────────────────────────
   useEffect(() => {
-    return onGoogleMapsReady(() => setGmLoaded(true));
+    return onGoogleMapsReady(
+      () => setGmLoaded(true),
+      (msg) => setGmErr(msg),
+    );
   }, []);
 
   // ── 2. Inicializar el mapa (el div siempre está en el DOM con altura real) ─
@@ -377,8 +405,26 @@ export default function MapaPage() {
         {/* Div del mapa: siempre renderizado, siempre con dimensiones */}
         <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
 
+        {/* Overlay: error de API key / dominio */}
+        {gmErr && (
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 20,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#fef2f2', padding: '24px',
+          }}>
+            <div className="flex flex-col items-center gap-3 text-center max-w-md">
+              <AlertTriangle className="w-10 h-10 text-red-500" />
+              <p className="text-sm font-semibold text-red-700">Error al cargar Google Maps</p>
+              <p className="text-xs text-red-600">{gmErr}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                API key usada: <code className="bg-gray-100 px-1 rounded font-mono">{API_KEY ? `${API_KEY.slice(0,8)}…` : '(no definida)'}</code>
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Overlay de carga encima del mapa */}
-        {!gmLoaded && (
+        {!gmLoaded && !gmErr && (
           <div style={{
             position: 'absolute', inset: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
