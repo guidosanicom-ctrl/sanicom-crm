@@ -374,6 +374,12 @@ export default function PipelinePage() {
 
   // Crear demo vinculada desde el detalle de una oportunidad
   const handleCrearDemoDesdeOpp = () => setDemoFormOpen(true);
+  // Memoizado para evitar que el objeto inline se recree en cada render y resetee el form
+  const demoFormInitial = useMemo(() => demoFormOpen && selected ? {
+    clienteId: selected.clienteId,
+    equipoNombre: selected.equiposDescripcion || '',
+    responsable: selected.responsable || '',
+  } : null, [demoFormOpen, selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSaveDemo = (data) => {
     const opp = selected && oportunidades.find(o => o.id === selected.id);
@@ -663,11 +669,7 @@ export default function PipelinePage() {
       <DemoForm
         open={demoFormOpen}
         onClose={() => setDemoFormOpen(false)}
-        initial={selected ? {
-          clienteId: selected.clienteId,
-          equipoNombre: selected.equiposDescripcion || '',
-          responsable: selected.responsable || '',
-        } : null}
+        initial={demoFormInitial}
         onSave={handleSaveDemo}
       />
 

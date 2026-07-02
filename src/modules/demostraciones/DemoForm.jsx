@@ -9,12 +9,12 @@ import { ESTADOS_DEMO, RESULTADOS_DEMO, LUGARES_DEMO } from '../../utils/constan
 const empty = { clienteId: '', contactoId: '', equipoNombre: '', responsable: '', fecha: '', hora: '09:00', lugar: 'Cliente', direccion: '', objetivo: '', estado: 'Pendiente', resultado: '', observaciones: '' };
 
 export default function DemoForm({ open, onClose, onSave, initial }) {
-  const [form, setForm] = useState(initial || empty);
+  const [form, setForm] = useState(initial ? { ...empty, ...initial } : empty);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (open) {
-      setForm(initial || empty);
+      setForm(initial ? { ...empty, ...initial } : empty);
       setErrors({});
     }
   }, [open, initial]);
