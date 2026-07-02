@@ -361,6 +361,7 @@ export default function ClientesPage() {
   const [filterEsp, setFilterEsp] = useState('');
   const [filterSubesp, setFilterSubesp] = useState('');
   const [filterProvincia, setFilterProvincia] = useState('');
+  const [filterEquipo, setFilterEquipo] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
   const [formOpen, setFormOpen] = useState(false);
@@ -416,6 +417,24 @@ export default function ClientesPage() {
     toast.success('Contacto registrado.');
   };
 
+  // Normaliza texto quitando tildes y pasando a minúsculas
+  const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+  const EQUIPO_KEYWORDS = {
+    'Diatermia':     ['diatermia', 'ros', 'indiba'],
+    'Onda de Choque': ['onda', 'choque', 'radial', 'focal', 'ems', 'eswt'],
+    'Ecógrafo':      ['eco', 'ecografo', 'sonoscape', 'esaote', 'mindray', 'p25', 'p12', 'x3', 'x11', 'sonda'],
+  };
+
+  const matchesEquipoFilter = (cliente, filtro) => {
+    if (!filtro) return true;
+    const keywords = EQUIPO_KEYWORDS[filtro] || [];
+    const textos = [
+      ...(cliente.equiposInteres || []).map(e => `${e.nombre || ''} ${e.categoria || ''} ${e.subcategoria || ''} ${e.modeloMarca || ''}`),
+    ].map(norm).join(' ');
+    return keywords.some(kw => textos.includes(norm(kw)));
+  };
+
   // Filtrado base (sin considerar "ver seleccionados")
   const baseFiltered = useMemo(() => {
     return clientes.filter(c => {
@@ -427,9 +446,10 @@ export default function ClientesPage() {
       const matchEsp = !filterEsp || c.especialidad === filterEsp;
       const matchSubesp = !filterSubesp || c.subespecialidad === filterSubesp;
       const matchProvincia = !filterProvincia || c.provincia === filterProvincia;
-      return matchSearch && matchTipo && matchEstado && matchEsp && matchSubesp && matchProvincia;
+      const matchEquipo = matchesEquipoFilter(c, filterEquipo);
+      return matchSearch && matchTipo && matchEstado && matchEsp && matchSubesp && matchProvincia && matchEquipo;
     });
-  }, [clientes, search, filterTipo, filterEstado, filterEsp, filterSubesp, filterProvincia, carlos]);
+  }, [clientes, search, filterTipo, filterEstado, filterEsp, filterSubesp, filterProvincia, filterEquipo, carlos]);
 
   // Si "Ver seleccionados" está activo, filtra sobre la lista base
   const filtered = useMemo(() => {
@@ -570,6 +590,14 @@ export default function ClientesPage() {
             </select>
           )}
           <ProvinciaSelect value={filterProvincia} onChange={v => { setFilterProvincia(v); setPage(1); }} />
+          {carlos && (
+            <select className={sel} value={filterEquipo} onChange={e => { setFilterEquipo(e.target.value); setPage(1); }}>
+              <option value="">Todos los equipos</option>
+              <option>Diatermia</option>
+              <option>Onda de Choque</option>
+              <option>Ecógrafo</option>
+            </select>
+          )}
         </div>
         <div className="flex gap-2">
           {!carlos && <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>}
@@ -690,6 +718,15 @@ export default function ClientesPage() {
             <option value="">Provincia</option>
             {PROVINCIAS_ES.map(p => <option key={p}>{p}</option>)}
           </select>
+          {carlos && (
+            <select className="flex-shrink-0 px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+              value={filterEquipo} onChange={e => { setFilterEquipo(e.target.value); setPage(1); }}>
+              <option value="">Equipo interés</option>
+              <option>Diatermia</option>
+              <option>Onda de Choque</option>
+              <option>Ecógrafo</option>
+            </select>
+          )}
         </div>
         {/* Fila 3: Seguimiento (solo Carlos) */}
         {carlos && (
