@@ -1,12 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
 import RefreshIndicator from '../../components/ui/RefreshIndicator';
-import { ChevronLeft, ChevronRight, Plus, X, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, addYears, subYears,
   isSameDay, isSameMonth, parseISO, differenceInMinutes, getYear, setMonth, setYear,
-  isWithinInterval,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -27,21 +26,11 @@ const HOUR_START = 7;
 const HOUR_END   = 21;
 const HOURS = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
 const ROW_H  = 56;
-const VAC_COLOR = '#BAE6FD'; // azul claro (sky-200)
-const VAC_TEXT  = '#0369A1'; // sky-700
 
 function parseDate(str) { try { return str ? parseISO(str) : null; } catch { return null; } }
 
-function dayInVac(date, vac) {
-  try {
-    const start = parseISO(vac.fechaInicio);
-    const end   = parseISO(vac.fechaFin);
-    return isWithinInterval(date, { start, end });
-  } catch { return false; }
-}
-
 // ── Vista de rejilla horaria (Semana y Día) ───────────────────────────────────
-function TimeGridView({ days, getDayEvents, getVacacionesForDay, onSlotClick, onEventClick, today }) {
+function TimeGridView({ days, getDayEvents, onSlotClick, onEventClick, today }) {
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -55,7 +44,6 @@ function TimeGridView({ days, getDayEvents, getVacacionesForDay, onSlotClick, on
         <div className="w-14 flex-shrink-0" />
         {days.map((day, i) => {
           const isToday = isSameDay(day, today);
-          const vacs = getVacacionesForDay(day);
           return (
             <div key={i} className="flex-1 border-l border-gray-100">
               <div className="text-center py-2">
@@ -65,19 +53,6 @@ function TimeGridView({ days, getDayEvents, getVacacionesForDay, onSlotClick, on
                   {format(day, 'd')}
                 </p>
               </div>
-              {/* Franja sutil de vacaciones */}
-              {vacs.length > 0 && (
-                <div className="px-1 pb-1">
-                  <div
-                    className="h-1 rounded-full opacity-70"
-                    style={{ background: `linear-gradient(90deg, ${vacs.map(() => VAC_COLOR).join(', ')})` }}
-                    title={vacs.map(v => `🏖️ ${v.usuarioNombre}`).join(' · ')}
-                  />
-                  <p className="text-[9px] truncate mt-0.5" style={{ color: VAC_TEXT }}>
-                    🏖️ {vacs.map(v => v.usuarioNombre?.split(' ')[0]).join(', ')}
-                  </p>
-                </div>
-              )}
             </div>
           );
         })}
@@ -100,16 +75,8 @@ function TimeGridView({ days, getDayEvents, getVacacionesForDay, onSlotClick, on
           {/* Columnas de días */}
           {days.map((day, di) => {
             const dayEvents = getDayEvents(day);
-            const vacs = getVacacionesForDay(day);
             return (
               <div key={di} className="flex-1 relative border-l border-gray-100" style={{ minWidth: 0 }}>
-                {/* Franja superior sutil de vacaciones */}
-                {vacs.length > 0 && (
-                  <div className="absolute top-0 left-0 right-0 h-1 pointer-events-none opacity-70"
-                    style={{ backgroundColor: VAC_COLOR }}
-                    title={vacs.map(v => `🏖️ ${v.usuarioNombre}`).join(' · ')}
-                  />
-                )}
                 {/* Líneas de hora */}
                 {HOURS.map(h => (
                   <div
@@ -159,7 +126,7 @@ function TimeGridView({ days, getDayEvents, getVacacionesForDay, onSlotClick, on
 // ── Vista Anual ───────────────────────────────────────────────────────────────
 const MINI_DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
-function MiniMonth({ year, monthIndex, getDayEvents, getVacacionesForDay, today, onDayClick }) {
+function MiniMonth({ year, monthIndex, getDayEvents, today, onDayClick }) {
   const monthDate = setMonth(setYear(new Date(), year), monthIndex);
   const start = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
   const end = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
@@ -182,8 +149,7 @@ function MiniMonth({ year, monthIndex, getDayEvents, getVacacionesForDay, today,
           const inMonth = isSameMonth(date, monthDate);
           const isToday = isSameDay(date, today);
           const events = inMonth ? getDayEvents(date) : [];
-          const vacs = inMonth ? getVacacionesForDay(date) : [];
-          const hasEvents = events.length > 0 || vacs.length > 0;
+          const hasEvents = events.length > 0;
           const colors = [...new Set(events.map(e => COLORS_EVENTO[e.tipo] || '#6B7280'))].slice(0, 3);
 
           return (
@@ -192,7 +158,6 @@ function MiniMonth({ year, monthIndex, getDayEvents, getVacacionesForDay, today,
               onClick={() => hasEvents && onDayClick(date)}
               className={`flex flex-col items-center py-0.5 rounded transition-colors
                 ${!inMonth ? 'opacity-0 pointer-events-none' : ''}
-                ${vacs.length > 0 ? 'ring-1 ring-sky-200' : ''}
                 ${hasEvents ? 'cursor-pointer hover:bg-blue-50' : ''}`}
             >
               <span className={`text-[10px] font-medium inline-flex w-5 h-5 items-center justify-center rounded-full leading-none
@@ -214,7 +179,7 @@ function MiniMonth({ year, monthIndex, getDayEvents, getVacacionesForDay, today,
   );
 }
 
-function YearView({ year, getDayEvents, getVacacionesForDay, today, onDayClick }) {
+function YearView({ year, getDayEvents, today, onDayClick }) {
   return (
     <div className="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 overflow-y-auto">
       {Array.from({ length: 12 }, (_, i) => (
@@ -223,7 +188,6 @@ function YearView({ year, getDayEvents, getVacacionesForDay, today, onDayClick }
           year={year}
           monthIndex={i}
           getDayEvents={getDayEvents}
-          getVacacionesForDay={getVacacionesForDay}
           today={today}
           onDayClick={onDayClick}
         />
@@ -265,8 +229,6 @@ export default function AgendaPage() {
     const d = parseDate(e.inicio);
     return d && isSameDay(d, date);
   });
-
-  const getVacacionesForDay = (date) => vacaciones.filter(v => dayInVac(date, v));
 
   // Días de la vista mensual
   const calendarDays = useMemo(() => {
@@ -420,6 +382,25 @@ export default function AgendaPage() {
         <Plus className="w-6 h-6" />
       </button>
 
+      {/* ── Banner de vacaciones ── */}
+      {upcomingVacaciones.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {upcomingVacaciones.map(v => (
+            <div key={v.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-50 border border-sky-200 text-xs text-sky-800">
+              <span>🏖️</span>
+              <span className="font-medium">{v.usuarioNombre?.split(' ')[0]}</span>
+              <span className="text-sky-500">—</span>
+              <span>
+                {format(parseISO(v.fechaInicio), 'd MMM', { locale: es })} al {format(parseISO(v.fechaFin), 'd MMM', { locale: es })}
+              </span>
+              {v.usuarioId === user?.id && (
+                <button onClick={() => setDelVacId(v.id)} className="ml-1 text-sky-400 hover:text-red-400 cursor-pointer" title="Eliminar">×</button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* ── Área del calendario ── */}
         <div className={`xl:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col
@@ -443,22 +424,13 @@ export default function AgendaPage() {
               ))}
               {calendarDays.map((date, i) => {
                 const dayEvents = getDayEvents(date);
-                const dayVacs = getVacacionesForDay(date);
                 const isToday = isSameDay(date, today);
                 const inMonth = isSameMonth(date, currentDate);
                 return (
                   <div key={i}
                     onClick={() => inMonth && handleDayClick(date)}
-                    className={`min-h-20 p-1 border-b border-r border-gray-50 relative
+                    className={`min-h-20 p-1 border-b border-r border-gray-50
                       ${inMonth ? 'cursor-pointer hover:bg-blue-50/50' : 'opacity-30'}`}>
-                    {/* Franja sutil en borde superior */}
-                    {dayVacs.length > 0 && inMonth && (
-                      <div
-                        className="absolute top-0 left-0 right-0 h-1 opacity-60"
-                        style={{ backgroundColor: VAC_COLOR }}
-                        title={dayVacs.map(v => `🏖️ ${v.usuarioNombre}`).join(' · ')}
-                      />
-                    )}
                     <span className={`text-xs font-medium inline-flex w-6 h-6 items-center justify-center rounded-full mb-1
                       ${isToday ? 'bg-[#1B4F8A] text-white' : 'text-gray-600'}`}>
                       {format(date, 'd')}
@@ -487,7 +459,6 @@ export default function AgendaPage() {
             <TimeGridView
               days={weekDays}
               getDayEvents={getDayEvents}
-              getVacacionesForDay={getVacacionesForDay}
               onSlotClick={handleSlotClick}
               onEventClick={setDetailEvent}
               today={today}
@@ -499,7 +470,6 @@ export default function AgendaPage() {
             <TimeGridView
               days={[currentDate]}
               getDayEvents={getDayEvents}
-              getVacacionesForDay={getVacacionesForDay}
               onSlotClick={handleSlotClick}
               onEventClick={setDetailEvent}
               today={today}
@@ -511,7 +481,6 @@ export default function AgendaPage() {
             <YearView
               year={getYear(currentDate)}
               getDayEvents={getDayEvents}
-              getVacacionesForDay={getVacacionesForDay}
               today={today}
               onDayClick={handleYearDayClick}
             />
@@ -545,42 +514,10 @@ export default function AgendaPage() {
             )}
           </div>
 
-          {/* Vacaciones */}
-          {upcomingVacaciones.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-              <h3 className="text-sm font-semibold text-gray-800 mb-3">🏖️ Vacaciones</h3>
-              <div className="space-y-2">
-                {upcomingVacaciones.map(v => (
-                  <div key={v.id} className="flex items-start justify-between gap-2 p-2 rounded-lg bg-sky-50">
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-sky-800">{v.usuarioNombre}</p>
-                      <p className="text-xs text-sky-600">
-                        {format(parseISO(v.fechaInicio), 'd MMM', { locale: es })} → {format(parseISO(v.fechaFin), 'd MMM yyyy', { locale: es })}
-                      </p>
-                      {v.notas && <p className="text-xs text-gray-500 mt-0.5 truncate">{v.notas}</p>}
-                    </div>
-                    {v.usuarioId === user?.id && (
-                      <button
-                        onClick={() => setDelVacId(v.id)}
-                        className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0 cursor-pointer"
-                        title="Eliminar">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Leyenda */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <h3 className="text-sm font-semibold text-gray-800 mb-3">Leyenda</h3>
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: VAC_COLOR, border: `1px solid ${VAC_TEXT}` }} />
-                <span className="text-xs text-gray-600">Vacaciones</span>
-              </div>
               {TIPOS_EVENTO.map(t => (
                 <div key={t} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS_EVENTO[t] }} />
