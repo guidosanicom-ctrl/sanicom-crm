@@ -65,17 +65,17 @@ function TimeGridView({ days, getDayEvents, getVacacionesForDay, onSlotClick, on
                   {format(day, 'd')}
                 </p>
               </div>
-              {/* Fila "todo el día": vacaciones */}
+              {/* Franja sutil de vacaciones */}
               {vacs.length > 0 && (
-                <div className="px-1 pb-1 space-y-0.5">
-                  {vacs.map(v => (
-                    <div key={v.id}
-                      className="text-[10px] px-1.5 py-0.5 rounded font-medium truncate"
-                      style={{ backgroundColor: VAC_COLOR, color: VAC_TEXT }}
-                      title={`🏖️ ${v.usuarioNombre}${v.notas ? ' — ' + v.notas : ''}`}>
-                      🏖️ {v.usuarioNombre?.split(' ')[0]}
-                    </div>
-                  ))}
+                <div className="px-1 pb-1">
+                  <div
+                    className="h-1 rounded-full opacity-70"
+                    style={{ background: `linear-gradient(90deg, ${vacs.map(() => VAC_COLOR).join(', ')})` }}
+                    title={vacs.map(v => `🏖️ ${v.usuarioNombre}`).join(' · ')}
+                  />
+                  <p className="text-[9px] truncate mt-0.5" style={{ color: VAC_TEXT }}>
+                    🏖️ {vacs.map(v => v.usuarioNombre?.split(' ')[0]).join(', ')}
+                  </p>
                 </div>
               )}
             </div>
@@ -103,9 +103,12 @@ function TimeGridView({ days, getDayEvents, getVacacionesForDay, onSlotClick, on
             const vacs = getVacacionesForDay(day);
             return (
               <div key={di} className="flex-1 relative border-l border-gray-100" style={{ minWidth: 0 }}>
-                {/* Fondo vacacional suave */}
+                {/* Franja superior sutil de vacaciones */}
                 {vacs.length > 0 && (
-                  <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: '#F0F9FF', opacity: 0.5 }} />
+                  <div className="absolute top-0 left-0 right-0 h-1 pointer-events-none opacity-70"
+                    style={{ backgroundColor: VAC_COLOR }}
+                    title={vacs.map(v => `🏖️ ${v.usuarioNombre}`).join(' · ')}
+                  />
                 )}
                 {/* Líneas de hora */}
                 {HOURS.map(h => (
@@ -189,7 +192,7 @@ function MiniMonth({ year, monthIndex, getDayEvents, getVacacionesForDay, today,
               onClick={() => hasEvents && onDayClick(date)}
               className={`flex flex-col items-center py-0.5 rounded transition-colors
                 ${!inMonth ? 'opacity-0 pointer-events-none' : ''}
-                ${vacs.length > 0 ? 'bg-sky-100' : ''}
+                ${vacs.length > 0 ? 'ring-1 ring-sky-200' : ''}
                 ${hasEvents ? 'cursor-pointer hover:bg-blue-50' : ''}`}
             >
               <span className={`text-[10px] font-medium inline-flex w-5 h-5 items-center justify-center rounded-full leading-none
@@ -446,24 +449,21 @@ export default function AgendaPage() {
                 return (
                   <div key={i}
                     onClick={() => inMonth && handleDayClick(date)}
-                    className={`min-h-20 p-1 border-b border-r border-gray-50
-                      ${inMonth ? 'cursor-pointer hover:bg-blue-50/50' : 'opacity-30'}
-                      ${dayVacs.length > 0 && inMonth ? 'bg-sky-50' : ''}`}>
+                    className={`min-h-20 p-1 border-b border-r border-gray-50 relative
+                      ${inMonth ? 'cursor-pointer hover:bg-blue-50/50' : 'opacity-30'}`}>
+                    {/* Franja sutil en borde superior */}
+                    {dayVacs.length > 0 && inMonth && (
+                      <div
+                        className="absolute top-0 left-0 right-0 h-1 opacity-60"
+                        style={{ backgroundColor: VAC_COLOR }}
+                        title={dayVacs.map(v => `🏖️ ${v.usuarioNombre}`).join(' · ')}
+                      />
+                    )}
                     <span className={`text-xs font-medium inline-flex w-6 h-6 items-center justify-center rounded-full mb-1
                       ${isToday ? 'bg-[#1B4F8A] text-white' : 'text-gray-600'}`}>
                       {format(date, 'd')}
                     </span>
                     <div className="space-y-0.5">
-                      {/* Bloques de vacaciones */}
-                      {dayVacs.map(v => (
-                        <div key={v.id}
-                          className="text-[10px] px-1.5 py-0.5 rounded font-medium truncate"
-                          style={{ backgroundColor: VAC_COLOR, color: VAC_TEXT }}
-                          title={`🏖️ ${v.usuarioNombre}${v.notas ? ' — ' + v.notas : ''}`}
-                          onClick={e => e.stopPropagation()}>
-                          🏖️ {v.usuarioNombre?.split(' ')[0]}
-                        </div>
-                      ))}
                       {/* Eventos normales */}
                       {dayEvents.slice(0, 3).map(ev => (
                         <div key={ev.id}
