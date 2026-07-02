@@ -2,11 +2,21 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
-import { geocodificar } from '../../utils/geocode';
 import { MapPin, X, Loader2, Navigation, AlertTriangle } from 'lucide-react';
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const CENTER_ES = { lat: 40.4168, lng: -3.7038 };
+
+async function geocodeGoogle(direccion, ciudad, provincia) {
+  const parts = [direccion, ciudad, provincia, 'España'].filter(Boolean);
+  const address = parts.join(', ');
+  const res = await fetch(
+    `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${API_KEY}`
+  );
+  const data = await res.json();
+  const loc = data.results[0]?.geometry?.location;
+  return loc ? { lat: loc.lat, lng: loc.lng } : null;
+}
 
 const MARKER_COLOR = {
   'Activo':        '#22C55E',
@@ -237,7 +247,7 @@ export default function MapaPage() {
     (async () => {
       for (const c of sinCoords) {
         if (cancelled) break;
-        const coords = await geocodificar(c.direccion, c.ciudad, c.provincia, c.cp);
+        const coords = await geocodeGoogle(c.direccion, c.ciudad, c.provincia);
         if (coords && !cancelled) {
           updateCliente(c.id, { lat: coords.lat, lng: coords.lng });
           setGeocodedCount(n => n + 1);
