@@ -331,7 +331,7 @@ export default function ServicioTecnicoPage() {
                 const equipoLabel = s.equipoNombre || equipos.find(e => e.id === s.equipoId)?.nombre;
                 const tecnico = users.find(u => u.id === s.tecnico);
                 return (
-                  <div key={s.id} className={`px-4 py-3 cursor-pointer active:bg-gray-50 ${s.estado === 'Completada' ? 'bg-green-200' : ''}`}
+                  <div key={s.id} className={`px-4 py-3 cursor-pointer active:bg-gray-50 ${(s.estado === 'Completada' || s.estado === 'Entregada') ? 'bg-green-200' : ''}`}
                     onClick={() => openDetail(s)}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
@@ -378,7 +378,7 @@ export default function ServicioTecnicoPage() {
                     const equipoLabel = s.equipoNombre || equipos.find(e => e.id === s.equipoId)?.nombre;
                     const user = users.find(u => u.id === s.tecnico);
                     return (
-                      <tr key={s.id} className={s.estado === 'Completada' ? 'bg-green-200 hover:bg-green-300' : 'hover:bg-gray-50'}>
+                      <tr key={s.id} className={(s.estado === 'Completada' || s.estado === 'Entregada') ? 'bg-green-200 hover:bg-green-300' : 'hover:bg-gray-50'}>
                         <td className="px-3 py-3">
                           <button onClick={() => openDetail(s)} className="font-mono text-xs text-[#1B4F8A] hover:underline cursor-pointer">{s.numero}</button>
                         </td>
