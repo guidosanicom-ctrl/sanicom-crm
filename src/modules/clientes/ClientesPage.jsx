@@ -421,9 +421,10 @@ export default function ClientesPage() {
   const norm = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
   const EQUIPO_KEYWORDS = {
-    'Diatermia':     ['diatermia', 'ros', 'indiba'],
-    'Onda de Choque': ['onda', 'choque', 'radial', 'focal', 'ems', 'eswt'],
-    'Ecógrafo':      ['eco', 'ecografo', 'sonoscape', 'esaote', 'mindray', 'p25', 'p12', 'x3', 'x11', 'sonda'],
+    'Diatermia':       ['diatermia', 'ros', 'indiba'],
+    'Onda de Choque':  ['onda', 'choque', 'radial', 'focal', 'ems', 'eswt'],
+    'Ecógrafo':        ['eco', 'ecografo', 'sonoscape', 'esaote', 'mindray', 'p25', 'p12', 'x3', 'x11', 'sonda'],
+    'Super Inductiva': ['inductiva', 'super inductiva', 'magneto', 'bltl', 'sis'],
   };
 
   const matchesEquipoFilter = (cliente, filtro) => {
@@ -596,6 +597,7 @@ export default function ClientesPage() {
               <option>Diatermia</option>
               <option>Onda de Choque</option>
               <option>Ecógrafo</option>
+              <option>Super Inductiva</option>
             </select>
           )}
         </div>
@@ -725,6 +727,7 @@ export default function ClientesPage() {
               <option>Diatermia</option>
               <option>Onda de Choque</option>
               <option>Ecógrafo</option>
+              <option>Super Inductiva</option>
             </select>
           )}
         </div>
