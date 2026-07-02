@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import { geocodificar } from '../../utils/geocode';
-import { MapPin, X, Loader2, Navigation } from 'lucide-react';
+import { MapPin, X, Loader2, Navigation, AlertTriangle } from 'lucide-react';
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const CENTER_ES = { lat: 40.4168, lng: -3.7038 };
@@ -36,8 +36,8 @@ const matchEquipo = (c, filtro) => {
 };
 
 function buildInfoContent(c, routeIds) {
-  const color = MARKER_COLOR[c.estado] || '#6B7280';
-  const label = ESTADO_LABEL[c.estado] || c.estado || '';
+  const color   = MARKER_COLOR[c.estado] || '#6B7280';
+  const label   = ESTADO_LABEL[c.estado] || c.estado || '';
   const checked = routeIds.has(c.id) ? 'checked' : '';
   return `
     <div style="min-width:180px;max-width:220px;font-family:sans-serif;font-size:13px;line-height:1.4">
@@ -49,34 +49,63 @@ function buildInfoContent(c, routeIds) {
         <span style="font-size:11px;color:#6b7280">${label}</span>
       </div>
       <div style="display:flex;gap:6px;padding-top:8px;border-top:1px solid #e5e7eb">
-        <button
-          onclick="window.__mapaNav('${c.id}')"
+        <button onclick="window.__mapaNav('${c.id}')"
           style="flex:1;background:#1B4F8A;color:#fff;border:none;border-radius:4px;padding:5px 8px;font-size:11px;cursor:pointer;font-weight:600">
           Ver ficha
         </button>
         <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#374151;cursor:pointer;user-select:none">
-          <input
-            type="checkbox"
-            ${checked}
-            onchange="window.__mapaToggleRoute('${c.id}')"
-            style="accent-color:#1B4F8A;cursor:pointer"
-          />
+          <input type="checkbox" ${checked} onchange="window.__mapaToggleRoute('${c.id}')"
+            style="accent-color:#1B4F8A;cursor:pointer" />
           Ruta
         </label>
       </div>
     </div>`;
 }
 
+// ── Carga del script de Google Maps (singleton a nivel de módulo) ────────────
+// Garantiza que el script se inyecta una sola vez y los suscriptores reciben
+// la notificación aunque el componente haya montado/desmontado mientras cargaba.
+const GM_CALLBACKS = new Set();
+let gmReady = false;
+
+function ensureGoogleMapsScript() {
+  if (gmReady) return;
+  if (window.google?.maps) { gmReady = true; GM_CALLBACKS.forEach(fn => fn()); GM_CALLBACKS.clear(); return; }
+  if (document.getElementById('gm-script')) return; // ya inyectado, esperamos
+
+  window.__gmInit = () => {
+    gmReady = true;
+    GM_CALLBACKS.forEach(fn => fn());
+    GM_CALLBACKS.clear();
+    delete window.__gmInit;
+  };
+
+  const script = document.createElement('script');
+  script.id    = 'gm-script';
+  script.async = true;
+  script.src   = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=__gmInit`;
+  script.onerror = () => console.error('[MapaPage] Error al cargar el script de Google Maps. Verifica la API key.');
+  document.head.appendChild(script);
+}
+
+function onGoogleMapsReady(fn) {
+  if (gmReady) { fn(); return () => {}; }
+  GM_CALLBACKS.add(fn);
+  ensureGoogleMapsScript();
+  return () => GM_CALLBACKS.delete(fn);
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 export default function MapaPage() {
   const { clientes, updateCliente } = useClientesStore();
   const { user, CARLOS_ESPECIALIDADES } = useAuthStore();
   const navigate = useNavigate();
 
-  const [gmLoaded, setGmLoaded] = useState(false);
-  const [filterEsp, setFilterEsp]     = useState('');
+  const [gmLoaded, setGmLoaded]     = useState(gmReady);
+  const [filterEsp, setFilterEsp]   = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterEquipo, setFilterEquipo] = useState('');
-  const [routeIds, setRouteIds]   = useState(() => new Set());
+  const [routeIds, setRouteIds]     = useState(() => new Set());
   const [directions, setDirections] = useState(null);
   const [routeLoading, setRouteLoading] = useState(false);
   const [geocoding, setGeocoding]   = useState(false);
@@ -84,13 +113,12 @@ export default function MapaPage() {
 
   const mapContainerRef = useRef(null);
   const mapRef          = useRef(null);
-  const markersRef      = useRef(new Map());   // id → google.maps.Marker
+  const markersRef      = useRef(new Map());
   const infoWindowRef   = useRef(null);
   const directionsRendererRef = useRef(null);
   const activeClienteRef = useRef(null);
   const routeIdsRef     = useRef(new Set());
 
-  // Carlos ve solo sus especialidades
   const isCarlos = user?.email === 'carlosleal@sanicom.es';
   const baseClientes = useMemo(() =>
     isCarlos ? clientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : clientes,
@@ -107,43 +135,30 @@ export default function MapaPage() {
     return true;
   }), [baseClientes, filterEsp, filterEstado, filterEquipo]);
 
-  const withCoords = useMemo(() => filtered.filter(c => c.lat && c.lng), [filtered]);
+  const withCoords      = useMemo(() => filtered.filter(c => c.lat && c.lng), [filtered]);
   const totalWithCoords = useMemo(() => baseClientes.filter(c => c.lat && c.lng).length, [baseClientes]);
 
-  // ── 1. Cargar el script de Google Maps ──────────────────────────────────
+  // ── 1. Suscribirse a la carga del script ────────────────────────────────
   useEffect(() => {
-    if (window.google?.maps) { setGmLoaded(true); return; }
-    const existing = document.getElementById('gm-script');
-    if (existing) {
-      // Script ya inyectado, esperar callback
-      window.__gmInit = () => setGmLoaded(true);
-      return;
-    }
-    window.__gmInit = () => setGmLoaded(true);
-    const script = document.createElement('script');
-    script.id  = 'gm-script';
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=__gmInit`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-    return () => {
-      // No eliminamos el script al desmontar para no romper instancias en caché
-      delete window.__gmInit;
-    };
+    return onGoogleMapsReady(() => setGmLoaded(true));
   }, []);
 
-  // ── 2. Inicializar el mapa una vez cargado el script ────────────────────
+  // ── 2. Inicializar el mapa (el div siempre está en el DOM con altura real) ─
   useEffect(() => {
     if (!gmLoaded || !mapContainerRef.current || mapRef.current) return;
 
     const map = new window.google.maps.Map(mapContainerRef.current, {
       center: CENTER_ES,
-      zoom: 6,
+      zoom:   6,
       streetViewControl: false,
-      mapTypeControl: false,
+      mapTypeControl:    false,
       fullscreenControl: true,
     });
     mapRef.current = map;
+
+    // Forzar refresco de tiles por si el contenedor tenía dimensiones 0 antes
+    window.google.maps.event.trigger(map, 'resize');
+    map.setCenter(CENTER_ES);
 
     infoWindowRef.current = new window.google.maps.InfoWindow();
     directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
@@ -152,11 +167,10 @@ export default function MapaPage() {
       polylineOptions: { strokeColor: '#1B4F8A', strokeWeight: 4 },
     });
 
-    // Cerrar infoWindow al clickar en el mapa
     map.addListener('click', () => infoWindowRef.current.close());
   }, [gmLoaded]);
 
-  // ── 3. Registrar callbacks globales para el HTML de InfoWindow ──────────
+  // ── 3. Callbacks globales para el HTML del InfoWindow ───────────────────
   useEffect(() => {
     window.__mapaNav = (id) => navigate(`/clientes/${id}`);
     window.__mapaToggleRoute = (id) => {
@@ -166,41 +180,36 @@ export default function MapaPage() {
       setRouteIds(new Set(next));
       setDirections(null);
       directionsRendererRef.current?.setDirections(null);
-      // Refrescar contenido del InfoWindow si sigue abierto
-      if (activeClienteRef.current?.id === id || true) {
-        const ac = activeClienteRef.current;
-        if (ac) infoWindowRef.current?.setContent(buildInfoContent(ac, next));
-      }
+      const ac = activeClienteRef.current;
+      if (ac) infoWindowRef.current?.setContent(buildInfoContent(ac, next));
     };
     return () => { delete window.__mapaNav; delete window.__mapaToggleRoute; };
   }, [navigate]);
 
-  // ── 4. Añadir/actualizar marcadores cuando cambian los clientes con coords
+  // ── 4. Añadir/actualizar marcadores cuando cambian clientes con coords ──
   useEffect(() => {
     if (!gmLoaded || !mapRef.current) return;
-
-    const allWithCoords = baseClientes.filter(c => c.lat && c.lng);
     const filteredIds = new Set(filtered.map(c => c.id));
+    const allWithCoords = baseClientes.filter(c => c.lat && c.lng);
 
     allWithCoords.forEach(c => {
       if (markersRef.current.has(c.id)) {
-        // Actualizar visibilidad
         markersRef.current.get(c.id).setVisible(filteredIds.has(c.id));
         return;
       }
-      const color = MARKER_COLOR[c.estado] || '#6B7280';
+      const color  = MARKER_COLOR[c.estado] || '#6B7280';
       const marker = new window.google.maps.Marker({
         position: { lat: c.lat, lng: c.lng },
-        map: mapRef.current,
-        title: c.nombre,
-        visible: filteredIds.has(c.id),
+        map:      mapRef.current,
+        title:    c.nombre,
+        visible:  filteredIds.has(c.id),
         icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: color,
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
+          path:          window.google.maps.SymbolPath.CIRCLE,
+          scale:         10,
+          fillColor:     color,
+          fillOpacity:   1,
+          strokeColor:   '#ffffff',
+          strokeWeight:  2,
         },
       });
       marker.addListener('click', () => {
@@ -212,14 +221,14 @@ export default function MapaPage() {
     });
   }, [gmLoaded, baseClientes, filtered]);
 
-  // ── 5. Actualizar visibilidad de marcadores al cambiar filtros ──────────
+  // ── 5. Visibilidad de marcadores al cambiar filtros ─────────────────────
   useEffect(() => {
     if (!gmLoaded) return;
     const filteredIds = new Set(filtered.map(c => c.id));
     markersRef.current.forEach((marker, id) => marker.setVisible(filteredIds.has(id)));
   }, [filtered, gmLoaded]);
 
-  // ── 6. Geocodificar clientes sin coords al montar ───────────────────────
+  // ── 6. Geocodificar en lote los clientes sin coords ─────────────────────
   useEffect(() => {
     const sinCoords = baseClientes.filter(c => !c.lat && !c.lng && (c.ciudad || c.direccion));
     if (sinCoords.length === 0) return;
@@ -253,8 +262,7 @@ export default function MapaPage() {
     const waypoints   = pts.slice(1, -1).map(c => ({ location: { lat: c.lat, lng: c.lng }, stopover: true }));
 
     setRouteLoading(true);
-    const svc = new window.google.maps.DirectionsService();
-    svc.route({
+    new window.google.maps.DirectionsService().route({
       origin, destination, waypoints,
       optimizeWaypoints: true,
       travelMode: window.google.maps.TravelMode.DRIVING,
@@ -264,7 +272,7 @@ export default function MapaPage() {
         setDirections(result);
         directionsRendererRef.current?.setDirections(result);
       } else {
-        console.error('[Directions]', status);
+        console.error('[MapaPage] Directions error:', status);
       }
     });
   }, [routeIds, baseClientes]);
@@ -278,9 +286,19 @@ export default function MapaPage() {
 
   const sel = 'px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none';
 
+  // Aviso si falta la API key (ayuda a depurar en Vercel)
+  if (!API_KEY) {
+    return (
+      <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 text-sm">
+        <AlertTriangle className="w-5 h-5 shrink-0" />
+        <span>Falta la variable de entorno <code className="font-mono bg-yellow-100 px-1 rounded">VITE_GOOGLE_MAPS_API_KEY</code>. Añádela en Vercel → Settings → Environment Variables.</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {/* Toolbar – filtros */}
+      {/* Filtros */}
       <div className="flex flex-wrap gap-2 items-center justify-between">
         <div className="flex flex-wrap gap-2">
           <select className={sel} value={filterEsp} onChange={e => setFilterEsp(e.target.value)}>
@@ -300,7 +318,7 @@ export default function MapaPage() {
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <MapPin className="w-4 h-4" />
-          <span>{withCoords.length} visibles · {totalWithCoords} con ubicación · {filtered.length} total filtrado</span>
+          <span>{withCoords.length} visibles · {totalWithCoords} con ubicación · {filtered.length} total</span>
           {geocoding && (
             <span className="flex items-center gap-1 text-blue-600">
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -341,14 +359,27 @@ export default function MapaPage() {
         )}
       </div>
 
-      {/* Contenedor del mapa */}
-      <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 600 }}>
+      {/* Contenedor del mapa — SIEMPRE en el DOM con altura real.
+          El loader es un overlay posicionado encima, no oculta el div del mapa. */}
+      <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm"
+        style={{ height: 600, position: 'relative' }}>
+
+        {/* Div del mapa: siempre renderizado, siempre con dimensiones */}
+        <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+
+        {/* Overlay de carga encima del mapa */}
         {!gmLoaded && (
-          <div className="h-full flex items-center justify-center bg-gray-50">
-            <Loader2 className="w-8 h-8 animate-spin text-[#1B4F8A]" />
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#f9fafb', zIndex: 10,
+          }}>
+            <div className="flex flex-col items-center gap-3 text-gray-400">
+              <Loader2 className="w-8 h-8 animate-spin text-[#1B4F8A]" />
+              <span className="text-sm">Cargando Google Maps…</span>
+            </div>
           </div>
         )}
-        <div ref={mapContainerRef} style={{ width: '100%', height: '100%', display: gmLoaded ? 'block' : 'none' }} />
       </div>
 
       {/* Resumen de ruta calculada */}
