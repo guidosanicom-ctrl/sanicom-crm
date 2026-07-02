@@ -28,6 +28,7 @@ import { useSeguimientoStore } from './store/seguimientoStore';
 import { useCatalogoEquiposStore } from './store/catalogoEquiposStore';
 import { useLlamadasPendientesStore } from './store/llamadasPendientesStore';
 import { useCursosStore } from './store/cursosStore';
+import { useVacacionesStore } from './store/vacacionesStore';
 import CursosPage from './modules/cursos/CursosPage';
 import Layout from './components/layout/Layout';
 import LoginPage from './modules/auth/LoginPage';
@@ -74,6 +75,7 @@ function AppInit() {
   const initCatalogoEquipos = useCatalogoEquiposStore(s => s.initialize);
   const initLlamadasPendientes = useLlamadasPendientesStore(s => s.initialize);
   const initCursos = useCursosStore(s => s.initialize);
+  const initVacaciones = useVacacionesStore(s => s.initialize);
 
   useAppBadge();
   usePushNotifications();
@@ -85,7 +87,7 @@ function AppInit() {
     Promise.all([
       initClientes(), initEquipos(), initOportunidades(), initDemos(),
       initServicios(), initAgenda(), initActividad(),
-      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(), initVisitas(), initNotas(), initSeguimiento(), initCatalogoEquipos(), initLlamadasPendientes(), initCursos(),
+      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(), initVisitas(), initNotas(), initSeguimiento(), initCatalogoEquipos(), initLlamadasPendientes(), initCursos(), initVacaciones(),
     ]).catch(e => console.error('[AppInit]', e));
   }, [user?.id]);
 

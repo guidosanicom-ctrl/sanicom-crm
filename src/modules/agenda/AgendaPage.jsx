@@ -1,11 +1,12 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
 import RefreshIndicator from '../../components/ui/RefreshIndicator';
-import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Trash2 } from 'lucide-react';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, addYears, subYears,
   isSameDay, isSameMonth, parseISO, differenceInMinutes, getYear, setMonth, setYear,
+  isWithinInterval,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -13,25 +14,36 @@ import { useAgendaStore } from '../../store/agendaStore';
 import { useVisitasStore } from '../../store/visitasStore';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
+import { useVacacionesStore } from '../../store/vacacionesStore';
 import Button from '../../components/ui/Button';
 import EventForm from './EventForm';
+import VacacionesForm from './VacacionesForm';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import { COLORS_EVENTO, TIPOS_EVENTO } from '../../utils/constants';
 import { formatDateTime } from '../../utils/formatters';
 
 // ── Constantes de la rejilla horaria ─────────────────────────────────────────
-const HOUR_START = 7;   // primera franja visible
-const HOUR_END   = 21;  // última franja visible (exclusiva)
+const HOUR_START = 7;
+const HOUR_END   = 21;
 const HOURS = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
-const ROW_H  = 56;      // px por hora
+const ROW_H  = 56;
+const VAC_COLOR = '#BAE6FD'; // azul claro (sky-200)
+const VAC_TEXT  = '#0369A1'; // sky-700
 
 function parseDate(str) { try { return str ? parseISO(str) : null; } catch { return null; } }
 
+function dayInVac(date, vac) {
+  try {
+    const start = parseISO(vac.fechaInicio);
+    const end   = parseISO(vac.fechaFin);
+    return isWithinInterval(date, { start, end });
+  } catch { return false; }
+}
+
 // ── Vista de rejilla horaria (Semana y Día) ───────────────────────────────────
-function TimeGridView({ days, getDayEvents, onSlotClick, onEventClick, today }) {
+function TimeGridView({ days, getDayEvents, getVacacionesForDay, onSlotClick, onEventClick, today }) {
   const scrollRef = useRef(null);
 
-  // Scroll a hora laboral al montar
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = (8 - HOUR_START) * ROW_H;
   }, []);
@@ -43,13 +55,29 @@ function TimeGridView({ days, getDayEvents, onSlotClick, onEventClick, today }) 
         <div className="w-14 flex-shrink-0" />
         {days.map((day, i) => {
           const isToday = isSameDay(day, today);
+          const vacs = getVacacionesForDay(day);
           return (
-            <div key={i} className="flex-1 text-center py-2 border-l border-gray-100">
-              <p className="text-xs text-gray-400 capitalize">{format(day, 'EEE', { locale: es })}</p>
-              <p className={`text-sm font-semibold mt-0.5 inline-flex w-7 h-7 items-center justify-center rounded-full
-                ${isToday ? 'bg-[#1B4F8A] text-white' : 'text-gray-700'}`}>
-                {format(day, 'd')}
-              </p>
+            <div key={i} className="flex-1 border-l border-gray-100">
+              <div className="text-center py-2">
+                <p className="text-xs text-gray-400 capitalize">{format(day, 'EEE', { locale: es })}</p>
+                <p className={`text-sm font-semibold mt-0.5 inline-flex w-7 h-7 items-center justify-center rounded-full
+                  ${isToday ? 'bg-[#1B4F8A] text-white' : 'text-gray-700'}`}>
+                  {format(day, 'd')}
+                </p>
+              </div>
+              {/* Fila "todo el día": vacaciones */}
+              {vacs.length > 0 && (
+                <div className="px-1 pb-1 space-y-0.5">
+                  {vacs.map(v => (
+                    <div key={v.id}
+                      className="text-[10px] px-1.5 py-0.5 rounded font-medium truncate"
+                      style={{ backgroundColor: VAC_COLOR, color: VAC_TEXT }}
+                      title={`🏖️ ${v.usuarioNombre}${v.notas ? ' — ' + v.notas : ''}`}>
+                      🏖️ {v.usuarioNombre?.split(' ')[0]}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
@@ -72,8 +100,13 @@ function TimeGridView({ days, getDayEvents, onSlotClick, onEventClick, today }) 
           {/* Columnas de días */}
           {days.map((day, di) => {
             const dayEvents = getDayEvents(day);
+            const vacs = getVacacionesForDay(day);
             return (
               <div key={di} className="flex-1 relative border-l border-gray-100" style={{ minWidth: 0 }}>
+                {/* Fondo vacacional suave */}
+                {vacs.length > 0 && (
+                  <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: '#F0F9FF', opacity: 0.5 }} />
+                )}
                 {/* Líneas de hora */}
                 {HOURS.map(h => (
                   <div
@@ -123,7 +156,7 @@ function TimeGridView({ days, getDayEvents, onSlotClick, onEventClick, today }) 
 // ── Vista Anual ───────────────────────────────────────────────────────────────
 const MINI_DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
-function MiniMonth({ year, monthIndex, getDayEvents, today, onDayClick }) {
+function MiniMonth({ year, monthIndex, getDayEvents, getVacacionesForDay, today, onDayClick }) {
   const monthDate = setMonth(setYear(new Date(), year), monthIndex);
   const start = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
   const end = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
@@ -146,7 +179,8 @@ function MiniMonth({ year, monthIndex, getDayEvents, today, onDayClick }) {
           const inMonth = isSameMonth(date, monthDate);
           const isToday = isSameDay(date, today);
           const events = inMonth ? getDayEvents(date) : [];
-          const hasEvents = events.length > 0;
+          const vacs = inMonth ? getVacacionesForDay(date) : [];
+          const hasEvents = events.length > 0 || vacs.length > 0;
           const colors = [...new Set(events.map(e => COLORS_EVENTO[e.tipo] || '#6B7280'))].slice(0, 3);
 
           return (
@@ -155,13 +189,14 @@ function MiniMonth({ year, monthIndex, getDayEvents, today, onDayClick }) {
               onClick={() => hasEvents && onDayClick(date)}
               className={`flex flex-col items-center py-0.5 rounded transition-colors
                 ${!inMonth ? 'opacity-0 pointer-events-none' : ''}
+                ${vacs.length > 0 ? 'bg-sky-100' : ''}
                 ${hasEvents ? 'cursor-pointer hover:bg-blue-50' : ''}`}
             >
               <span className={`text-[10px] font-medium inline-flex w-5 h-5 items-center justify-center rounded-full leading-none
                 ${isToday ? 'bg-[#1B4F8A] text-white' : inMonth ? 'text-gray-700' : 'text-gray-300'}`}>
                 {format(date, 'd')}
               </span>
-              {hasEvents && (
+              {events.length > 0 && (
                 <div className="flex gap-px mt-px justify-center">
                   {colors.map((c, ci) => (
                     <div key={ci} className="w-1 h-1 rounded-full" style={{ backgroundColor: c }} />
@@ -176,7 +211,7 @@ function MiniMonth({ year, monthIndex, getDayEvents, today, onDayClick }) {
   );
 }
 
-function YearView({ year, getDayEvents, today, onDayClick }) {
+function YearView({ year, getDayEvents, getVacacionesForDay, today, onDayClick }) {
   return (
     <div className="p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 overflow-y-auto">
       {Array.from({ length: 12 }, (_, i) => (
@@ -185,6 +220,7 @@ function YearView({ year, getDayEvents, today, onDayClick }) {
           year={year}
           monthIndex={i}
           getDayEvents={getDayEvents}
+          getVacacionesForDay={getVacacionesForDay}
           today={today}
           onDayClick={onDayClick}
         />
@@ -198,7 +234,8 @@ export default function AgendaPage() {
   const { eventos, addEvento, updateEvento, deleteEvento } = useAgendaStore();
   const { updateVisita } = useVisitasStore();
   const { clientes } = useClientesStore();
-  const { users } = useAuthStore();
+  const { users, user } = useAuthStore();
+  const { vacaciones, addVacaciones, deleteVacaciones } = useVacacionesStore();
   const today = useMemo(() => new Date(), []);
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -209,6 +246,8 @@ export default function AgendaPage() {
   const [defaultHour, setDefaultHour] = useState('');
   const [detailEvent, setDetailEvent] = useState(null);
   const [delOpen, setDelOpen] = useState(false);
+  const [vacFormOpen, setVacFormOpen] = useState(false);
+  const [delVacId, setDelVacId] = useState(null);
   const { refreshing } = useAutoRefresh([makeRefresher(useAgendaStore)]);
   const [filterTipo, setFilterTipo] = useState('');
   const [filterResp, setFilterResp] = useState('');
@@ -223,6 +262,8 @@ export default function AgendaPage() {
     const d = parseDate(e.inicio);
     return d && isSameDay(d, date);
   });
+
+  const getVacacionesForDay = (date) => vacaciones.filter(v => dayInVac(date, v));
 
   // Días de la vista mensual
   const calendarDays = useMemo(() => {
@@ -254,7 +295,6 @@ export default function AgendaPage() {
     else setCurrentDate(d => addDays(d, 1));
   };
 
-  // Título de la cabecera según vista
   const headerTitle = useMemo(() => {
     if (view === 'year') return format(currentDate, 'yyyy');
     if (view === 'month') return format(currentDate, 'MMMM yyyy', { locale: es });
@@ -268,13 +308,11 @@ export default function AgendaPage() {
     return format(currentDate, "EEEE, d 'de' MMMM yyyy", { locale: es });
   }, [view, currentDate]);
 
-  // Desde vista anual: navegar al día
   const handleYearDayClick = (date) => {
     setCurrentDate(date);
     setView('day');
   };
 
-  // Abrir formulario desde clic en día/franja
   const handleDayClick = (date) => {
     setDefaultDate(format(date, 'yyyy-MM-dd'));
     setDefaultHour('');
@@ -296,6 +334,14 @@ export default function AgendaPage() {
       .slice(0, 8);
   }, [filteredEventos]);
 
+  // Vacaciones próximas o actuales (ordenadas)
+  const upcomingVacaciones = useMemo(() => {
+    const now = new Date();
+    return vacaciones
+      .filter(v => { try { return parseISO(v.fechaFin) >= now; } catch { return false; } })
+      .sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio));
+  }, [vacaciones]);
+
   const DAY_NAMES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
   return (
@@ -312,7 +358,7 @@ export default function AgendaPage() {
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)}
             className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white">
             <option value="">Todos los tipos</option>
@@ -323,6 +369,9 @@ export default function AgendaPage() {
             <option value="">Todos</option>
             {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
+          <Button size="sm" variant="outline" onClick={() => setVacFormOpen(true)}>
+            🏖️ Añadir vacaciones
+          </Button>
           <Button size="sm" onClick={() => { setSelectedEvent(null); setDefaultDate(''); setDefaultHour(''); setFormOpen(true); }}>
             <Plus className="w-4 h-4" />Nuevo evento
           </Button>
@@ -331,7 +380,6 @@ export default function AgendaPage() {
 
       {/* Toolbar — móvil */}
       <div className="flex sm:hidden flex-col gap-2">
-        {/* Vista */}
         <div className="grid grid-cols-4 gap-1">
           {[['month','Mes'], ['week','Sem.'], ['day','Día'], ['year','Año']].map(([v, label]) => (
             <button key={v} onClick={() => setView(v)}
@@ -341,7 +389,6 @@ export default function AgendaPage() {
             </button>
           ))}
         </div>
-        {/* Filtros */}
         <div className="grid grid-cols-2 gap-2">
           <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)}
             className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none bg-white w-full">
@@ -354,6 +401,11 @@ export default function AgendaPage() {
             {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
         </div>
+        <button
+          onClick={() => setVacFormOpen(true)}
+          className="w-full py-2 rounded-lg text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200">
+          🏖️ Añadir vacaciones
+        </button>
       </div>
 
       {/* FAB móvil — Nuevo evento */}
@@ -368,7 +420,7 @@ export default function AgendaPage() {
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* ── Área del calendario ── */}
         <div className={`xl:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col
-          ${view === 'week' || view === 'day' ? 'h-[640px]' : view === 'year' ? 'h-[680px]' : ''}`}>
+          ${view === 'week' || view === 'day' ? 'h-[700px]' : view === 'year' ? 'h-[680px]' : ''}`}>
           {/* Cabecera de navegación */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
             <button onClick={goBack} className="p-1.5 rounded-lg hover:bg-gray-100 cursor-pointer">
@@ -388,18 +440,31 @@ export default function AgendaPage() {
               ))}
               {calendarDays.map((date, i) => {
                 const dayEvents = getDayEvents(date);
+                const dayVacs = getVacacionesForDay(date);
                 const isToday = isSameDay(date, today);
                 const inMonth = isSameMonth(date, currentDate);
                 return (
                   <div key={i}
                     onClick={() => inMonth && handleDayClick(date)}
                     className={`min-h-20 p-1 border-b border-r border-gray-50
-                      ${inMonth ? 'cursor-pointer hover:bg-blue-50/50' : 'opacity-30'}`}>
+                      ${inMonth ? 'cursor-pointer hover:bg-blue-50/50' : 'opacity-30'}
+                      ${dayVacs.length > 0 && inMonth ? 'bg-sky-50' : ''}`}>
                     <span className={`text-xs font-medium inline-flex w-6 h-6 items-center justify-center rounded-full mb-1
                       ${isToday ? 'bg-[#1B4F8A] text-white' : 'text-gray-600'}`}>
                       {format(date, 'd')}
                     </span>
                     <div className="space-y-0.5">
+                      {/* Bloques de vacaciones */}
+                      {dayVacs.map(v => (
+                        <div key={v.id}
+                          className="text-[10px] px-1.5 py-0.5 rounded font-medium truncate"
+                          style={{ backgroundColor: VAC_COLOR, color: VAC_TEXT }}
+                          title={`🏖️ ${v.usuarioNombre}${v.notas ? ' — ' + v.notas : ''}`}
+                          onClick={e => e.stopPropagation()}>
+                          🏖️ {v.usuarioNombre?.split(' ')[0]}
+                        </div>
+                      ))}
+                      {/* Eventos normales */}
                       {dayEvents.slice(0, 3).map(ev => (
                         <div key={ev.id}
                           onClick={e => { e.stopPropagation(); setDetailEvent(ev); }}
@@ -422,6 +487,7 @@ export default function AgendaPage() {
             <TimeGridView
               days={weekDays}
               getDayEvents={getDayEvents}
+              getVacacionesForDay={getVacacionesForDay}
               onSlotClick={handleSlotClick}
               onEventClick={setDetailEvent}
               today={today}
@@ -433,6 +499,7 @@ export default function AgendaPage() {
             <TimeGridView
               days={[currentDate]}
               getDayEvents={getDayEvents}
+              getVacacionesForDay={getVacacionesForDay}
               onSlotClick={handleSlotClick}
               onEventClick={setDetailEvent}
               today={today}
@@ -444,6 +511,7 @@ export default function AgendaPage() {
             <YearView
               year={getYear(currentDate)}
               getDayEvents={getDayEvents}
+              getVacacionesForDay={getVacacionesForDay}
               today={today}
               onDayClick={handleYearDayClick}
             />
@@ -452,6 +520,7 @@ export default function AgendaPage() {
 
         {/* ── Sidebar ── */}
         <div className="space-y-4">
+          {/* Próximos eventos */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <h3 className="text-sm font-semibold text-gray-800 mb-3">Próximos eventos</h3>
             {upcomingEvents.length === 0 ? (
@@ -476,9 +545,42 @@ export default function AgendaPage() {
             )}
           </div>
 
+          {/* Vacaciones */}
+          {upcomingVacaciones.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">🏖️ Vacaciones</h3>
+              <div className="space-y-2">
+                {upcomingVacaciones.map(v => (
+                  <div key={v.id} className="flex items-start justify-between gap-2 p-2 rounded-lg bg-sky-50">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-sky-800">{v.usuarioNombre}</p>
+                      <p className="text-xs text-sky-600">
+                        {format(parseISO(v.fechaInicio), 'd MMM', { locale: es })} → {format(parseISO(v.fechaFin), 'd MMM yyyy', { locale: es })}
+                      </p>
+                      {v.notas && <p className="text-xs text-gray-500 mt-0.5 truncate">{v.notas}</p>}
+                    </div>
+                    {v.usuarioId === user?.id && (
+                      <button
+                        onClick={() => setDelVacId(v.id)}
+                        className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0 cursor-pointer"
+                        title="Eliminar">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Leyenda */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <h3 className="text-sm font-semibold text-gray-800 mb-3">Leyenda</h3>
             <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: VAC_COLOR, border: `1px solid ${VAC_TEXT}` }} />
+                <span className="text-xs text-gray-600">Vacaciones</span>
+              </div>
               {TIPOS_EVENTO.map(t => (
                 <div key={t} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS_EVENTO[t] }} />
@@ -531,7 +633,6 @@ export default function AgendaPage() {
         onSave={(data) => {
           if (selectedEvent) {
             updateEvento(selectedEvent.id, data);
-            // Si el evento está vinculado a una visita, propagar cambios
             if (selectedEvent.visitaId) {
               const fecha = data.inicio ? data.inicio.split('T')[0] : '';
               const hora = data.inicio ? data.inicio.split('T')[1]?.slice(0, 5) : '';
@@ -549,10 +650,25 @@ export default function AgendaPage() {
           }
         }}
       />
+
+      <VacacionesForm
+        open={vacFormOpen}
+        onClose={() => setVacFormOpen(false)}
+        onSave={async (data) => {
+          await addVacaciones(data);
+          toast.success('Vacaciones guardadas.');
+        }}
+      />
+
       <ConfirmDialog open={delOpen} onClose={() => setDelOpen(false)}
         onConfirm={() => { deleteEvento(detailEvent?.id); setDetailEvent(null); toast.success('Evento eliminado.'); }}
         title="Eliminar evento"
         message={`¿Eliminar "${detailEvent?.titulo}"?`} />
+
+      <ConfirmDialog open={!!delVacId} onClose={() => setDelVacId(null)}
+        onConfirm={() => { deleteVacaciones(delVacId); setDelVacId(null); toast.success('Vacaciones eliminadas.'); }}
+        title="Eliminar vacaciones"
+        message="¿Eliminar este periodo de vacaciones?" />
     </div>
   );
 }
