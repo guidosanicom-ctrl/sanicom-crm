@@ -71,10 +71,25 @@ export default function DemoDetail({ open, onClose, demo, onEdit, onDelete }) {
             <Row label="Cliente" value={cliente?.nombre} />
             <Row label="Equipo" value={equipo?.nombre} />
             <Row label="Responsable" value={responsable?.name} />
-            <Row label="Fecha" value={`${formatDate(demo.fecha)} ${demo.hora || ''}`} />
+            <Row label="Fecha de entrega" value={`${formatDate(demo.fecha)} ${demo.hora || ''}`} />
             <Row label="Lugar" value={demo.lugar} />
+            {demo.fechaRecogida && <Row label="Fecha de recogida" value={formatDate(demo.fechaRecogida)} />}
             {demo.direccion && <Row label="Dirección / Link" value={demo.direccion} />}
           </div>
+          {demo.fecha && (() => {
+            const inicio = new Date(demo.fecha);
+            const fin = demo.fechaRecogida ? new Date(demo.fechaRecogida) : new Date();
+            const dias = Math.max(0, Math.floor((fin - inicio) / (1000 * 60 * 60 * 24)));
+            const recogida = !!demo.fechaRecogida;
+            return (
+              <div className={`mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${recogida ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-700'}`}>
+                <span className="text-base">{recogida ? '📦' : '⏱️'}</span>
+                {recogida
+                  ? `Demo en cliente durante ${dias} día${dias !== 1 ? 's' : ''}`
+                  : `${dias} día${dias !== 1 ? 's' : ''} en el cliente`}
+              </div>
+            );
+          })()}
           {demo.objetivo && (
             <div className="mt-4">
               <p className="text-xs text-gray-400 mb-1">Objetivo</p>

@@ -6,7 +6,7 @@ import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import { ESTADOS_DEMO, RESULTADOS_DEMO, LUGARES_DEMO } from '../../utils/constants';
 
-const empty = { clienteId: '', contactoId: '', equipoNombre: '', responsable: '', fecha: '', hora: '09:00', lugar: 'Cliente', direccion: '', objetivo: '', estado: 'Pendiente', resultado: '', observaciones: '' };
+const empty = { clienteId: '', contactoId: '', equipoNombre: '', responsable: '', fecha: '', hora: '09:00', lugar: 'Cliente', direccion: '', objetivo: '', estado: 'Pendiente', resultado: '', observaciones: '', fechaRecogida: '' };
 
 export default function DemoForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial ? { ...empty, ...initial } : empty);
@@ -123,6 +123,10 @@ export default function DemoForm({ open, onClose, onSave, initial }) {
             </select>
           </div>
         )}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Fecha de recogida</label>
+          <input {...inp('fechaRecogida', 'date')} />
+        </div>
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-1">Objetivo</label>
           <input {...inp('objetivo')} placeholder="Objetivo de la demostración" />
