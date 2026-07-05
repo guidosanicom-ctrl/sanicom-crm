@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
-import { MapPin, X, Loader2, Navigation, AlertTriangle } from 'lucide-react';
+import { MapPin, X, Loader2, Navigation, AlertTriangle, RefreshCw } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const CENTER_ES = { lat: 40.4168, lng: -3.7038 };
@@ -135,9 +136,12 @@ export default function MapaPage() {
   const { user, CARLOS_ESPECIALIDADES } = useAuthStore();
   const navigate = useNavigate();
 
+  const isCarlos = user?.email === 'carlosleal@sanicom.es';
+
   const [gmLoaded, setGmLoaded]     = useState(gmReady);
   const [gmErr, setGmErr]           = useState(gmError);
-  const [filterEsp, setFilterEsp]   = useState('');
+  // Carlos arranca con 'mis-especialidades' preseleccionado
+  const [filterEsp, setFilterEsp]   = useState(isCarlos ? 'mis-especialidades' : '');
   const [filterEstado, setFilterEstado] = useState('');
   const [filterEquipo, setFilterEquipo] = useState('');
   const [routeIds, setRouteIds]     = useState(() => new Set());
@@ -145,6 +149,8 @@ export default function MapaPage() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [geocoding, setGeocoding]   = useState(false);
   const [geocodedCount, setGeocodedCount] = useState(0);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchResult, setBatchResult]   = useState(null); // { processed, skipped, errors }
 
   const mapContainerRef = useRef(null);
   const mapRef          = useRef(null);
@@ -154,24 +160,29 @@ export default function MapaPage() {
   const activeClienteRef = useRef(null);
   const routeIdsRef     = useRef(new Set());
 
-  const isCarlos = user?.email === 'carlosleal@sanicom.es';
-  const baseClientes = useMemo(() =>
-    isCarlos ? clientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : clientes,
-  [clientes, isCarlos, CARLOS_ESPECIALIDADES]);
+  // En el Mapa, todos los usuarios ven todos los clientes.
+  // Carlos tiene su vista restringida en el resto del CRM, pero aquí el mapa
+  // sirve también para exploración de territorio — el filtro hace el control.
+  const baseClientes = clientes;
 
   const especialidades = useMemo(() =>
     [...new Set(baseClientes.map(c => c.especialidad).filter(Boolean))].sort(),
   [baseClientes]);
 
   const filtered = useMemo(() => baseClientes.filter(c => {
-    if (filterEsp    && c.especialidad !== filterEsp) return false;
-    if (filterEstado && c.estado !== filterEstado)    return false;
-    if (!matchEquipo(c, filterEquipo))                return false;
+    if (filterEsp === 'mis-especialidades') {
+      if (!CARLOS_ESPECIALIDADES.includes(c.especialidad)) return false;
+    } else if (filterEsp) {
+      if (c.especialidad !== filterEsp) return false;
+    }
+    if (filterEstado && c.estado !== filterEstado) return false;
+    if (!matchEquipo(c, filterEquipo))             return false;
     return true;
-  }), [baseClientes, filterEsp, filterEstado, filterEquipo]);
+  }), [baseClientes, filterEsp, filterEstado, filterEquipo, CARLOS_ESPECIALIDADES]);
 
   const withCoords      = useMemo(() => filtered.filter(c => c.lat && c.lng), [filtered]);
   const totalWithCoords = useMemo(() => baseClientes.filter(c => c.lat && c.lng).length, [baseClientes]);
+  const sinCoordsTotales = useMemo(() => baseClientes.filter(c => !c.lat && !c.lng).length, [baseClientes]);
 
   // ── 1. Suscribirse a la carga del script ────────────────────────────────
   useEffect(() => {
@@ -266,26 +277,29 @@ export default function MapaPage() {
     markersRef.current.forEach((marker, id) => marker.setVisible(filteredIds.has(id)));
   }, [filtered, gmLoaded]);
 
-  // ── 6. Geocodificar en lote los clientes sin coords ─────────────────────
-  useEffect(() => {
-    const sinCoords = baseClientes.filter(c => !c.lat && !c.lng && (c.ciudad || c.direccion));
-    if (sinCoords.length === 0) return;
-    let cancelled = false;
-    setGeocoding(true);
-    (async () => {
-      for (const c of sinCoords) {
-        if (cancelled) break;
-        const coords = await geocodeGoogle(c.direccion, c.ciudad, c.provincia);
-        if (coords && !cancelled) {
-          updateCliente(c.id, { lat: coords.lat, lng: coords.lng });
-          setGeocodedCount(n => n + 1);
-        }
-        await new Promise(r => setTimeout(r, 250));
+  // ── 6. Geocodificación en lote via Edge Function ────────────────────────
+  const geocodificarLote = useCallback(async () => {
+    if (batchRunning) return;
+    setBatchRunning(true);
+    setBatchResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('geocode-clientes', {
+        body: { limit: 200 },
+      });
+      if (error) throw error;
+      setBatchResult(data);
+      // Recargar clientes del store para mostrar los nuevos pines
+      if (data?.processed > 0) {
+        const { initialize } = useClientesStore.getState();
+        await initialize();
       }
-      if (!cancelled) setGeocoding(false);
-    })();
-    return () => { cancelled = true; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    } catch (err) {
+      console.error('[MapaPage] geocodificarLote:', err);
+      setBatchResult({ error: String(err) });
+    } finally {
+      setBatchRunning(false);
+    }
+  }, [batchRunning]);
 
   // ── 7. Calcular ruta óptima ─────────────────────────────────────────────
   const calcularRuta = useCallback(() => {
@@ -341,6 +355,7 @@ export default function MapaPage() {
         <div className="flex flex-wrap gap-2">
           <select className={sel} value={filterEsp} onChange={e => setFilterEsp(e.target.value)}>
             <option value="">Todas las especialidades</option>
+            {isCarlos && <option value="mis-especialidades">⭐ Mis especialidades</option>}
             {especialidades.map(e => <option key={e}>{e}</option>)}
           </select>
           <select className={sel} value={filterEstado} onChange={e => setFilterEstado(e.target.value)}>
@@ -354,14 +369,28 @@ export default function MapaPage() {
             {Object.keys(EQUIPO_KEYWORDS).map(k => <option key={k}>{k}</option>)}
           </select>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
           <MapPin className="w-4 h-4" />
-          <span>{withCoords.length} visibles · {totalWithCoords} con ubicación · {filtered.length} total</span>
-          {geocoding && (
-            <span className="flex items-center gap-1 text-blue-600">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Geocodificando… (+{geocodedCount})
+          <span>{withCoords.length} visibles · {totalWithCoords}/{baseClientes.length} geocodificados</span>
+          {sinCoordsTotales > 0 && (
+            <button
+              onClick={geocodificarLote}
+              disabled={batchRunning}
+              title={`${sinCoordsTotales} clientes sin coordenadas`}
+              className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-50 cursor-pointer transition-colors">
+              {batchRunning
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <RefreshCw className="w-3 h-3" />}
+              {batchRunning ? 'Geocodificando…' : `Geocodificar ${sinCoordsTotales} pendientes`}
+            </button>
+          )}
+          {batchResult && !batchResult.error && (
+            <span className="text-green-600">
+              ✓ {batchResult.processed} geocodificados · {batchResult.skipped} sin dirección
             </span>
+          )}
+          {batchResult?.error && (
+            <span className="text-red-500">Error: {batchResult.error}</span>
           )}
         </div>
       </div>
