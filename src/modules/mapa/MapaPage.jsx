@@ -2,8 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
-import { MapPin, X, Loader2, Navigation, AlertTriangle, RefreshCw } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { MapPin, X, Loader2, Navigation, AlertTriangle } from 'lucide-react';
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const CENTER_ES = { lat: 40.4168, lng: -3.7038 };
@@ -149,8 +148,6 @@ export default function MapaPage() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [geocoding, setGeocoding]   = useState(false);
   const [geocodedCount, setGeocodedCount] = useState(0);
-  const [batchRunning, setBatchRunning] = useState(false);
-  const [batchResult, setBatchResult]   = useState(null); // { processed, skipped, errors }
 
   const mapContainerRef = useRef(null);
   const mapRef          = useRef(null);
@@ -277,29 +274,6 @@ export default function MapaPage() {
     markersRef.current.forEach((marker, id) => marker.setVisible(filteredIds.has(id)));
   }, [filtered, gmLoaded]);
 
-  // ── 6. Geocodificación en lote via Edge Function ────────────────────────
-  const geocodificarLote = useCallback(async () => {
-    if (batchRunning) return;
-    setBatchRunning(true);
-    setBatchResult(null);
-    try {
-      const { data, error } = await supabase.functions.invoke('geocode-clientes', {
-        body: { limit: 200 },
-      });
-      if (error) throw error;
-      setBatchResult(data);
-      // Recargar clientes del store para mostrar los nuevos pines
-      if (data?.processed > 0) {
-        const { initialize } = useClientesStore.getState();
-        await initialize();
-      }
-    } catch (err) {
-      console.error('[MapaPage] geocodificarLote:', err);
-      setBatchResult({ error: String(err) });
-    } finally {
-      setBatchRunning(false);
-    }
-  }, [batchRunning]);
 
   // ── 7. Calcular ruta óptima ─────────────────────────────────────────────
   const calcularRuta = useCallback(() => {
@@ -369,28 +343,17 @@ export default function MapaPage() {
             {Object.keys(EQUIPO_KEYWORDS).map(k => <option key={k}>{k}</option>)}
           </select>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
+        <div className="flex items-center gap-2 text-xs text-gray-500">
           <MapPin className="w-4 h-4" />
           <span>{withCoords.length} visibles · {totalWithCoords}/{baseClientes.length} geocodificados</span>
           {sinCoordsTotales > 0 && (
-            <button
-              onClick={geocodificarLote}
-              disabled={batchRunning}
-              title={`${sinCoordsTotales} clientes sin coordenadas`}
-              className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-600 disabled:opacity-50 cursor-pointer transition-colors">
-              {batchRunning
-                ? <Loader2 className="w-3 h-3 animate-spin" />
-                : <RefreshCw className="w-3 h-3" />}
-              {batchRunning ? 'Geocodificando…' : `Geocodificar ${sinCoordsTotales} pendientes`}
-            </button>
+            <span className="text-amber-600">· {sinCoordsTotales} pendientes (geocodificación en background)</span>
           )}
-          {batchResult && !batchResult.error && (
-            <span className="text-green-600">
-              ✓ {batchResult.processed} geocodificados · {batchResult.skipped} sin dirección
+          {geocoding && (
+            <span className="flex items-center gap-1 text-blue-600">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Actualizando…
             </span>
-          )}
-          {batchResult?.error && (
-            <span className="text-red-500">Error: {batchResult.error}</span>
           )}
         </div>
       </div>
