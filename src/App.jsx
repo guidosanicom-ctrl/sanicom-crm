@@ -30,7 +30,6 @@ import { useLlamadasPendientesStore } from './store/llamadasPendientesStore';
 import { useCursosStore } from './store/cursosStore';
 import { useVacacionesStore } from './store/vacacionesStore';
 import CursosPage from './modules/cursos/CursosPage';
-import MapaPage from './modules/mapa/MapaPage';
 import Layout from './components/layout/Layout';
 import LoginPage from './modules/auth/LoginPage';
 import NoAccess from './modules/auth/NoAccess';
@@ -152,7 +151,6 @@ export default function App() {
           <Route path="/servicio-tecnico" element={<ProtectedRoute module="servicio-tecnico"><ServicioTecnicoPage /></ProtectedRoute>} />
           <Route path="/equipos" element={<ProtectedRoute module="equipos"><EquiposPage /></ProtectedRoute>} />
           <Route path="/cursos" element={<ProtectedRoute module="cursos"><CursosPage /></ProtectedRoute>} />
-          <Route path="/mapa" element={<ProtectedRoute module="mapa"><MapaPage /></ProtectedRoute>} />
           <Route path="/documentos" element={<DocumentosPage />} />
           <Route path="/configuracion" element={<ProtectedRoute module="configuracion"><ConfiguracionPage /></ProtectedRoute>} />
           <Route path="/notificaciones" element={<NotificacionesPage />} />

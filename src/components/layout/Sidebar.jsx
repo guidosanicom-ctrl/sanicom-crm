@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import {
   LayoutDashboard, Users, Calendar, TrendingUp, PlaySquare,
-  Wrench, Package, FolderOpen, Settings, LogOut, X, GraduationCap, Map
+  Wrench, Package, FolderOpen, Settings, LogOut, X, GraduationCap
 } from 'lucide-react';
 import logo from '../../assets/sanicom_logo.png';
 import UserAvatar from '../ui/UserAvatar';
@@ -16,7 +16,6 @@ const NAV_ITEMS = [
   { path: '/servicio-tecnico', label: 'Servicio Técnico', icon: Wrench, module: 'servicio-tecnico' },
   { path: '/equipos', label: 'Equipos en stock', icon: Package, module: 'equipos' },
   { path: '/cursos', label: 'Cursos Formativos', icon: GraduationCap, module: 'cursos', onlyIfAccess: true },
-  { path: '/mapa', label: 'Mapa de Clientes', icon: Map, module: 'mapa', onlyIfAccess: true },
   { path: '/documentos', label: 'Documentos', icon: FolderOpen, module: null },
   { path: '/configuracion', label: 'Configuración', icon: Settings, module: 'configuracion' },
 ];
