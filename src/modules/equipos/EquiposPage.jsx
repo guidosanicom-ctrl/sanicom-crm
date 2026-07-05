@@ -49,12 +49,20 @@ function EquipoForm({ open, onClose, onSave, initial, readOnly }) {
   };
 
   const handleSubChange = (val) => {
-    const catFinal = catSelect === 'Otro' ? (form.otroTexto?.trim() || '') : catSelect;
-    // If switching away from SUBCATEGORIA_LIBRE, clear otroTexto
     const clearOtro = val !== SUBCATEGORIA_LIBRE ? { otroTexto: '' } : {};
-    const displaySub = val === SUBCATEGORIA_LIBRE ? '' : val;
-    const nombre = [catFinal, displaySub].filter(Boolean).join(' ');
-    setForm(f => ({ ...f, subcategoria: val, ...clearOtro, nombre: nombre || f.nombre }));
+
+    if (val && val !== SUBCATEGORIA_LIBRE && val.includes(' ')) {
+      // "SonoScape X11" → marca=SonoScape, modelo=X11, nombre=SonoScape X11
+      const spaceIdx = val.indexOf(' ');
+      const marca = val.slice(0, spaceIdx);
+      const modelo = val.slice(spaceIdx + 1);
+      setForm(f => ({ ...f, subcategoria: val, ...clearOtro, nombre: val, marca, modelo }));
+    } else {
+      const catFinal = catSelect === 'Otro' ? (form.otroTexto?.trim() || '') : catSelect;
+      const displaySub = val === SUBCATEGORIA_LIBRE ? '' : val;
+      const nombre = [catFinal, displaySub].filter(Boolean).join(' ');
+      setForm(f => ({ ...f, subcategoria: val, ...clearOtro, nombre: nombre || f.nombre }));
+    }
   };
 
   const handleOtroChange = (val) => {
