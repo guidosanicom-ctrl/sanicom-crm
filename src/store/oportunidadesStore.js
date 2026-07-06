@@ -49,7 +49,8 @@ export const useOportunidadesStore = create((set, get) => ({
     const now = new Date().toISOString().split('T')[0];
     const prev = get().oportunidades.find(o => o.id === id);
     const entries = user ? buildAuditEntries(prev, { ...prev, ...updates }, user) : [];
-    const updated = { ...prev, ...updates, fechaUltimaActualizacion: now, historial: [...(prev?.historial || []), ...entries] };
+    const extraOpp = updates.etapa === 'Ganado' && prev?.etapa !== 'Ganado' ? { fechaGanado: now } : {};
+    const updated = { ...prev, ...updates, ...extraOpp, fechaUltimaActualizacion: now, historial: [...(prev?.historial || []), ...entries] };
     set(s => ({ oportunidades: s.oportunidades.map(o => o.id === id ? updated : o) }));
     supabase.from(TABLE).update({ data: updated }).eq('id', id).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ oportunidades: s.oportunidades.map(o => o.id === id ? prev : o) })); }

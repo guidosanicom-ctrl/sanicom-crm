@@ -5,6 +5,7 @@ import RefreshIndicator from '../../components/ui/RefreshIndicator';
 import { Plus, CheckCircle, TrendingUp, Package, Euro, BarChart3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useServicioStore } from '../../store/servicioStore';
+import { useOportunidadesStore } from '../../store/oportunidadesStore';
 import { useClientesStore } from '../../store/clientesStore';
 import { useEquiposStore } from '../../store/equiposStore';
 import { useAuthStore } from '../../store/authStore';
@@ -51,6 +52,7 @@ function StatCard({ label, value, sub, color = 'gray', icon: Icon, onClick }) {
 
 function ResumenMensual({ servicios, isGuido, onOpenOT }) {
   const { clientes } = useClientesStore();
+  const { oportunidades } = useOportunidadesStore();
   const now = new Date();
   const [mes, setMes] = useState(now.getMonth());
   const [anio, setAnio] = useState(now.getFullYear());
@@ -94,6 +96,18 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
 
   const fmt = (n) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
+  // Oportunidades ganadas en el período con comisión individual de Guido
+  const oppsGanadasDel = useMemo(() => oportunidades.filter(o => {
+    if (o.etapa !== 'Ganado') return false;
+    const d = new Date(o.fechaGanado || o.fechaCierre || o.fechaCreacion);
+    return d.getFullYear() === anio && d.getMonth() === mes;
+  }), [oportunidades, mes, anio]);
+
+  const comisionOpps = useMemo(() => oppsGanadasDel.reduce((acc, o) => {
+    const pct = o.comisionGuidoPct ?? 10;
+    return acc + (Number(o.valor) || 0) * pct / 100;
+  }, 0), [oppsGanadasDel]);
+
   return (
     <div className="space-y-6">
       {/* Selector */}
@@ -130,8 +144,15 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
           <StatCard label="💶 Pendientes de facturar" value={pendienteFacturar} color={pendienteFacturar > 0 ? 'yellow' : 'gray'} icon={TrendingUp} sub="Cerradas por Guido, aún no facturadas" />
         </div>
         {isGuido && (
-          <div className="mt-3">
-            <StatCard label="💰 Mi comisión del mes" value={fmt(totalSinIva * 0.10)} color="green" icon={Euro} sub="10% del total facturado sin IVA" />
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <StatCard label="💰 Comisión OTs (10%)" value={fmt(totalSinIva * 0.10)} color="green" icon={Euro} sub="10% del total facturado sin IVA" />
+            <StatCard
+              label="🏆 Comisión oportunidades ganadas"
+              value={fmt(comisionOpps)}
+              color="green"
+              icon={Euro}
+              sub={oppsGanadasDel.length > 0 ? `${oppsGanadasDel.length} oportunidad${oppsGanadasDel.length !== 1 ? 'es' : ''} · % individual por oportunidad` : 'Sin oportunidades ganadas este mes'}
+            />
           </div>
         )}
         {del.length === 0 && (
