@@ -96,17 +96,25 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
 
   const fmt = (n) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
-  // Oportunidades ganadas en el período con comisión individual de Guido
+  // Oportunidades ganadas en el período
+  // Usa fechaGanado (guardada al marcar Ganado) o fechaUltimaActualizacion como fallback fiable
   const oppsGanadasDel = useMemo(() => oportunidades.filter(o => {
     if (o.etapa !== 'Ganado') return false;
-    const d = new Date(o.fechaGanado || o.fechaCierre || o.fechaCreacion);
+    const fechaRef = o.fechaGanado || o.fechaUltimaActualizacion;
+    if (!fechaRef) return false;
+    const d = new Date(fechaRef);
     return d.getFullYear() === anio && d.getMonth() === mes;
   }), [oportunidades, mes, anio]);
 
-  const comisionOpps = useMemo(() => oppsGanadasDel.reduce((acc, o) => {
-    const pct = o.comisionGuidoPct ?? 10;
-    return acc + (Number(o.valor) || 0) * pct / 100;
-  }, 0), [oppsGanadasDel]);
+  const oppsConComision = useMemo(() => oppsGanadasDel.map(o => {
+    const pct = o.comisionGuidoPct != null ? Number(o.comisionGuidoPct) : 10;
+    const valor = Number(o.valor) || 0;
+    return { ...o, _pct: pct, _comision: valor * pct / 100 };
+  }), [oppsGanadasDel]);
+
+  const comisionOTs   = totalSinIva * 0.10;
+  const comisionOpps  = oppsConComision.reduce((acc, o) => acc + o._comision, 0);
+  const comisionTotal = comisionOTs + comisionOpps;
 
   return (
     <div className="space-y-6">
@@ -144,15 +152,34 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
           <StatCard label="💶 Pendientes de facturar" value={pendienteFacturar} color={pendienteFacturar > 0 ? 'yellow' : 'gray'} icon={TrendingUp} sub="Cerradas por Guido, aún no facturadas" />
         </div>
         {isGuido && (
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <StatCard label="💰 Comisión OTs (10%)" value={fmt(totalSinIva * 0.10)} color="green" icon={Euro} sub="10% del total facturado sin IVA" />
-            <StatCard
-              label="🏆 Comisión oportunidades ganadas"
-              value={fmt(comisionOpps)}
-              color="green"
-              icon={Euro}
-              sub={oppsGanadasDel.length > 0 ? `${oppsGanadasDel.length} oportunidad${oppsGanadasDel.length !== 1 ? 'es' : ''} · % individual por oportunidad` : 'Sin oportunidades ganadas este mes'}
-            />
+          <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-green-800">💰 Mi comisión total del mes</span>
+              <span className="text-2xl font-bold text-green-700">{fmt(comisionTotal)}</span>
+            </div>
+            <div className="border-t border-green-200 pt-3 space-y-2 text-sm text-green-900">
+              <div className="flex justify-between">
+                <span className="text-gray-600">OTs · 10% de {fmt(totalSinIva)} facturado</span>
+                <span className="font-medium">{fmt(comisionOTs)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Ventas · {oppsConComision.length} oportunidad{oppsConComision.length !== 1 ? 'es' : ''} ganada{oppsConComision.length !== 1 ? 's' : ''}</span>
+                <span className="font-medium">{fmt(comisionOpps)}</span>
+              </div>
+              {oppsConComision.length > 0 && (
+                <div className="pl-3 border-l-2 border-green-300 space-y-1 mt-1">
+                  {oppsConComision.map(o => (
+                    <div key={o.id} className="flex justify-between text-xs text-gray-500">
+                      <span className="truncate max-w-[60%]">{o.nombre} · {fmt(Number(o.valor))} × {o._pct}%</span>
+                      <span className="font-medium text-green-700">{fmt(o._comision)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {oppsConComision.length === 0 && (
+                <p className="text-xs text-gray-400 pl-3">Sin oportunidades ganadas este mes</p>
+              )}
+            </div>
           </div>
         )}
         {del.length === 0 && (
