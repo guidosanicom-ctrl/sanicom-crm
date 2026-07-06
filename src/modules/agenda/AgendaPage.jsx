@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
 import RefreshIndicator from '../../components/ui/RefreshIndicator';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
@@ -202,6 +203,7 @@ export default function AgendaPage() {
   const { updateVisita } = useVisitasStore();
   const { clientes } = useClientesStore();
   const { users, user } = useAuthStore();
+  const navigate = useNavigate();
   const { vacaciones, addVacaciones, deleteVacaciones } = useVacacionesStore();
   const today = useMemo(() => new Date(), []);
 
@@ -553,9 +555,14 @@ export default function AgendaPage() {
               {detailEvent.responsable && <div><span className="font-medium">Responsable:</span> {users.find(u => u.id === detailEvent.responsable)?.name}</div>}
               {detailEvent.descripcion && <div><span className="font-medium">Descripción:</span> {detailEvent.descripcion}</div>}
             </div>
-            <div className="flex gap-2 mt-5">
+            <div className="flex gap-2 mt-5 flex-wrap">
               <Button size="sm" variant="outline" onClick={() => { setSelectedEvent(detailEvent); setDetailEvent(null); setFormOpen(true); }}>Editar</Button>
               <Button size="sm" variant="danger" onClick={() => setDelOpen(true)}>Eliminar</Button>
+              {detailEvent.demoId && (
+                <Button size="sm" variant="outline" onClick={() => { setDetailEvent(null); navigate(`/demostraciones?openId=${detailEvent.demoId}`); }}>
+                  📦 Ver demo
+                </Button>
+              )}
             </div>
           </div>
         </div>

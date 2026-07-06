@@ -4,6 +4,7 @@ import Button from '../../components/ui/Button';
 import ClienteSearchInput from '../../components/ui/ClienteSearchInput';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
+import { useCatalogoEquiposStore, SUBCATEGORIA_LIBRE } from '../../store/catalogoEquiposStore';
 import { ESTADOS_DEMO, RESULTADOS_DEMO, LUGARES_DEMO } from '../../utils/constants';
 
 const empty = { clienteId: '', contactoId: '', equipoNombre: '', responsable: '', fecha: '', hora: '09:00', lugar: 'Cliente', direccion: '', objetivo: '', estado: 'Pendiente', resultado: '', observaciones: '', fechaRecogida: '' };
@@ -11,21 +12,40 @@ const empty = { clienteId: '', contactoId: '', equipoNombre: '', responsable: ''
 export default function DemoForm({ open, onClose, onSave, initial }) {
   const [form, setForm] = useState(initial ? { ...empty, ...initial } : empty);
   const [errors, setErrors] = useState({});
+  const [catPick, setCatPick] = useState('');
+  const [subPick, setSubPick] = useState('');
 
   useEffect(() => {
     if (open) {
       setForm(initial ? { ...empty, ...initial } : empty);
       setErrors({});
+      setCatPick('');
+      setSubPick('');
     }
   }, [open, initial]);
 
   const { clientes: todosClientes } = useClientesStore();
   const { users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const { categorias: getCats, subcategorias: getSubs } = useCatalogoEquiposStore();
   const clientes = isCarlos() ? todosClientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : todosClientes;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const contactos = clientes.find(c => c.id === form.clienteId)?.contactos || [];
+
+  const handleCatPick = (val) => {
+    setCatPick(val);
+    setSubPick('');
+    if (!val || val === 'Otro') return;
+    const subs = getSubs(val);
+    if (subs.length === 0) set('equipoNombre', val);
+  };
+
+  const handleSubPick = (val) => {
+    setSubPick(val);
+    if (!val || val === SUBCATEGORIA_LIBRE) return;
+    set('equipoNombre', val);
+  };
 
   const validate = () => {
     const e = {};
@@ -51,6 +71,8 @@ export default function DemoForm({ open, onClose, onSave, initial }) {
     className: `w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors[k] ? 'border-red-400' : 'border-gray-200'}`,
   });
 
+  const subs = catPick && catPick !== 'Otro' ? getSubs(catPick) : [];
+
   return (
     <Modal open={open} onClose={onClose} title={initial ? 'Editar demostración' : 'Nueva demostración'} size="lg"
       footer={<><Button variant="outline" onClick={onClose}>Cancelar</Button><Button onClick={handleSave}>{initial ? 'Guardar' : 'Crear'}</Button></>}
@@ -74,9 +96,35 @@ export default function DemoForm({ open, onClose, onSave, initial }) {
             {contactos.map(ct => <option key={ct.id} value={ct.id}>{ct.nombre}</option>)}
           </select>
         </div>
-        <div>
+        <div className="md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 mb-1">Equipo *</label>
-          <input {...inp('equipoNombre')} placeholder="Nombre del equipo a demostrar" />
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <select
+                value={catPick}
+                onChange={e => handleCatPick(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white"
+              >
+                <option value="">Seleccionar del catálogo...</option>
+                {getCats().map(c => <option key={c} value={c}>{c}</option>)}
+                <option value="Otro">Otro</option>
+              </select>
+              {subs.length > 0 && (
+                <select
+                  value={subPick}
+                  onChange={e => handleSubPick(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white"
+                >
+                  <option value="">Modelo...</option>
+                  {subs.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              )}
+            </div>
+            <input
+              {...inp('equipoNombre')}
+              placeholder={catPick ? 'Nombre del equipo (editable)' : 'O escribe el nombre del equipo'}
+            />
+          </div>
           {errors.equipoNombre && <p className="text-xs text-red-500 mt-1">{errors.equipoNombre}</p>}
         </div>
         <div>
@@ -135,7 +183,6 @@ export default function DemoForm({ open, onClose, onSave, initial }) {
           <label className="block text-xs font-medium text-gray-600 mb-1">Observaciones</label>
           <textarea value={form.observaciones} onChange={e => set('observaciones', e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
         </div>
-
       </div>
     </Modal>
   );

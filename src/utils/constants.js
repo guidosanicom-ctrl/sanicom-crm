@@ -57,6 +57,7 @@ export const COLORS_EVENTO = {
   'Llamada/Seguimiento': '#EF4444',
   'Demo de equipo': '#8B5CF6',
   'Cierre de venta con cliente': '#10B981',
+  'Recogida de equipo': '#F97316',
 };
 
 export const COLORS_ESTADO_SERVICIO = {

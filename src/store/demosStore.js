@@ -20,13 +20,27 @@ function buildEventoFromDemo(demo) {
   const finH = String(h + 1).padStart(2, '0');
   const finM = String(m).padStart(2, '0');
   return {
-    titulo: `Demo: ${equipo?.nombre || 'Equipo'} - ${cliente?.nombre || 'Cliente'}`,
+    titulo: `Demo: ${equipo?.nombre || demo.equipoNombre || 'Equipo'} - ${cliente?.nombre || 'Cliente'}`,
     tipo: 'Demo de equipo',
     inicio: demo.fecha ? `${demo.fecha}T${hora}` : '',
     fin:    demo.fecha ? `${demo.fecha}T${finH}:${finM}` : '',
     clienteId: demo.clienteId,
     responsable: demo.responsable,
     descripcion: 'Demostración generada automáticamente desde el módulo de Demostraciones',
+  };
+}
+
+function buildEventoRecogida(demo) {
+  const cliente = useClientesStore.getState().clientes.find(c => c.id === demo.clienteId);
+  return {
+    titulo: `📦 Recoger equipo — ${cliente?.nombre || 'Cliente'}`,
+    tipo: 'Recogida de equipo',
+    inicio: `${demo.fechaRecogida}T09:00`,
+    fin:    `${demo.fechaRecogida}T10:00`,
+    clienteId: demo.clienteId,
+    responsable: demo.responsable,
+    demoId: demo.id,
+    descripcion: `Recogida del equipo de la demostración`,
   };
 }
 
@@ -47,9 +61,14 @@ export const useDemosStore = create((set, get) => ({
     const numero = generateNumero('DM', demos);
     const historial = user ? [createEntry('creó esta demostración', user)] : [];
     const item = { ...demoData, id: generateId(), numero, creadoPorId: user?.id || null, historial };
-    // Crear evento en agenda vinculado
+    // Crear evento de demo en agenda
     const evento = useAgendaStore.getState().addEvento({ ...buildEventoFromDemo(demoData), demoId: item.id, _skipNotif: true });
     const itemWithEvento = { ...item, eventoId: evento.id };
+    // Crear evento de recogida si hay fechaRecogida
+    if (demoData.fechaRecogida) {
+      const eventoR = useAgendaStore.getState().addEvento({ ...buildEventoRecogida({ ...itemWithEvento }), _skipNotif: true });
+      itemWithEvento.eventoRecogidaId = eventoR.id;
+    }
     set(s => ({ demos: [...s.demos, itemWithEvento] }));
     supabase.from(TABLE).insert({ id: itemWithEvento.id, data: itemWithEvento }).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ demos: s.demos.filter(d => d.id !== itemWithEvento.id) })); }
@@ -72,14 +91,33 @@ export const useDemosStore = create((set, get) => ({
     const user = useAuthStore.getState().user;
     const prev = get().demos.find(d => d.id === id);
     const entries = user ? buildAuditEntries(prev, { ...prev, ...updates }, user) : [];
-    const updated = { ...prev, ...updates, historial: [...(prev?.historial || []), ...entries] };
+
+    // Gestionar evento de recogida ANTES de construir `updated`
+    const extraUpdates = {};
+    const recogidaFields = ['fechaRecogida', 'clienteId', 'responsable'];
+    if (recogidaFields.some(k => k in updates && updates[k] !== prev[k])) {
+      const merged = { ...prev, ...updates };
+      if (merged.fechaRecogida) {
+        if (prev.eventoRecogidaId) {
+          useAgendaStore.getState().updateEvento(prev.eventoRecogidaId, buildEventoRecogida(merged));
+        } else {
+          const eventoR = useAgendaStore.getState().addEvento({ ...buildEventoRecogida(merged), _skipNotif: true });
+          extraUpdates.eventoRecogidaId = eventoR.id;
+        }
+      } else if (prev.eventoRecogidaId) {
+        useAgendaStore.getState().deleteEvento(prev.eventoRecogidaId);
+        extraUpdates.eventoRecogidaId = null;
+      }
+    }
+
+    const updated = { ...prev, ...updates, ...extraUpdates, historial: [...(prev?.historial || []), ...entries] };
     set(s => ({ demos: s.demos.map(d => d.id === id ? updated : d) }));
     supabase.from(TABLE).update({ data: updated }).eq('id', id).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ demos: s.demos.map(d => d.id === id ? prev : d) })); }
     });
-    // Sincronizar evento de agenda si cambiaron campos relevantes
+    // Sincronizar evento de demo si cambiaron campos relevantes
     if (prev?.eventoId) {
-      const syncFields = ['fecha', 'hora', 'clienteId', 'equipoId', 'responsable'];
+      const syncFields = ['fecha', 'hora', 'clienteId', 'equipoId', 'equipoNombre', 'responsable'];
       if (syncFields.some(k => updates[k] !== undefined && updates[k] !== prev[k])) {
         useAgendaStore.getState().updateEvento(prev.eventoId, buildEventoFromDemo({ ...prev, ...updates }));
       }
@@ -100,6 +138,7 @@ export const useDemosStore = create((set, get) => ({
       if (error) { console.error(error); set({ demos: prev }); }
     });
     if (target?.eventoId) useAgendaStore.getState().deleteEvento(target.eventoId);
+    if (target?.eventoRecogidaId) useAgendaStore.getState().deleteEvento(target.eventoRecogidaId);
   },
 
   getDemo: (id) => get().demos.find(d => d.id === id),
