@@ -45,7 +45,7 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
   }, [open, initial]);
 
   const { clientes: todosClientes } = useClientesStore();
-  const { users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const { users, isCarlos, isGuido, CARLOS_ESPECIALIDADES } = useAuthStore();
   const clientes = isCarlos() ? todosClientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : todosClientes;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -156,7 +156,7 @@ export default function OportunidadForm({ open, onClose, onSave, initial }) {
           <input type="number" {...f('valor')} placeholder="0" min={0} />
           {errors.valor && <p className="text-xs text-red-500 mt-1">{errors.valor}</p>}
         </div>
-        {form.etapa === 'Ganado' && (
+        {form.etapa === 'Ganado' && isGuido() && (
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">💰 % Comisión de Guido</label>
             <div className="flex items-center gap-2">
