@@ -28,17 +28,23 @@ function Row({ label, value }) {
 export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete }) {
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
-  const { users, isCarlos } = useAuthStore();
+  const { users, isCarlos, user } = useAuthStore();
   const { updateServicio } = useServicioStore();
   const [exporting, setExporting] = useState(false);
   const [fechaEntrega, setFechaEntrega] = useState(new Date().toISOString().split('T')[0]);
   const [firmaCliente, setFirmaCliente] = useState(null);
   const [registrandoEntrega, setRegistrandoEntrega] = useState(false);
+  const [editandoCierre, setEditandoCierre] = useState(false);
+  const [fechaCierreEdit, setFechaCierreEdit] = useState('');
+
+  const puedeEditarCierre = ['jgovantes@sanicom.es', 'guidorosso@sanicom.es'].includes(user?.email);
 
   useEffect(() => {
     if (open && orden) {
       setFechaEntrega(orden.fechaEntrega || new Date().toISOString().split('T')[0]);
       setFirmaCliente(orden.firmaCliente || null);
+      setEditandoCierre(false);
+      setFechaCierreEdit(orden.fechaCompletada || '');
     }
   }, [open, orden?.id]);
 
@@ -107,6 +113,36 @@ export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete 
             <Row label="Fecha programada" value={formatDate(orden.fechaProgramada)} />
             <Row label="Fecha creación" value={formatDate(orden.fechaCreacion)} />
             {orden.nSerie && <Row label="Nº de serie" value={orden.nSerie} />}
+            {(orden.estado === 'Completada' || orden.estado === 'Entregada') && (
+              <div>
+                <p className="text-xs text-gray-400 mb-0.5">Fecha de cierre</p>
+                {editandoCierre ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={fechaCierreEdit}
+                      onChange={e => setFechaCierreEdit(e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    <button
+                      onClick={() => {
+                        updateServicio(orden.id, { fechaCompletada: fechaCierreEdit });
+                        setEditandoCierre(false);
+                      }}
+                      className="text-xs text-blue-600 font-medium hover:text-blue-800 cursor-pointer"
+                    >Guardar</button>
+                    <button onClick={() => setEditandoCierre(false)} className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer">✕</button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-gray-800">{formatDate(orden.fechaCompletada) || '-'}</p>
+                    {puedeEditarCierre && (
+                      <button onClick={() => setEditandoCierre(true)} className="text-xs text-gray-400 hover:text-blue-600 cursor-pointer" title="Editar fecha de cierre">✏️</button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           {orden.descripcion && (
             <div className="mt-4">
