@@ -315,7 +315,7 @@ function KanbanColumn({ stage, opps, clientes, users, onOpen }) {
   const { oportunidadesConLlamadaPendiente } = useLlamadasPendientesStore();
   const pendingLlamadasSet = oportunidadesConLlamadaPendiente();
   return (
-    <div className="flex-shrink-0 w-72">
+    <div className="flex-shrink-0 w-[280px]">
       <div className={`rounded-xl border p-3 ${STAGE_COLORS[stage] || 'bg-gray-50 border-gray-100'}`}>
         <div className="flex items-center justify-between mb-3">
           <span className={`text-sm font-semibold ${STAGE_HEADER[stage] || 'text-gray-700'}`}>{etapaLabel(stage)}</span>
@@ -602,7 +602,7 @@ export default function PipelinePage() {
 
       {viewMode === 'kanban' ? (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd} autoScroll={{ enabled: true }}>
-          <div className="hidden sm:block overflow-x-auto pb-4 -mx-6 px-6">
+          <div className="hidden sm:block overflow-x-auto pb-4">
             <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
               {ETAPAS_PIPELINE.map(stage => (
                 <KanbanColumn
