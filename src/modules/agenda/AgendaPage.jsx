@@ -563,6 +563,11 @@ export default function AgendaPage() {
                   📦 Ver demo
                 </Button>
               )}
+              {detailEvent.oportunidadId && (
+                <Button size="sm" variant="outline" onClick={() => { setDetailEvent(null); navigate(`/pipeline?openId=${detailEvent.oportunidadId}`); }}>
+                  ▶️ Ver oportunidad
+                </Button>
+              )}
             </div>
           </div>
         </div>

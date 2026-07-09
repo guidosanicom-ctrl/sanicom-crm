@@ -6,6 +6,7 @@ import { buildAuditEntries, createEntry } from '../utils/auditLog';
 import { useAuthStore } from './authStore';
 import { useActividadStore } from './actividadStore';
 import { useNotificacionesStore } from './notificacionesStore';
+import { useAgendaStore } from './agendaStore';
 
 const TABLE = 'oportunidades';
 
@@ -50,7 +51,36 @@ export const useOportunidadesStore = create((set, get) => ({
     const prev = get().oportunidades.find(o => o.id === id);
     const entries = user ? buildAuditEntries(prev, { ...prev, ...updates }, user) : [];
     const extraOpp = updates.etapa === 'Ganado' && prev?.etapa !== 'Ganado' ? { fechaGanado: now } : {};
-    const updated = { ...prev, ...updates, ...extraOpp, fechaUltimaActualizacion: now, historial: [...(prev?.historial || []), ...entries] };
+
+    // Gestionar evento de agenda para fecha de retorno de pausa
+    const extraPausa = {};
+    const pausaChanged = 'enPausa' in updates || 'pausaRecordatorio' in updates;
+    if (pausaChanged) {
+      const merged = { ...prev, ...updates };
+      const agenda = useAgendaStore.getState();
+      if (merged.enPausa && merged.pausaRecordatorio) {
+        const eventoData = {
+          titulo: `▶️ Retomar oportunidad — ${prev?.nombre || ''}`,
+          tipo: 'Llamada/Seguimiento',
+          inicio: `${merged.pausaRecordatorio}T09:00`,
+          fin: `${merged.pausaRecordatorio}T09:30`,
+          responsable: merged.responsable || prev?.responsable,
+          oportunidadId: id,
+          descripcion: `Retomar oportunidad pausada`,
+        };
+        if (prev?.eventoPausaId) {
+          agenda.updateEvento(prev.eventoPausaId, eventoData);
+        } else {
+          const ev = agenda.addEvento({ ...eventoData, _skipNotif: true });
+          extraPausa.eventoPausaId = ev.id;
+        }
+      } else if (!merged.enPausa && prev?.eventoPausaId) {
+        agenda.deleteEvento(prev.eventoPausaId);
+        extraPausa.eventoPausaId = null;
+      }
+    }
+
+    const updated = { ...prev, ...updates, ...extraOpp, ...extraPausa, fechaUltimaActualizacion: now, historial: [...(prev?.historial || []), ...entries] };
     set(s => ({ oportunidades: s.oportunidades.map(o => o.id === id ? updated : o) }));
     supabase.from(TABLE).update({ data: updated }).eq('id', id).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ oportunidades: s.oportunidades.map(o => o.id === id ? prev : o) })); }
@@ -82,6 +112,7 @@ export const useOportunidadesStore = create((set, get) => ({
     supabase.from(TABLE).delete().eq('id', id).then(({ error }) => {
       if (error) { console.error(error); set({ oportunidades: prev }); }
     });
+    if (target?.eventoPausaId) useAgendaStore.getState().deleteEvento(target.eventoPausaId);
   },
 
   getOportunidad: (id) => get().oportunidades.find(o => o.id === id),
