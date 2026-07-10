@@ -6,7 +6,7 @@ import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import { TIPOS_EVENTO } from '../../utils/constants';
 
-const empty = { titulo: '', tipo: 'Visita comercial', inicio: '', fin: '', clienteId: '', responsable: '', descripcion: '', equipoNombre: '' };
+const empty = { titulo: '', tipo: 'Visita comercial', inicio: '', fin: '', clienteId: '', responsable: '', descripcion: '', equipoNombre: '', compartidoCon: [] };
 
 function buildDefault(initial, defaultDate, defaultHour) {
   if (initial) return initial;
@@ -32,7 +32,7 @@ export default function EventForm({ open, onClose, onSave, initial, defaultDate,
     }
   }, [open, initial, defaultDate, defaultHour]);
   const { clientes: todosClientes } = useClientesStore();
-  const { users, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
+  const { users, user, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const clientes = isCarlos() ? todosClientes.filter(c => CARLOS_ESPECIALIDADES.includes(c.especialidad)) : todosClientes;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -45,9 +45,14 @@ export default function EventForm({ open, onClose, onSave, initial, defaultDate,
     return Object.keys(e).length === 0;
   };
 
+  const toggleCompartir = (uid) => {
+    const list = form.compartidoCon || [];
+    set('compartidoCon', list.includes(uid) ? list.filter(x => x !== uid) : [...list, uid]);
+  };
+
   const handleSave = () => {
     if (!validate()) return;
-    onSave(form);
+    onSave({ ...form, creadoPor: form.creadoPor || user?.id });
     onClose();
     setForm(empty);
   };
@@ -109,6 +114,28 @@ export default function EventForm({ open, onClose, onSave, initial, defaultDate,
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Descripción</label>
           <textarea value={form.descripcion} onChange={e => set('descripcion', e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" placeholder="Descripción..." />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-2">👥 Compartir con</label>
+          <div className="flex flex-wrap gap-2">
+            {users.filter(u => u.id !== (form.responsable || user?.id)).map(u => {
+              const checked = (form.compartidoCon || []).includes(u.id);
+              return (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => toggleCompartir(u.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
+                    checked
+                      ? 'bg-blue-100 border-blue-300 text-blue-800'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-400'
+                  }`}
+                >
+                  {checked ? '✓ ' : ''}{u.name.split(' ')[0]}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </Modal>

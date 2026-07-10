@@ -25,13 +25,18 @@ export const useAgendaStore = create((set, get) => ({
     supabase.from(TABLE).insert({ id: item.id, data: item }).then(({ error }) => {
       if (error) { console.error(error); set(s => ({ eventos: s.eventos.filter(e => e.id !== item.id) })); }
     });
-    if (!_skipNotif && item.responsable) {
+    if (!_skipNotif) {
       const user = useAuthStore.getState().user;
-      if (user && item.responsable !== user.id) {
-        useNotificacionesStore.getState().pushNotificacion(item.responsable, {
-          mensaje: `${user.name} te creó un evento en la agenda: "${item.titulo}"`,
+      const push = useNotificacionesStore.getState().pushNotificacion;
+      if (user) {
+        const toNotify = new Set([
+          ...(item.responsable && item.responsable !== user.id ? [item.responsable] : []),
+          ...(item.compartidoCon || []).filter(id => id !== user.id),
+        ]);
+        toNotify.forEach(uid => push(uid, {
+          mensaje: `${user.name} te compartió un evento: "${item.titulo}"`,
           tipo: 'agenda', modulo: 'agenda', enlace: '/agenda',
-        });
+        }));
       }
     }
     return item;

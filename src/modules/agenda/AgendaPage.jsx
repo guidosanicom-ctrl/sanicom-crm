@@ -223,7 +223,7 @@ export default function AgendaPage() {
 
   const filteredEventos = useMemo(() => eventos.filter(e => {
     if (filterTipo && e.tipo !== filterTipo) return false;
-    if (filterResp && e.responsable !== filterResp) return false;
+    if (filterResp && e.responsable !== filterResp && !(e.compartidoCon || []).includes(filterResp)) return false;
     return true;
   }), [eventos, filterTipo, filterResp]);
 
@@ -553,6 +553,15 @@ export default function AgendaPage() {
               {detailEvent.fin && <div><span className="font-medium">Fin:</span> {formatDateTime(detailEvent.fin)}</div>}
               {detailEvent.clienteId && <div><span className="font-medium">Cliente:</span> {clientes.find(c => c.id === detailEvent.clienteId)?.nombre}</div>}
               {detailEvent.responsable && <div><span className="font-medium">Responsable:</span> {users.find(u => u.id === detailEvent.responsable)?.name}</div>}
+              {detailEvent.creadoPor && detailEvent.creadoPor !== detailEvent.responsable && (
+                <div><span className="font-medium">Creado por:</span> {users.find(u => u.id === detailEvent.creadoPor)?.name}</div>
+              )}
+              {detailEvent.compartidoCon?.length > 0 && (
+                <div>
+                  <span className="font-medium">👥 Compartido con:</span>{' '}
+                  {detailEvent.compartidoCon.map(id => users.find(u => u.id === id)?.name).filter(Boolean).join(', ')}
+                </div>
+              )}
               {detailEvent.descripcion && <div><span className="font-medium">Descripción:</span> {detailEvent.descripcion}</div>}
             </div>
             <div className="flex gap-2 mt-5 flex-wrap">
