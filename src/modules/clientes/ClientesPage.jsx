@@ -422,9 +422,10 @@ export default function ClientesPage() {
 
   const EQUIPO_KEYWORDS = {
     'Diatermia':       ['diatermia', 'ros', 'indiba'],
-    'Onda de Choque':  ['onda', 'choque', 'radial', 'focal', 'ems', 'eswt'],
-    'Ecógrafo':        ['eco', 'ecografo', 'sonoscape', 'esaote', 'mindray', 'p25', 'p12', 'x3', 'x11', 'sonda'],
-    'Super Inductiva': ['inductiva', 'super inductiva', 'magneto', 'bltl', 'sis'],
+    'Onda de Choque':  ['onda de choque', 'radial', 'focal', 'ems', 'eswt'],
+    'Ecógrafo':        ['ecografo', 'sonoscape', 'esaote', 'mindray', 'p25', 'p12', 'x3', 'x11'],
+    'Super Inductiva': ['super inductiva', 'inductiva', 'bltl', 'sis bltl'],
+    'Magneto':         ['magneto', 'magnetoterapia'],
   };
 
   const matchesEquipoFilter = (cliente, filtro) => {
