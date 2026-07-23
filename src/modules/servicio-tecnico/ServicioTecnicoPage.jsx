@@ -53,6 +53,8 @@ function StatCard({ label, value, sub, color = 'gray', icon: Icon, onClick }) {
 function ResumenMensual({ servicios, isGuido, onOpenOT }) {
   const { clientes } = useClientesStore();
   const { oportunidades } = useOportunidadesStore();
+  const { users } = useAuthStore();
+  const guidoId = users.find(u => u.email === 'guidorosso@sanicom.es')?.id;
   const now = new Date();
   const [mes, setMes] = useState(now.getMonth());
   const [anio, setAnio] = useState(now.getFullYear());
@@ -100,11 +102,12 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
   // Usa fechaGanado (guardada al marcar Ganado) o fechaUltimaActualizacion como fallback fiable
   const oppsGanadasDel = useMemo(() => oportunidades.filter(o => {
     if (o.etapa !== 'Ganado') return false;
+    if (o.responsable !== guidoId) return false;
     const fechaRef = o.fechaGanado || o.fechaUltimaActualizacion;
     if (!fechaRef) return false;
     const d = new Date(fechaRef);
     return d.getFullYear() === anio && d.getMonth() === mes;
-  }), [oportunidades, mes, anio]);
+  }), [oportunidades, mes, anio, guidoId]);
 
   const oppsConComision = useMemo(() => oppsGanadasDel.map(o => {
     const pct = o.comisionGuidoPct != null ? Number(o.comisionGuidoPct) : 10;
