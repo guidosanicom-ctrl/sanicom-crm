@@ -523,6 +523,7 @@ export default function ServicioTecnicoPage() {
         orden={selected && servicios.find(s => s.id === selected.id)}
         onEdit={readOnly ? null : () => openEdit(selected)}
         onDelete={readOnly ? null : () => { setDetailOpen(false); setDelOpen(true); }}
+        onFacturar={readOnly ? null : (o) => { setDetailOpen(false); setFacturacionOT(o); }}
       />
 
       <ServicioForm

@@ -38,7 +38,7 @@ export default function DemostracionesPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [delOpen, setDelOpen] = useState(false);
-  const PER_PAGE = 10;
+  const PER_PAGE = 25;
 
   // ── Flujo post-creación ────────────────────────────────────────────────────
   // oppFlow: null | { demo, step: 'ask' | 'conflict', conflictOpp: opp | null }

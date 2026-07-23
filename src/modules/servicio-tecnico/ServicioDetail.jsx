@@ -25,7 +25,7 @@ function Row({ label, value }) {
   );
 }
 
-export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete }) {
+export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete, onFacturar }) {
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
   const { users, isCarlos, user } = useAuthStore();
@@ -227,6 +227,20 @@ export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete 
             {orden.facturacion.notas && (
               <p className="mt-2 text-xs text-gray-500 italic">{orden.facturacion.notas}</p>
             )}
+          </div>
+        )}
+
+        {/* Cerrada sin datos de facturación — permitir añadirla ahora */}
+        {!orden.facturacion && orden.facturacionRequerida !== false && !isCarlos()
+          && (orden.estado === 'Completada' || orden.estado === 'Entregada') && onFacturar && (
+          <div className="border border-yellow-200 rounded-xl p-4 bg-yellow-50 flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm text-gray-700">💶 Esta OT no tiene detalle de facturación cargado.</p>
+            <button
+              onClick={() => onFacturar(orden)}
+              className="text-xs bg-[#1B4F8A] text-white px-3 py-1.5 rounded-lg hover:bg-[#163d6e] transition-colors cursor-pointer font-medium whitespace-nowrap"
+            >
+              Añadir facturación
+            </button>
           </div>
         )}
 
