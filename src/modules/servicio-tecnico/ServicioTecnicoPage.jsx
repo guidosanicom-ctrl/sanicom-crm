@@ -41,11 +41,11 @@ function StatCard({ label, value, sub, color = 'gray', icon: Icon, onClick }) {
       className={`border rounded-xl p-4 text-left w-full ${colors[color]} ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
     >
       <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-medium opacity-70">{label}</p>
-        {Icon && <Icon className="w-4 h-4 opacity-50" />}
+        <p className="text-sm font-medium opacity-70">{label}</p>
+        {Icon && <Icon className="w-5 h-5 opacity-50" />}
       </div>
-      <p className="text-2xl font-bold">{value}</p>
-      {sub && <p className="text-xs mt-1 opacity-60">{sub}</p>}
+      <p className="text-3xl font-bold">{value}</p>
+      {sub && <p className="text-sm mt-1 opacity-60">{sub}</p>}
     </Tag>
   );
 }
@@ -137,7 +137,7 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
 
       {/* Estado de órdenes */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Órdenes de trabajo</h3>
+        <h3 className="text-base font-semibold text-gray-600 mb-3 uppercase tracking-wide">Órdenes de trabajo</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="Total" value={del.length} color="blue" icon={Wrench} />
           <StatCard label="Completadas" value={completadasDel.length} color="green" icon={CheckCircle} />
@@ -148,7 +148,7 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
 
       {/* Facturación */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Facturación</h3>
+        <h3 className="text-base font-semibold text-gray-600 mb-3 uppercase tracking-wide">Facturación</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <StatCard label="Total facturado (sin IVA)" value={fmt(totalSinIva)} color="blue" icon={Euro} sub="Suma de OTs completadas con detalle · ver desglose" onClick={() => setDetalleOpen(true)} />
           <StatCard label="OTs sin detalle de facturación" value={sinDetalle} color={sinDetalle > 0 ? 'orange' : 'gray'} icon={Package} sub="Completadas sin conceptos cargados" />
@@ -157,10 +157,10 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
         {isGuido && (
           <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-green-800">💰 Mi comisión total del mes</span>
-              <span className="text-2xl font-bold text-green-700">{fmt(comisionTotal)}</span>
+              <span className="text-base font-semibold text-green-800">💰 Mi comisión total del mes</span>
+              <span className="text-3xl font-bold text-green-700">{fmt(comisionTotal)}</span>
             </div>
-            <div className="border-t border-green-200 pt-3 space-y-2 text-sm text-green-900">
+            <div className="border-t border-green-200 pt-3 space-y-2 text-base text-green-900">
               <div className="flex justify-between">
                 <span className="text-gray-600">OTs · 10% de {fmt(totalSinIva)} facturado</span>
                 <span className="font-medium">{fmt(comisionOTs)}</span>
@@ -170,7 +170,7 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
                   {otsFacturadas.map(s => {
                     const cliente = clientes.find(c => c.id === s.clienteId);
                     return (
-                      <div key={s.id} className="flex justify-between text-xs text-gray-500">
+                      <div key={s.id} className="flex justify-between text-sm text-gray-500">
                         <span className="truncate max-w-[60%]">{s.numero} · {cliente?.nombre || '-'} · {fmt(s._montoSinIva)}</span>
                         <span className="font-medium text-green-700">{fmt(s._montoSinIva * 0.10)}</span>
                       </div>
@@ -179,7 +179,7 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
                 </div>
               )}
               {otsFacturadas.length === 0 && (
-                <p className="text-xs text-gray-400 pl-3">Sin OTs facturadas este mes</p>
+                <p className="text-sm text-gray-400 pl-3">Sin OTs facturadas este mes</p>
               )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Ventas · {oppsConComision.length} oportunidad{oppsConComision.length !== 1 ? 'es' : ''} ganada{oppsConComision.length !== 1 ? 's' : ''}</span>
@@ -188,7 +188,7 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
               {oppsConComision.length > 0 && (
                 <div className="pl-3 border-l-2 border-green-300 space-y-1 mt-1">
                   {oppsConComision.map(o => (
-                    <div key={o.id} className="flex justify-between text-xs text-gray-500">
+                    <div key={o.id} className="flex justify-between text-sm text-gray-500">
                       <span className="truncate max-w-[60%]">{o.nombre} · {fmt(Number(o.valor))} × {o._pct}%</span>
                       <span className="font-medium text-green-700">{fmt(o._comision)}</span>
                     </div>
@@ -196,7 +196,7 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
                 </div>
               )}
               {oppsConComision.length === 0 && (
-                <p className="text-xs text-gray-400 pl-3">Sin oportunidades ganadas este mes</p>
+                <p className="text-sm text-gray-400 pl-3">Sin oportunidades ganadas este mes</p>
               )}
             </div>
           </div>
