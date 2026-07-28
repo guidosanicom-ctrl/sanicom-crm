@@ -2,10 +2,11 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
 import RefreshIndicator from '../../components/ui/RefreshIndicator';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Upload, Trash2, Users, Route, X, Eye, Copy, ClipboardList, MessageCircle, Mail, Phone, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Upload, Trash2, Users, Route, X, Eye, Copy, ClipboardList, MessageCircle, Mail, Phone, ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
+import { useVisitasStore } from '../../store/visitasStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import SearchBar from '../../components/shared/SearchBar';
@@ -351,6 +352,8 @@ export default function ClientesPage() {
   const { clientes, addCliente, deleteCliente, deleteClientes, importClientes, importClientesSwiftMR } = useClientesStore();
   const { user, isCarlos, CARLOS_ESPECIALIDADES } = useAuthStore();
   const { contactos, addContacto } = useSeguimientoStore();
+  const { visitas } = useVisitasStore();
+  const visitadosIds = useMemo(() => new Set(visitas.map(v => v.clienteId)), [visitas]);
   const { especialidades } = useEspecialidadesStore();
   const { subespecialidades } = useSubespecialidadesStore();
   const { tipos: tiposCliente } = useTiposClienteStore();
@@ -362,6 +365,7 @@ export default function ClientesPage() {
   const [filterSubesp, setFilterSubesp] = useState('');
   const [filterProvincia, setFilterProvincia] = useState('');
   const [filterEquipo, setFilterEquipo] = useState('');
+  const [filterVisitado, setFilterVisitado] = useState('');
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
   const [formOpen, setFormOpen] = useState(false);
@@ -449,9 +453,10 @@ export default function ClientesPage() {
       const matchSubesp = !filterSubesp || c.subespecialidad === filterSubesp;
       const matchProvincia = !filterProvincia || c.provincia === filterProvincia;
       const matchEquipo = matchesEquipoFilter(c, filterEquipo);
-      return matchSearch && matchTipo && matchEstado && matchEsp && matchSubesp && matchProvincia && matchEquipo;
+      const matchVisitado = !filterVisitado || (filterVisitado === 'si' ? visitadosIds.has(c.id) : !visitadosIds.has(c.id));
+      return matchSearch && matchTipo && matchEstado && matchEsp && matchSubesp && matchProvincia && matchEquipo && matchVisitado;
     });
-  }, [clientes, search, filterTipo, filterEstado, filterEsp, filterSubesp, filterProvincia, filterEquipo, carlos]);
+  }, [clientes, search, filterTipo, filterEstado, filterEsp, filterSubesp, filterProvincia, filterEquipo, filterVisitado, visitadosIds, carlos]);
 
   // Si "Ver seleccionados" está activo, filtra sobre la lista base
   const filtered = useMemo(() => {
@@ -601,6 +606,13 @@ export default function ClientesPage() {
               <option>Super Inductiva</option>
             </select>
           )}
+          {carlos && (
+            <select className={sel} value={filterVisitado} onChange={e => { setFilterVisitado(e.target.value); setPage(1); }}>
+              <option value="">Visitados / No visitados</option>
+              <option value="si">Visitados</option>
+              <option value="no">No visitados</option>
+            </select>
+          )}
         </div>
         <div className="flex gap-2">
           {!carlos && <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4" />Importar</Button>}
@@ -731,6 +743,14 @@ export default function ClientesPage() {
               <option>Super Inductiva</option>
             </select>
           )}
+          {carlos && (
+            <select className="flex-shrink-0 px-2 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none"
+              value={filterVisitado} onChange={e => { setFilterVisitado(e.target.value); setPage(1); }}>
+              <option value="">Visitados / No visitados</option>
+              <option value="si">Visitados</option>
+              <option value="no">No visitados</option>
+            </select>
+          )}
         </div>
         {/* Fila 3: Seguimiento (solo Carlos) */}
         {carlos && (
@@ -828,6 +848,7 @@ export default function ClientesPage() {
               <div className="sm:hidden divide-y divide-gray-50">
                 {paginated.map(c => {
                   const esContactado = carlos && contactos.some(x => x.clienteId === c.id);
+                  const esVisitado = carlos && visitadosIds.has(c.id);
                   const isSelected = selected.has(c.id);
                   return (
                     <div key={c.id}
@@ -847,7 +868,10 @@ export default function ClientesPage() {
                           <span className="text-xs font-bold text-[#1B4F8A]">{c.nombre?.charAt(0)?.toUpperCase()}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-[#1B4F8A] truncate">{c.nombre}</p>
+                          <p className="text-sm font-semibold text-[#1B4F8A] truncate flex items-center gap-1">
+                            {c.nombre}
+                            {esVisitado && <MapPin className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" title="Visitado" />}
+                          </p>
                           <p className="text-xs text-gray-400 truncate">{[c.especialidad, c.ciudad].filter(Boolean).join(' · ')}</p>
                           {c.telefono && <p className="text-xs text-gray-500 mt-0.5">{c.telefono}</p>}
                         </div>
@@ -877,6 +901,7 @@ export default function ClientesPage() {
                     {paginated.map(c => {
                       const isSelected = selected.has(c.id);
                       const esContactado = carlos && contactos.some(x => x.clienteId === c.id);
+                      const esVisitado = carlos && visitadosIds.has(c.id);
                       return (
                         <tr key={c.id}
                           className={`cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/60 hover:bg-blue-100/60' : esContactado ? 'hover:bg-green-100/40' : 'hover:bg-gray-50'}`}
@@ -885,7 +910,12 @@ export default function ClientesPage() {
                           <td className="px-4 py-3 w-10" onClick={e => toggleOne(c.id, e)}>
                             <input type="checkbox" className={chk} checked={isSelected} onChange={() => {}} />
                           </td>
-                          <td className="px-4 py-3 font-medium text-[#1B4F8A]">{c.nombre}</td>
+                          <td className="px-4 py-3 font-medium text-[#1B4F8A]">
+                            <span className="flex items-center gap-1">
+                              {c.nombre}
+                              {esVisitado && <MapPin className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" title="Visitado" />}
+                            </span>
+                          </td>
                           <td className="px-4 py-3 text-gray-500">{c.contactoPrincipal || '-'}</td>
                           <td className="px-4 py-3 text-gray-600">{c.tipo}</td>
                           <td className="px-4 py-3 text-gray-500">
