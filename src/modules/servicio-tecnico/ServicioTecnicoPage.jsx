@@ -165,6 +165,22 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
                 <span className="text-gray-600">OTs · 10% de {fmt(totalSinIva)} facturado</span>
                 <span className="font-medium">{fmt(comisionOTs)}</span>
               </div>
+              {otsFacturadas.length > 0 && (
+                <div className="pl-3 border-l-2 border-green-300 space-y-1 mt-1">
+                  {otsFacturadas.map(s => {
+                    const cliente = clientes.find(c => c.id === s.clienteId);
+                    return (
+                      <div key={s.id} className="flex justify-between text-xs text-gray-500">
+                        <span className="truncate max-w-[60%]">{s.numero} · {cliente?.nombre || '-'} · {fmt(s._montoSinIva)}</span>
+                        <span className="font-medium text-green-700">{fmt(s._montoSinIva * 0.10)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {otsFacturadas.length === 0 && (
+                <p className="text-xs text-gray-400 pl-3">Sin OTs facturadas este mes</p>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Ventas · {oppsConComision.length} oportunidad{oppsConComision.length !== 1 ? 'es' : ''} ganada{oppsConComision.length !== 1 ? 's' : ''}</span>
                 <span className="font-medium">{fmt(comisionOpps)}</span>
