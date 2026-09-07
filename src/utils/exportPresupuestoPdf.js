@@ -99,11 +99,6 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc) {
   setFont(doc, 8, DARK, 'bold');
   doc.text(validoHasta ? formatDate(validoHasta) : '—', M + 88, y);
 
-  setFont(doc, 8, MUTED);
-  doc.text('Estado:', M + 130, y);
-  setFont(doc, 8, DARK, 'bold');
-  doc.text(presupuesto.estado || '—', M + 145, y);
-
   y += 10;
 
   // ── CLIENTE ─────────────────────────────────────────────────────────────
@@ -182,17 +177,17 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc) {
   }
 
   // ── PIE DE PÁGINA ────────────────────────────────────────────────────────
-  hLine(doc, PH - 18, CYAN);
   doc.setDrawColor(...CYAN);
   doc.setLineWidth(0.5);
-  doc.line(M, PH - 18, PW - M, PH - 18);
+  doc.line(M, PH - 26, PW - M, PH - 26);
 
   setFont(doc, 8, PRIMARY, 'bold');
-  doc.text('Sanicom Medical Systems', M, PH - 12);
+  doc.text('Sanicom Medical Systems SL', M, PH - 21);
   setFont(doc, 7.5, MUTED);
-  doc.text('www.sanicom.es  ·  info@sanicom.es', M, PH - 7.5);
-  setFont(doc, 7.5, MUTED);
-  doc.text(`Documento generado el ${formatDate(new Date().toISOString())}`, PW - M, PH - 7.5, { align: 'right' });
+  doc.text('CIF B90309147', M, PH - 17);
+  doc.text('Av. de Mairena 5 - Local 20 - Mairena del Aljarafe (41927)', M, PH - 13);
+  doc.text('guidorosso@sanicom.es', M, PH - 9);
+  doc.text(`Documento generado el ${formatDate(new Date().toISOString())}`, PW - M, PH - 9, { align: 'right' });
 
   // ── GUARDAR ──────────────────────────────────────────────────────────────
   doc.save(`Presupuesto_${presupuesto.numero || 'presupuesto'}.pdf`);
