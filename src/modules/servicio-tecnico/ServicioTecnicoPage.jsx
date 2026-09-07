@@ -18,6 +18,7 @@ import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import ServicioForm from './ServicioForm';
 import ServicioDetail from './ServicioDetail';
 import FacturacionModal from './FacturacionModal';
+import PresupuestosTab from './PresupuestosTab';
 import Modal from '../../components/ui/Modal';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { ESTADOS_SERVICIO, TIPOS_SERVICIO, PRIORIDADES_SERVICIO } from '../../utils/constants';
@@ -329,9 +330,19 @@ export default function ServicioTecnicoPage() {
             Resumen mensual
           </button>
         )}
+        {isGuido() && (
+          <button
+            onClick={() => setActiveTab('presupuestos')}
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer ${activeTab === 'presupuestos' ? 'bg-white border border-b-white border-gray-200 -mb-px text-[#1B4F8A]' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Presupuestos
+          </button>
+        )}
       </div>
 
       {activeTab === 'resumen' && !isCarlos() && <ResumenMensual servicios={servicios} isGuido={isGuido()} onOpenOT={openDetail} />}
+
+      {activeTab === 'presupuestos' && isGuido() && <PresupuestosTab />}
 
       {activeTab === 'ordenes' && <>
 

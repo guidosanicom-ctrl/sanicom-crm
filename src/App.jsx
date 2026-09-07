@@ -18,6 +18,7 @@ import { useServiciosHospitalStore } from './store/serviciosHospitalStore';
 import { useDriveStore } from './store/driveStore';
 import { usePipelineStore } from './store/pipelineStore';
 import { useVisitasStore } from './store/visitasStore';
+import { usePresupuestosStore } from './store/presupuestosStore';
 import { useAppBadge } from './hooks/useAppBadge';
 import { useGlobalRefresh } from './hooks/useGlobalRefresh';
 import { makeRefresher } from './hooks/useAutoRefresh';
@@ -70,6 +71,7 @@ function AppInit() {
   const initDrive         = useDriveStore(s => s.initialize);
   const initPipeline      = usePipelineStore(s => s.initialize);
   const initVisitas       = useVisitasStore(s => s.initialize);
+  const initPresupuestos  = usePresupuestosStore(s => s.initialize);
   const initNotas         = useNotasStore(s => s.initialize);
   const initSeguimiento   = useSeguimientoStore(s => s.initialize);
   const initCatalogoEquipos = useCatalogoEquiposStore(s => s.initialize);
@@ -87,7 +89,7 @@ function AppInit() {
     Promise.all([
       initClientes(), initEquipos(), initOportunidades(), initDemos(),
       initServicios(), initAgenda(), initActividad(),
-      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(), initVisitas(), initNotas(), initSeguimiento(), initCatalogoEquipos(), initLlamadasPendientes(), initCursos(), initVacaciones(),
+      initEspecialidades(), initSubespecialidades(), initCategorias(), initTiposCliente(), initServiciosHospital(), initDrive(), initPipeline(), initVisitas(), initNotas(), initSeguimiento(), initCatalogoEquipos(), initLlamadasPendientes(), initCursos(), initVacaciones(), initPresupuestos(),
     ]).catch(e => console.error('[AppInit]', e));
   }, [user?.id]);
 
@@ -107,7 +109,7 @@ function AppInit() {
           makeRefresher(useEspecialidadesStore), makeRefresher(useSubespecialidadesStore),
           makeRefresher(useCategoriasStore), makeRefresher(useTiposClienteStore),
           makeRefresher(useServiciosHospitalStore), makeRefresher(useDriveStore),
-          makeRefresher(usePipelineStore),
+          makeRefresher(usePipelineStore), makeRefresher(usePresupuestosStore),
         ]
       : []
   );

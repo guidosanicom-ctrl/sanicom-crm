@@ -33,6 +33,12 @@ create table if not exists ordenes_servicio (
   data jsonb not null default '{}'::jsonb
 );
 
+-- Tabla de presupuestos de servicio técnico
+create table if not exists presupuestos (
+  id text primary key,
+  data jsonb not null default '{}'::jsonb
+);
+
 -- Tabla de eventos de agenda
 create table if not exists eventos_agenda (
   id text primary key,
@@ -86,7 +92,7 @@ declare
 begin
   foreach t in array array[
     'clientes','equipos','oportunidades','demostraciones',
-    'ordenes_servicio','eventos_agenda','notificaciones','actividad',
+    'ordenes_servicio','presupuestos','eventos_agenda','notificaciones','actividad',
     'especialidades','categorias_equipo','pipeline_etapas','subespecialidades_fisioterapia'
   ]
   loop

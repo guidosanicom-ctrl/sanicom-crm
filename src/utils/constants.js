@@ -13,6 +13,7 @@ export const TIPOS_SERVICIO = ['Mantenimiento preventivo', 'Reparación correcti
 export const PRIORIDADES_SERVICIO = ['Baja', 'Normal', 'Alta', 'Urgente'];
 export const ESTADOS_SERVICIO = ['Pendiente', 'Programada', 'En curso', 'Completada', 'Entregada', 'Cancelada'];
 export const ESTADOS_DEMO = ['Pendiente', 'Confirmada', 'Realizada', 'Reprogramada', 'Cancelada'];
+export const ESTADOS_PRESUPUESTO = ['Borrador', 'Enviado', 'Aceptado', 'Rechazado'];
 export const RESULTADOS_DEMO = ['Muy interesado', 'Interesado', 'Sin interés', 'Pendiente de decisión'];
 export const ORIGENES_OPP = ['Visita comercial', 'Referido', 'Web', 'Llamada entrante', 'Feria', 'Email', 'Redes sociales', 'Otro'];
 export const REDES_SOCIALES = ['Instagram', 'Facebook', 'LinkedIn', 'WhatsApp', 'YouTube', 'Otra'];
