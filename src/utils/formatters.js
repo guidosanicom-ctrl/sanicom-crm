@@ -40,12 +40,13 @@ export const generateNumero = (prefix, list) => {
 };
 
 // Numeración anual sin guión: PR + año + secuencial de 4 dígitos, se reinicia cada año.
-export const generateNumeroAnual = (prefix, list) => {
+// startAt permite fijar un piso (ej: continuar una numeración externa previa).
+export const generateNumeroAnual = (prefix, list, startAt = 1) => {
   const base = `${prefix}${new Date().getFullYear()}`;
   const max = list.reduce((acc, item) => {
     if (!item.numero?.startsWith(base)) return acc;
     const num = parseInt(item.numero.slice(base.length)) || 0;
     return num > acc ? num : acc;
-  }, 0);
+  }, startAt - 1);
   return `${base}${String(max + 1).padStart(4, '0')}`;
 };

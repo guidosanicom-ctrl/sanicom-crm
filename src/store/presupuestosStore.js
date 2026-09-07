@@ -21,7 +21,7 @@ export const usePresupuestosStore = create((set, get) => ({
   addPresupuesto: (presupuestoData) => {
     const user = useAuthStore.getState().user;
     const presupuestos = get().presupuestos;
-    const numero = generateNumeroAnual('PR', presupuestos);
+    const numero = generateNumeroAnual('PR', presupuestos, 144);
     const historial = user ? [createEntry('creó este presupuesto', user)] : [];
     const item = {
       ...presupuestoData, id: generateId(), numero,
