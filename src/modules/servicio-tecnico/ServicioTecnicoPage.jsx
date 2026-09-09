@@ -298,7 +298,8 @@ export default function ServicioTecnicoPage() {
       && (!filterTipo || s.tipo === filterTipo)
       && (!filterPrioridad || s.prioridad === filterPrioridad)
       && (!filterTecnico || s.tecnico === filterTecnico);
-  }), [servicios, clientes, equipos, search, filterEstado, filterTipo, filterPrioridad, filterTecnico]);
+  }).sort((a, b) => (b.numero || '').localeCompare(a.numero || '', undefined, { numeric: true })),
+  [servicios, clientes, equipos, search, filterEstado, filterTipo, filterPrioridad, filterTecnico]);
 
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
