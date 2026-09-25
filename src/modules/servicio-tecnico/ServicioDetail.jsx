@@ -184,7 +184,9 @@ export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete,
                 <span className="w-1 h-4 bg-yellow-400 rounded-full inline-block" />
                 💶 Facturación
               </h3>
-              {orden.facturacion.facturada ? (
+              {orden.facturacionRequerida === false ? (
+                <span className="text-xs text-gray-600 font-semibold bg-gray-100 px-2 py-1 rounded-lg">Sin factura · solo registro</span>
+              ) : orden.facturacion.facturada ? (
                 <span className="text-xs text-green-600 font-semibold bg-green-100 px-2 py-1 rounded-lg">✓ Facturada</span>
               ) : (
                 <button
@@ -231,10 +233,14 @@ export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete,
         )}
 
         {/* Cerrada sin datos de facturación — permitir añadirla ahora */}
-        {!orden.facturacion && orden.facturacionRequerida !== false && !isCarlos()
+        {!orden.facturacion && !isCarlos()
           && (orden.estado === 'Completada' || orden.estado === 'Entregada') && onFacturar && (
           <div className="border border-yellow-200 rounded-xl p-4 bg-yellow-50 flex items-center justify-between gap-3 flex-wrap">
-            <p className="text-sm text-gray-700">💶 Esta OT no tiene detalle de facturación cargado.</p>
+            <p className="text-sm text-gray-700">
+              {orden.facturacionRequerida === false
+                ? '💶 Cerrada sin factura y sin detalle cargado.'
+                : '💶 Esta OT no tiene detalle de facturación cargado.'}
+            </p>
             <button
               onClick={() => onFacturar(orden)}
               className="text-xs bg-[#1B4F8A] text-white px-3 py-1.5 rounded-lg hover:bg-[#163d6e] transition-colors cursor-pointer font-medium whitespace-nowrap"

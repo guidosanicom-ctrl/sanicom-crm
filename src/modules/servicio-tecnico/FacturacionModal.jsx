@@ -34,14 +34,20 @@ export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero
     [lineas]);
   const totalConIva = totalSinIva * (1 + iva / 100);
 
+  const hayLineas = lineas.some(l => l.concepto.trim());
+
   const handleConfirm = () => {
+    const lineasValidas = lineas.filter(l => l.concepto.trim());
+    const facturacion = lineasValidas.length > 0
+      ? { lineas: lineasValidas, iva, notas, totalSinIva, totalConIva, facturada: false }
+      : null;
     if (!requiereFactura) {
-      onConfirm({ facturacionRequerida: false });
+      // Sin factura: el detalle es opcional; si se carga, cuenta para el resumen y la comisión
+      onConfirm({ facturacionRequerida: false, ...(facturacion ? { facturacion } : {}) });
       return;
     }
-    const lineasValidas = lineas.filter(l => l.concepto.trim());
-    if (lineasValidas.length === 0) return;
-    onConfirm({ facturacion: { lineas: lineasValidas, iva, notas, totalSinIva, totalConIva, facturada: false } });
+    if (!facturacion) return;
+    onConfirm({ facturacion });
   };
 
   const inp = 'w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20';
@@ -55,8 +61,8 @@ export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleConfirm} disabled={requiereFactura && !lineas.some(l => l.concepto.trim())}>
-            {requiereFactura ? 'Confirmar y cerrar OT' : 'Cerrar OT sin facturar'}
+          <Button onClick={handleConfirm} disabled={requiereFactura && !hayLineas}>
+            {requiereFactura || hayLineas ? 'Confirmar y cerrar OT' : 'Cerrar OT sin facturar'}
           </Button>
         </>
       }
@@ -82,12 +88,12 @@ export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero
 
         {!requiereFactura && (
           <p className="text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
-            La OT se marcará como completada sin pedir datos de facturación y no aparecerá como pendiente de facturar en el resumen mensual.
+            La OT no se enviará a Administración para facturar ni aparecerá como pendiente de facturar.
+            Puedes cargar el detalle igualmente (opcional): quedará en el histórico y contará para el total y la comisión del resumen mensual.
           </p>
         )}
       </div>
 
-      {requiereFactura && (
       <div className="space-y-5 mt-5">
         {/* Tabla de líneas */}
         <div>
@@ -183,7 +189,6 @@ export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero
           />
         </div>
       </div>
-      )}
     </Modal>
   );
 }

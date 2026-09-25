@@ -95,7 +95,7 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
   const totalSinIva = otsFacturadas.reduce((acc, s) => acc + s._montoSinIva, 0);
   // No contar las OTs marcadas explícitamente como "no requiere factura"
   const sinDetalle      = completadasDel.filter(s => !s.facturacion && s.facturacionRequerida !== false).length;
-  const pendienteFacturar = completadasDel.filter(s => s.facturacion && !s.facturacion.facturada).length;
+  const pendienteFacturar = completadasDel.filter(s => s.facturacion && !s.facturacion.facturada && s.facturacionRequerida !== false).length;
 
   const fmt = (n) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
@@ -426,7 +426,7 @@ export default function ServicioTecnicoPage() {
                           {s.fechaProgramada && <span className="text-xs text-gray-400">{formatDate(s.fechaProgramada)}</span>}
                         </div>
                       </div>
-                      {s.facturacion && !s.facturacion.facturada && (
+                      {s.facturacion && !s.facturacion.facturada && s.facturacionRequerida !== false && (
                         <Badge color="yellow">💶 Pendiente</Badge>
                       )}
                       {!readOnly && s.estado !== 'Completada' && s.estado !== 'Entregada' && (
@@ -470,7 +470,7 @@ export default function ServicioTecnicoPage() {
                         <td className="px-3 py-3"><Badge color={PRIORIDAD_BADGE[s.prioridad] || 'gray'}>{s.prioridad}</Badge></td>
                         <td className="px-3 py-3">
                           <div className="flex gap-2 items-center">
-                            {s.facturacion && !s.facturacion.facturada && (
+                            {s.facturacion && !s.facturacion.facturada && s.facturacionRequerida !== false && (
                               <Badge color="yellow">💶 Pendiente</Badge>
                             )}
                             {!readOnly && s.estado !== 'Completada' && s.estado !== 'Entregada' && (
@@ -531,13 +531,17 @@ export default function ServicioTecnicoPage() {
         ordenNumero={facturacionOT?.numero}
         onConfirm={(resultado) => {
           const base = pendingFormData || { estado: 'Completada' };
-          const updates = resultado.facturacionRequerida === false
-            ? { ...base, facturacionRequerida: false }
-            : { ...base, facturacion: resultado.facturacion };
+          const sinFactura = resultado.facturacionRequerida === false;
+          const updates = {
+            ...base,
+            ...(sinFactura ? { facturacionRequerida: false }
+              : facturacionOT.facturacionRequerida === false ? { facturacionRequerida: true } : {}),
+            ...(resultado.facturacion ? { facturacion: resultado.facturacion } : {}),
+          };
           updateServicio(facturacionOT.id, updates);
           toast.success(
-            resultado.facturacionRequerida === false
-              ? 'Orden completada sin facturación.'
+            sinFactura
+              ? (resultado.facturacion ? 'Orden completada sin factura. Detalle guardado en el resumen.' : 'Orden completada sin facturación.')
               : 'Orden completada y detalle de facturación guardado.'
           );
           setFacturacionOT(null);
