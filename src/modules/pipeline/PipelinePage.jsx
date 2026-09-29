@@ -18,6 +18,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { useLlamadasPendientesStore } from '../../store/llamadasPendientesStore';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
+import Modal from '../../components/ui/Modal';
 import { etapaLabel } from '../../utils/constants';
 
 // Dropdown con búsqueda reutilizable
@@ -356,6 +357,7 @@ export default function PipelinePage() {
   const [responsableFiltro, setResponsableFiltro] = useState('');
   const [ciudadFiltro, setCiudadFiltro] = useState('');
   const [especialidadFiltro, setEspecialidadFiltro] = useState('');
+  const [ganadasOpen, setGanadasOpen] = useState(false);
 
   // Sincronizar mobileTab cuando cargan las etapas
   useEffect(() => { if (!mobileTab && ETAPAS_PIPELINE.length) setMobileTab(ETAPAS_PIPELINE[0]); }, [ETAPAS_PIPELINE]);
@@ -414,13 +416,29 @@ export default function PipelinePage() {
     const pipeline = open.reduce((s, o) => s + (o.valor || 0), 0);
     const weighted = open.reduce((s, o) => s + (o.valor || 0) * (o.probabilidad || 0) / 100, 0);
     const now = new Date();
-    const wonMonth = oportunidades.filter(o => {
-      if (o.etapa !== 'Ganado') return false;
-      const d = o.fechaUltimaActualizacion;
-      return d && new Date(d).getMonth() === now.getMonth() && new Date(d).getFullYear() === now.getFullYear();
-    }).length;
-    return { total: oportunidades.length, pipeline, weighted, wonMonth };
+    // fechaGanado (guardada al marcar Ganado) o fechaUltimaActualizacion como fallback
+    const ganadasMes = oportunidades
+      .filter(o => {
+        if (o.etapa !== 'Ganado') return false;
+        const d = o.fechaGanado || o.fechaUltimaActualizacion;
+        return d && new Date(d).getMonth() === now.getMonth() && new Date(d).getFullYear() === now.getFullYear();
+      })
+      .sort((a, b) => new Date(b.fechaGanado || b.fechaUltimaActualizacion) - new Date(a.fechaGanado || a.fechaUltimaActualizacion));
+    return { total: oportunidades.length, pipeline, weighted, wonMonth: ganadasMes.length, ganadasMes };
   }, [oportunidades]);
+
+  // Totales de ventas ganadas del mes por comercial
+  const ganadasPorComercial = useMemo(() => {
+    const map = new Map();
+    metrics.ganadasMes.forEach(o => {
+      const key = o.responsable || '';
+      const cur = map.get(key) || { id: key, count: 0, valor: 0 };
+      cur.count += 1;
+      cur.valor += Number(o.valor) || 0;
+      map.set(key, cur);
+    });
+    return [...map.values()].sort((a, b) => b.valor - a.valor);
+  }, [metrics.ganadasMes]);
 
   const EQUIPOS_FILTRO = ['Diatermia', 'Onda de Choque', 'Ecógrafo', 'Otro'];
 
@@ -493,8 +511,15 @@ export default function PipelinePage() {
           { label: 'Total oportunidades', value: metrics.total },
           { label: 'Pipeline total', value: formatCurrency(metrics.pipeline) },
           { label: 'Valor ponderado', value: formatCurrency(metrics.weighted) },
-          { label: 'Ganadas este mes', value: metrics.wonMonth },
-        ].map((m, i) => (
+          { label: 'Ganadas este mes', value: metrics.wonMonth, onClick: () => setGanadasOpen(true), hint: 'Ver ventas' },
+        ].map((m, i) => m.onClick ? (
+          <button key={i} onClick={m.onClick}
+            className="text-left bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:border-[#1B4F8A] hover:shadow transition-colors cursor-pointer">
+            <p className="text-xs text-gray-500">{m.label}</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{m.value}</p>
+            <p className="text-xs text-[#1B4F8A] mt-1 font-medium">{m.hint} →</p>
+          </button>
+        ) : (
           <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <p className="text-xs text-gray-500">{m.label}</p>
             <p className="text-xl font-bold text-gray-900 mt-1">{m.value}</p>
@@ -654,6 +679,71 @@ export default function PipelinePage() {
           </table>
         </div>
       )}
+
+      {/* Ventas ganadas este mes */}
+      <Modal
+        open={ganadasOpen}
+        onClose={() => setGanadasOpen(false)}
+        title={`Ventas ganadas — ${new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`}
+        size="lg"
+      >
+        {metrics.ganadasMes.length === 0 ? (
+          <p className="text-center text-sm text-gray-400 py-6">No hay oportunidades ganadas este mes.</p>
+        ) : (
+          <div className="space-y-4">
+            {/* Resumen por comercial */}
+            <div className="flex flex-wrap gap-2">
+              {ganadasPorComercial.map(c => (
+                <div key={c.id} className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                  <p className="text-xs text-gray-600">{users.find(u => u.id === c.id)?.name || 'Sin responsable'}</p>
+                  <p className="text-sm font-semibold text-green-800">
+                    {formatCurrency(c.valor)} <span className="text-xs font-normal text-gray-500">· {c.count} venta{c.count !== 1 ? 's' : ''}</span>
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Listado */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    {['Oportunidad', 'Cliente', 'Comercial', 'Fecha', 'Valor'].map(h => (
+                      <th key={h} className={`py-2 px-2 text-xs font-semibold text-gray-500 uppercase ${h === 'Valor' ? 'text-right' : 'text-left'}`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {metrics.ganadasMes.map(o => {
+                    const cliente = clientes.find(c => c.id === o.clienteId);
+                    const resp = users.find(u => u.id === o.responsable);
+                    return (
+                      <tr key={o.id} className="hover:bg-gray-50">
+                        <td className="py-2 px-2">
+                          <button onClick={() => { setGanadasOpen(false); openDetail(o); }}
+                            className="text-[#1B4F8A] hover:underline text-left cursor-pointer">{o.nombre}</button>
+                        </td>
+                        <td className="py-2 px-2 text-gray-600">{cliente?.nombre || '-'}</td>
+                        <td className="py-2 px-2 text-gray-600 whitespace-nowrap">{resp?.name || '-'}</td>
+                        <td className="py-2 px-2 text-gray-500 whitespace-nowrap">{formatDate(o.fechaGanado || o.fechaUltimaActualizacion)}</td>
+                        <td className="py-2 px-2 text-right font-medium whitespace-nowrap">{formatCurrency(Number(o.valor) || 0)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-gray-200">
+                    <td colSpan={4} className="py-2 px-2 font-bold text-gray-800">Total</td>
+                    <td className="py-2 px-2 text-right font-bold text-[#1B4F8A] whitespace-nowrap">
+                      {formatCurrency(metrics.ganadasMes.reduce((s, o) => s + (Number(o.valor) || 0), 0))}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Detail panel */}
       <OportunidadDetail
