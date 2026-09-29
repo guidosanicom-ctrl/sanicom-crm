@@ -684,7 +684,14 @@ export default function PipelinePage() {
       <Modal
         open={ganadasOpen}
         onClose={() => setGanadasOpen(false)}
-        title={`Ventas ganadas — ${new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}`}
+        title={
+          <span className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+            <span>Ventas ganadas</span>
+            <span className="text-sm font-normal text-gray-500 capitalize">
+              {new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+            </span>
+          </span>
+        }
         size="lg"
       >
         {metrics.ganadasMes.length === 0 ? (
@@ -692,19 +699,48 @@ export default function PipelinePage() {
         ) : (
           <div className="space-y-4">
             {/* Resumen por comercial */}
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
               {ganadasPorComercial.map(c => (
-                <div key={c.id} className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                  <p className="text-xs text-gray-600">{users.find(u => u.id === c.id)?.name || 'Sin responsable'}</p>
-                  <p className="text-sm font-semibold text-green-800">
-                    {formatCurrency(c.valor)} <span className="text-xs font-normal text-gray-500">· {c.count} venta{c.count !== 1 ? 's' : ''}</span>
-                  </p>
+                <div key={c.id} className="bg-green-50 border border-green-200 rounded-lg px-3 py-2 min-w-0">
+                  <p className="text-xs text-gray-600 truncate">{users.find(u => u.id === c.id)?.name || 'Sin responsable'}</p>
+                  <p className="text-sm font-semibold text-green-800">{formatCurrency(c.valor)}</p>
+                  <p className="text-xs text-gray-500">{c.count} venta{c.count !== 1 ? 's' : ''}</p>
                 </div>
               ))}
             </div>
 
-            {/* Listado */}
-            <div className="overflow-x-auto">
+            {/* Total del mes — solo móvil */}
+            <div className="sm:hidden flex items-center justify-between bg-[#1B4F8A] text-white rounded-xl px-4 py-3">
+              <span className="text-sm font-medium">Total del mes</span>
+              <span className="text-lg font-bold">
+                {formatCurrency(metrics.ganadasMes.reduce((s, o) => s + (Number(o.valor) || 0), 0))}
+              </span>
+            </div>
+
+            {/* Tarjetas — solo móvil */}
+            <div className="sm:hidden space-y-2">
+              {metrics.ganadasMes.map(o => {
+                const cliente = clientes.find(c => c.id === o.clienteId);
+                const resp = users.find(u => u.id === o.responsable);
+                return (
+                  <button key={o.id} onClick={() => { setGanadasOpen(false); openDetail(o); }}
+                    className="w-full text-left bg-white border border-gray-100 rounded-xl p-3 shadow-sm active:bg-gray-50 cursor-pointer">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm font-semibold text-[#1B4F8A] leading-snug min-w-0 break-words">{o.nombre}</p>
+                      <p className="text-sm font-bold text-green-700 whitespace-nowrap">{formatCurrency(Number(o.valor) || 0)}</p>
+                    </div>
+                    {cliente?.nombre && <p className="text-xs text-gray-600 mt-1 truncate">{cliente.nombre}</p>}
+                    <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
+                      <span className="truncate">{resp?.name || 'Sin responsable'}</span>
+                      <span className="whitespace-nowrap">{formatDate(o.fechaGanado || o.fechaUltimaActualizacion)}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Tabla — solo escritorio */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
