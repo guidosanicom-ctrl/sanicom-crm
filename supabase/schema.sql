@@ -116,3 +116,13 @@ alter table push_subscriptions enable row level security;
 drop policy if exists "allow_all_anon" on push_subscriptions;
 create policy "allow_all_anon" on push_subscriptions
   for all to anon using (true) with check (true);
+
+-- Viajes de servicio técnico (dieta por noche; el sobrante tras hotel y cena va a comisiones)
+create table if not exists viajes (
+  id text primary key,
+  data jsonb not null default '{}'::jsonb
+);
+alter table viajes enable row level security;
+drop policy if exists "allow_all_anon" on viajes;
+create policy "allow_all_anon" on viajes
+  for all to anon using (true) with check (true);

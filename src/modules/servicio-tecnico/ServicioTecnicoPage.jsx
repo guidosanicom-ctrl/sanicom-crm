@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useOpenFromUrl } from '../../hooks/useOpenFromUrl';
 import { useAutoRefresh, makeRefresher } from '../../hooks/useAutoRefresh';
 import RefreshIndicator from '../../components/ui/RefreshIndicator';
@@ -19,6 +19,8 @@ import ServicioForm from './ServicioForm';
 import ServicioDetail from './ServicioDetail';
 import FacturacionModal from './FacturacionModal';
 import PresupuestosTab from './PresupuestosTab';
+import ViajesTab from './ViajesTab';
+import { useViajesStore, calcularViaje } from '../../store/viajesStore';
 import Modal from '../../components/ui/Modal';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { ESTADOS_SERVICIO, TIPOS_SERVICIO, PRIORIDADES_SERVICIO } from '../../utils/constants';
@@ -54,6 +56,7 @@ function StatCard({ label, value, sub, color = 'gray', icon: Icon, onClick }) {
 function ResumenMensual({ servicios, isGuido, onOpenOT }) {
   const { clientes } = useClientesStore();
   const { oportunidades } = useOportunidadesStore();
+  const { viajes } = useViajesStore();
   const { users } = useAuthStore();
   const guidoId = users.find(u => u.email === 'guidorosso@sanicom.es')?.id;
   const now = new Date();
@@ -116,9 +119,17 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
     return { ...o, _pct: pct, _comision: valor * pct / 100 };
   }), [oppsGanadasDel]);
 
-  const comisionOTs   = totalSinIva * 0.10;
-  const comisionOpps  = oppsConComision.reduce((acc, o) => acc + o._comision, 0);
-  const comisionTotal = comisionOTs + comisionOpps;
+  // Viajes del período: lo que sobra de la dieta tras hotel y cena se suma a la comisión
+  const viajesDel = useMemo(() => viajes.filter(v => {
+    if (v.creadoPorId && v.creadoPorId !== guidoId) return false;
+    const d = new Date(v.fecha);
+    return d.getFullYear() === anio && d.getMonth() === mes;
+  }).map(v => ({ ...v, ...calcularViaje(v) })), [viajes, mes, anio, guidoId]);
+
+  const comisionOTs     = totalSinIva * 0.10;
+  const comisionOpps    = oppsConComision.reduce((acc, o) => acc + o._comision, 0);
+  const sobranteViajes  = viajesDel.reduce((acc, v) => acc + v.sobrante, 0);
+  const comisionTotal   = comisionOTs + comisionOpps + sobranteViajes;
 
   return (
     <div className="space-y-6">
@@ -199,6 +210,23 @@ function ResumenMensual({ servicios, isGuido, onOpenOT }) {
               {oppsConComision.length === 0 && (
                 <p className="text-sm text-gray-400 pl-3">Sin oportunidades ganadas este mes</p>
               )}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Viajes · sobrante de {viajesDel.length} viaje{viajesDel.length !== 1 ? 's' : ''}</span>
+                <span className="font-medium">{fmt(sobranteViajes)}</span>
+              </div>
+              {viajesDel.length > 0 && (
+                <div className="pl-3 border-l-2 border-green-300 space-y-1 mt-1">
+                  {viajesDel.map(v => (
+                    <div key={v.id} className="flex justify-between text-sm text-gray-500">
+                      <span className="truncate max-w-[60%]">{formatDate(v.fecha)} · {v.destino} · {v.noches} noche{v.noches !== 1 ? 's' : ''} − hotel y cena {fmt(v.gastos)}</span>
+                      <span className={`font-medium ${v.sobrante >= 0 ? 'text-green-700' : 'text-red-600'}`}>{fmt(v.sobrante)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {viajesDel.length === 0 && (
+                <p className="text-sm text-gray-400 pl-3">Sin viajes este mes</p>
+              )}
             </div>
           </div>
         )}
@@ -273,6 +301,11 @@ export default function ServicioTecnicoPage() {
   const { equipos } = useEquiposStore();
   const { users, isReadOnly, isCarlos, isGuido } = useAuthStore();
   const readOnly = isReadOnly('servicio-tecnico');
+  const initViajes = useViajesStore(s => s.initialize);
+  const guido = isGuido();
+
+  // Los viajes solo los usa Guido: se cargan aquí y no en el arranque de la app
+  useEffect(() => { if (guido) initViajes(); }, [guido, initViajes]);
   const [activeTab, setActiveTab] = useState('ordenes');
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
@@ -308,7 +341,9 @@ export default function ServicioTecnicoPage() {
 
   useOpenFromUrl(servicios, (ot) => openDetail(ot));
 
-  const { refreshing } = useAutoRefresh([makeRefresher(useServicioStore)]);
+  const { refreshing } = useAutoRefresh(guido
+    ? [makeRefresher(useServicioStore), makeRefresher(useViajesStore)]
+    : [makeRefresher(useServicioStore)]);
 
   const sel = `px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none bg-white`;
 
@@ -339,11 +374,21 @@ export default function ServicioTecnicoPage() {
             Presupuestos
           </button>
         )}
+        {isGuido() && (
+          <button
+            onClick={() => setActiveTab('viajes')}
+            className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors cursor-pointer ${activeTab === 'viajes' ? 'bg-white border border-b-white border-gray-200 -mb-px text-[#1B4F8A]' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Viajes
+          </button>
+        )}
       </div>
 
       {activeTab === 'resumen' && !isCarlos() && <ResumenMensual servicios={servicios} isGuido={isGuido()} onOpenOT={openDetail} />}
 
       {activeTab === 'presupuestos' && isGuido() && <PresupuestosTab />}
+
+      {activeTab === 'viajes' && isGuido() && <ViajesTab />}
 
       {activeTab === 'ordenes' && <>
 
