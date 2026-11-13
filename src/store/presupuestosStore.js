@@ -55,5 +55,29 @@ export const usePresupuestosStore = create((set, get) => ({
     });
   },
 
+  /** Crea el presupuesto en STEL Order (función stel-enviar-presupuesto). */
+  enviarAStel: async (id) => {
+    const user = useAuthStore.getState().user;
+    const { data, error } = await supabase.functions.invoke('stel-enviar-presupuesto', {
+      body: { presupuestoId: id, usuario: user?.name || null },
+    });
+    let msg = data?.error;
+    if (error) {
+      msg = error.message;
+      try { msg = (await error.context?.json())?.error || msg; } catch { /* sin cuerpo */ }
+    }
+    if (msg) return { ok: false, error: msg };
+    // La función ya lo guardó en la base de datos; aquí solo actualizamos la copia local
+    // (sin volver a guardar, para no pisar nada) y registramos quién lo envió.
+    set(s => ({ presupuestos: s.presupuestos.map(p => p.id === id ? { ...p, stel: data.stel } : p) }));
+    const prev = get().presupuestos.find(p => p.id === id);
+    if (prev && user && !data.yaEnviado) {
+      const updated = { ...prev, historial: [...(prev.historial || []), createEntry(`envió el presupuesto a STEL (${data.stel.referencia || data.stel.id})`, user)] };
+      set(s => ({ presupuestos: s.presupuestos.map(p => p.id === id ? updated : p) }));
+      supabase.from(TABLE).update({ data: updated }).eq('id', id).then(({ error: e }) => { if (e) console.error(e); });
+    }
+    return { ok: true, ...data };
+  },
+
   getPresupuesto: (id) => get().presupuestos.find(p => p.id === id),
 }));

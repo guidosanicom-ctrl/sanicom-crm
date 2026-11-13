@@ -5,9 +5,12 @@ import Badge from '../../components/ui/Badge';
 import HistorialTimeline from '../../components/shared/HistorialTimeline';
 import { useAuthStore } from '../../store/authStore';
 import { useClientesStore } from '../../store/clientesStore';
+import { usePresupuestosStore } from '../../store/presupuestosStore';
+import ConfirmDialog from '../../components/shared/ConfirmDialog';
+import toast from 'react-hot-toast';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { exportPresupuestoPdf } from '../../utils/exportPresupuestoPdf';
-import { Edit, Trash2, FileDown } from 'lucide-react';
+import { Edit, Trash2, FileDown, Send, CheckCircle2 } from 'lucide-react';
 import logoSrc from '../../assets/sanicom_logo.png';
 
 const ESTADO_COLOR = { 'Borrador': 'gray', 'Enviado': 'blue', 'Aceptado': 'green', 'Rechazado': 'red' };
@@ -28,12 +31,31 @@ function validoHasta(presupuesto) {
   return d.toISOString().split('T')[0];
 }
 
-export default function PresupuestoDetail({ open, onClose, presupuesto, onEdit, onDelete }) {
+export default function PresupuestoDetail({ open, onClose, presupuesto: presupuestoProp, onEdit, onDelete }) {
   const { clientes } = useClientesStore();
   const { user, users } = useAuthStore();
+  const enviarAStel = usePresupuestosStore(s => s.enviarAStel);
+  // Versión viva del store (para ver al momento que se ha enviado a STEL)
+  const presupuestoLive = usePresupuestosStore(s => s.presupuestos.find(p => p.id === presupuestoProp?.id));
+  const presupuesto = presupuestoLive || presupuestoProp;
   const [exporting, setExporting] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [confirmStel, setConfirmStel] = useState(false);
 
   if (!presupuesto) return null;
+
+  const lineasLibres = (presupuesto.lineas || []).filter(l => l.concepto?.trim() && !l.stelItemId);
+
+  const handleEnviarStel = async () => {
+    setEnviando(true);
+    try {
+      const r = await enviarAStel(presupuesto.id);
+      if (!r.ok) { toast.error(r.error, { duration: 8000 }); return; }
+      toast.success(r.yaEnviado ? 'Este presupuesto ya estaba en STEL.' : `Presupuesto creado en STEL: ${r.stel.referencia || r.stel.id}`);
+    } finally {
+      setEnviando(false);
+    }
+  };
 
   const cliente = clientes.find(c => c.id === presupuesto.clienteId);
 
@@ -49,6 +71,7 @@ export default function PresupuestoDetail({ open, onClose, presupuesto, onEdit, 
   };
 
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
@@ -60,6 +83,11 @@ export default function PresupuestoDetail({ open, onClose, presupuesto, onEdit, 
           <Button variant="outline" onClick={handleExportPdf} loading={exporting}>
             <FileDown className="w-4 h-4" />{exporting ? 'Generando...' : 'Exportar PDF'}
           </Button>
+          {!presupuesto.stel?.id && (
+            <Button variant="outline" onClick={() => setConfirmStel(true)} loading={enviando}>
+              <Send className="w-4 h-4" />{enviando ? 'Enviando…' : 'Enviar a STEL'}
+            </Button>
+          )}
           {onDelete && (
             <Button variant="danger" onClick={onDelete}>
               <Trash2 className="w-4 h-4" />Eliminar
@@ -77,6 +105,11 @@ export default function PresupuestoDetail({ open, onClose, presupuesto, onEdit, 
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <Badge color={ESTADO_COLOR[presupuesto.estado] || 'gray'}>{presupuesto.estado}</Badge>
+            {presupuesto.stel?.id && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />En STEL{presupuesto.stel.referencia ? `: ${presupuesto.stel.referencia}` : ''}
+              </span>
+            )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <Row label="Cliente" value={cliente?.nombre} />
@@ -141,5 +174,17 @@ export default function PresupuestoDetail({ open, onClose, presupuesto, onEdit, 
         </div>
       </div>
     </Modal>
+      <ConfirmDialog
+        open={confirmStel}
+        onClose={() => setConfirmStel(false)}
+        onConfirm={lineasLibres.length ? () => {} : handleEnviarStel}
+        title="Enviar a STEL"
+        variant="primary"
+        confirmText={lineasLibres.length ? 'Entendido' : 'Enviar'}
+        message={lineasLibres.length
+          ? `No se puede enviar todavía: ${lineasLibres.length === 1 ? 'hay una línea escrita' : `hay ${lineasLibres.length} líneas escritas`} a mano. STEL solo admite artículos de su catálogo: edítalas y elígelas del buscador.`
+          : 'Se creará este presupuesto en STEL Order para que Administración lo revise y lo facture. Si el cliente no existe en STEL, se creará con su CIF. Los cambios que hagas después en el CRM no se pasan a STEL.'}
+      />
+    </>
   );
 }
