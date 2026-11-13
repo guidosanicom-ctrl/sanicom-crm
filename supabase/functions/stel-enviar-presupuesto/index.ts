@@ -24,11 +24,20 @@ const json = (body: unknown, status = 200) =>
 
 class UserError extends Error {}
 
+// Los acentos y la ñ se mandan escapados (\u00ed…): así llegan bien aunque STEL
+// interprete el cuerpo con otra codificación (antes "Clínica" llegaba como "ClÃ­nica").
+const toAsciiJson = (v: unknown) =>
+  JSON.stringify(v).replace(/[\u007f-\uffff]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+
 async function stel(apiKey: string, method: string, path: string, body?: unknown) {
   const res = await fetch(`${STEL_BASE}/${path}`, {
     method,
-    headers: { APIKEY: apiKey, Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) },
-    body: body ? JSON.stringify(body) : undefined,
+    headers: {
+      APIKEY: apiKey,
+      Accept: 'application/json',
+      ...(body ? { 'Content-Type': 'application/json; charset=UTF-8' } : {}),
+    },
+    body: body ? toAsciiJson(body) : undefined,
   });
   const text = await res.text();
   let data: any = null;
