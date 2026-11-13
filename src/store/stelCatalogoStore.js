@@ -7,10 +7,23 @@ const ITEMS = 'stel_items';
 const CONFIG = 'stel_config';
 const CONFIG_ID = 'main';
 
-/** Áreas efectivas de un artículo: las asignadas a mano + las de su categoría STEL. */
-export const areasEfectivas = (item, categoriaAreas = {}) => {
+/** Marca del artículo = prefijo de la referencia antes del primer guion (ROSS-04BP031 → ROSS). */
+export const prefijoReferencia = (ref) => {
+  const r = String(ref || '').trim().toUpperCase();
+  const i = r.indexOf('-');
+  return i > 0 ? r.slice(0, i) : '';
+};
+
+/**
+ * Áreas efectivas de un artículo: las asignadas a mano + las de su categoría STEL
+ * + las de su marca (prefijo de referencia).
+ */
+export const areasEfectivas = (item, config = {}) => {
   const set = new Set(item?.areas || []);
+  const { categoriaAreas = {}, prefijoAreas = {} } = config;
   if (item?.categoriaId != null) (categoriaAreas[item.categoriaId] || []).forEach(a => set.add(a));
+  const pref = prefijoReferencia(item?.referencia);
+  if (pref) (prefijoAreas[pref] || []).forEach(a => set.add(a));
   return [...set];
 };
 
@@ -19,7 +32,7 @@ export const veTodoElCatalogo = (user) => user?.role === 'Administración';
 
 export const useStelCatalogoStore = create((set, get) => ({
   items: [],
-  config: { categoriaAreas: {}, categorias: [], ultimaSync: null },
+  config: { categoriaAreas: {}, prefijoAreas: {}, categorias: [], ultimaSync: null },
   initialized: false,
   syncing: false,
 
@@ -32,7 +45,7 @@ export const useStelCatalogoStore = create((set, get) => ({
     if (error) { console.error('[stelCatalogoStore]', error); return; }
     set({
       items: (data || []).map(r => r.data),
-      config: { categoriaAreas: {}, categorias: [], ...(cfg?.data || {}) },
+      config: { categoriaAreas: {}, prefijoAreas: {}, categorias: [], ...(cfg?.data || {}) },
       initialized: true,
     });
   },
@@ -75,6 +88,15 @@ export const useStelCatalogoStore = create((set, get) => ({
     });
   },
 
+  setPrefijoAreas: (prefijo, areas) => {
+    const prev = get().config;
+    const updated = { ...prev, prefijoAreas: { ...(prev.prefijoAreas || {}), [prefijo]: areas } };
+    set({ config: updated });
+    supabase.from(CONFIG).upsert({ id: CONFIG_ID, data: updated }).then(({ error }) => {
+      if (error) { console.error(error); set({ config: prev }); }
+    });
+  },
+
   /** Artículos que puede usar un usuario en sus presupuestos. */
   itemsParaUsuario: (user) => {
     const { items, config } = get();
@@ -83,6 +105,6 @@ export const useStelCatalogoStore = create((set, get) => ({
     // Se lee de USERS (no de la sesión guardada) para que los cambios de áreas apliquen sin volver a iniciar sesión
     const misAreas = new Set(USERS.find(u => u.id === user?.id)?.areasCatalogo || []);
     if (!misAreas.size) return [];
-    return activos.filter(i => areasEfectivas(i, config.categoriaAreas).some(a => misAreas.has(a)));
+    return activos.filter(i => areasEfectivas(i, config).some(a => misAreas.has(a)));
   },
 }));

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import SearchBar from '../../components/shared/SearchBar';
-import { useStelCatalogoStore, areasEfectivas } from '../../store/stelCatalogoStore';
+import { useStelCatalogoStore, areasEfectivas, prefijoReferencia } from '../../store/stelCatalogoStore';
 import { AREAS_CATALOGO } from '../../utils/constants';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -21,7 +21,7 @@ function AreaChips({ value = [], heredadas = [], onToggle }) {
             key={a.id}
             type="button"
             onClick={() => onToggle(a.id)}
-            title={heredada ? 'Asignada por su categoría' : undefined}
+            title={heredada ? 'Asignada por su marca o categoría' : undefined}
             className={`px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors cursor-pointer
               ${manual ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]'
                 : heredada ? 'bg-blue-50 text-[#1B4F8A] border-blue-200'
@@ -36,7 +36,8 @@ function AreaChips({ value = [], heredadas = [], onToggle }) {
 }
 
 export default function CatalogoStel() {
-  const { items, config, syncing, initialize, sincronizar, setItemAreas, setCategoriaAreas } = useStelCatalogoStore();
+  const { items, config, syncing, initialize, sincronizar, setItemAreas, setCategoriaAreas, setPrefijoAreas } = useStelCatalogoStore();
+  const [buscaMarca, setBuscaMarca] = useState('');
   const [search, setSearch] = useState('');
   const [tipo, setTipo] = useState('');
   const [filtroArea, setFiltroArea] = useState('');
@@ -45,6 +46,20 @@ export default function CatalogoStel() {
   useEffect(() => { initialize(); }, [initialize]);
 
   const catAreas = config.categoriaAreas || {};
+  const prefAreas = config.prefijoAreas || {};
+
+  // Marcas detectadas por el prefijo de la referencia, con nº de artículos y un ejemplo
+  const marcas = useMemo(() => {
+    const m = new Map();
+    items.filter(i => !i.eliminado).forEach(i => {
+      const p = prefijoReferencia(i.referencia);
+      if (!p) return;
+      const e = m.get(p) || { prefijo: p, total: 0, ejemplo: i.nombre };
+      e.total++; m.set(p, e);
+    });
+    return [...m.values()].sort((a, b) => b.total - a.total);
+  }, [items]);
+  const marcasVisibles = marcas.filter(m => !buscaMarca || m.prefijo.toLowerCase().includes(buscaMarca.toLowerCase()) || m.ejemplo?.toLowerCase().includes(buscaMarca.toLowerCase()));
 
   const visibles = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -53,16 +68,16 @@ export default function CatalogoStel() {
       .filter(i => !tipo || i.tipo === tipo)
       .filter(i => {
         if (!filtroArea) return true;
-        const ef = areasEfectivas(i, catAreas);
+        const ef = areasEfectivas(i, config);
         return filtroArea === '__sin' ? ef.length === 0 : ef.includes(filtroArea);
       })
       .filter(i => !q || [i.nombre, i.referencia, i.categoriaNombre].some(t => t?.toLowerCase().includes(q)))
       .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
-  }, [items, tipo, filtroArea, search, catAreas]);
+  }, [items, tipo, filtroArea, search, config]);
 
   const paginados = visibles.slice((page - 1) * PER_PAGE, page * PER_PAGE);
   const totalPages = Math.max(1, Math.ceil(visibles.length / PER_PAGE));
-  const sinArea = items.filter(i => !i.eliminado && areasEfectivas(i, catAreas).length === 0).length;
+  const sinArea = items.filter(i => !i.eliminado && areasEfectivas(i, config).length === 0).length;
 
   const handleSync = async () => {
     const r = await sincronizar();
@@ -96,6 +111,32 @@ export default function CatalogoStel() {
           </Button>
         </div>
       </Card>
+
+      {marcas.length > 0 && (
+        <Card padding={false} className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700">Áreas por marca</h4>
+              <p className="text-xs text-gray-400 mt-0.5">
+                La marca sale del inicio de la referencia (ROSS-04BP031 → ROSS). Asignar una marca a un área incluye
+                todos sus artículos, también los que se den de alta en el futuro.
+              </p>
+            </div>
+            <SearchBar value={buscaMarca} onChange={setBuscaMarca} placeholder="Buscar marca…" className="w-48" />
+          </div>
+          <div className="divide-y divide-gray-100 max-h-[420px] overflow-auto">
+            {marcasVisibles.map(m => (
+              <div key={m.prefijo} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-700">{m.prefijo}<span className="text-xs font-normal text-gray-400 ml-2">{m.total} artículos</span></p>
+                  <p className="text-xs text-gray-400 truncate max-w-md">Ej.: {m.ejemplo}</p>
+                </div>
+                <AreaChips value={prefAreas[m.prefijo] || []} onToggle={a => setPrefijoAreas(m.prefijo, toggle(prefAreas[m.prefijo] || [], a))} />
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {config.categorias?.length > 0 && (
         <Card padding={false} className="p-5">
@@ -140,7 +181,7 @@ export default function CatalogoStel() {
           <>
             <div className="divide-y divide-gray-100">
               {paginados.map(i => {
-                const heredadas = i.categoriaId != null ? (catAreas[i.categoriaId] || []) : [];
+                const heredadas = areasEfectivas({ ...i, areas: [] }, config);
                 const Icon = i.tipo === 'service' ? Wrench : Package;
                 return (
                   <div key={i.id} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2.5 ${i.inactivo ? 'opacity-50' : ''}`}>
