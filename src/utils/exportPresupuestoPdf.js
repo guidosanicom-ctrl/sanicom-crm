@@ -80,12 +80,16 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
     } catch (_) { /* si falla el logo, continuar sin él */ }
   }
 
-  doc.setFillColor(...PRIMARY);
+  // Mientras no esté en STEL es un borrador: sin número, para que al cliente
+  // nunca le llegue un número que no exista en STEL (PRV…).
+  const esBorrador = !presupuesto.stel?.referencia;
+
+  doc.setFillColor(...(esBorrador ? MUTED : PRIMARY));
   doc.roundedRect(PW - M - 60, y, 60, 18, 2, 2, 'F');
   setFont(doc, 8, [255, 255, 255]);
   doc.text('PRESUPUESTO', PW - M - 30, y + 5.5, { align: 'center' });
   setFont(doc, 13, [255, 255, 255], 'bold');
-  doc.text(numeroPresupuesto(presupuesto) || '—', PW - M - 30, y + 13, { align: 'center' });
+  doc.text(esBorrador ? 'BORRADOR' : numeroPresupuesto(presupuesto), PW - M - 30, y + 13, { align: 'center' });
 
   y += 22;
   doc.setDrawColor(...CYAN);
@@ -218,6 +222,25 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
   doc.text(contacto, M, PH - 9);
   doc.text(`Documento generado el ${formatDate(new Date().toISOString())}`, PW - M, PH - 9, { align: 'right' });
 
+  // ── MARCA DE AGUA "BORRADOR" ─────────────────────────────────────────────
+  if (esBorrador) {
+    const pages = doc.getNumberOfPages();
+    for (let p = 1; p <= pages; p++) {
+      doc.setPage(p);
+      doc.saveGraphicsState();
+      doc.setGState(new doc.GState({ opacity: 0.08 }));
+      setFont(doc, 90, PRIMARY, 'bold');
+      // Centrado a mano: jsPDF no centra bien el texto girado
+      const w = doc.getTextWidth('BORRADOR');
+      const k = Math.SQRT1_2 * w / 2;
+      doc.text('BORRADOR', PW / 2 - k, PH / 2 + k, { angle: 45 });
+      doc.restoreGraphicsState();
+    }
+  }
+
   // ── GUARDAR ──────────────────────────────────────────────────────────────
-  doc.save(`Presupuesto_${numeroPresupuesto(presupuesto) || 'presupuesto'}.pdf`);
+  const nombreCliente = (cliente?.nombre || '').replace(/[^\p{L}\p{N} _-]/gu, '').trim().replace(/\s+/g, '_');
+  doc.save(esBorrador
+    ? `Presupuesto_BORRADOR${nombreCliente ? `_${nombreCliente}` : ''}.pdf`
+    : `Presupuesto_${numeroPresupuesto(presupuesto)}.pdf`);
 }
