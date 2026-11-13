@@ -76,7 +76,7 @@ export default function PresupuestoDetail({ open, onClose, presupuesto, onEdit, 
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <Row label="Cliente" value={cliente?.nombre} />
-            <Row label="Equipo" value={presupuesto.equipoNombre} />
+            {presupuesto.equipoNombre && <Row label="Equipo" value={presupuesto.equipoNombre} />}
             <Row label="Fecha" value={formatDate(presupuesto.fecha)} />
             <Row label="Válido hasta" value={validoHasta(presupuesto) ? formatDate(validoHasta(presupuesto)) : '-'} />
           </div>

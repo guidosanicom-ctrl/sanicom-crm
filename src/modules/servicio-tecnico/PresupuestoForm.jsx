@@ -24,6 +24,8 @@ const inp = 'w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:
 export default function PresupuestoForm({ open, onClose, onSave, initial }) {
   const { clientes } = useClientesStore();
   const { user } = useAuthStore();
+  // El campo Equipo es de servicio técnico; los comerciales (ventas) no lo usan
+  const mostrarEquipo = user?.role !== 'Comercial Restringido';
   const { items: stelItems, config: stelConfig, initialize: initStel, itemsParaUsuario } = useStelCatalogoStore();
   useEffect(() => { if (open) initStel(); }, [open, initStel]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,11 +103,11 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
             />
             {errors.clienteId && <p className="text-xs text-red-500 mt-1">{errors.clienteId}</p>}
           </div>
-          <div>
+          {mostrarEquipo && <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Equipo</label>
             <input type="text" value={form.equipoNombre} onChange={e => set('equipoNombre', e.target.value)}
               placeholder="Nombre del equipo" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
-          </div>
+          </div>}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
             <input type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)}

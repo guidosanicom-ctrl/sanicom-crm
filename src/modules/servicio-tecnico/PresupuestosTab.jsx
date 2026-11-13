@@ -23,6 +23,7 @@ export default function PresupuestosTab() {
   const { user } = useAuthStore();
   // Administración ve todos; el resto, los que creó (y los antiguos sin creador)
   const verTodos = user?.role === 'Administración';
+  const mostrarEquipo = user?.role !== 'Comercial Restringido';
 
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
@@ -108,7 +109,7 @@ export default function PresupuestosTab() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {['Nº', 'Cliente', 'Equipo', 'Fecha', 'Total con IVA', 'Estado', 'Acciones'].map(h => (
+                    {['Nº', 'Cliente', ...(mostrarEquipo ? ['Equipo'] : []), 'Fecha', 'Total con IVA', 'Estado', 'Acciones'].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -122,7 +123,7 @@ export default function PresupuestosTab() {
                           <button onClick={() => openDetail(p)} className="font-mono text-xs text-[#1B4F8A] hover:underline cursor-pointer">{p.numero}</button>
                         </td>
                         <td className="px-4 py-3 font-medium">{client?.nombre || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600">{p.equipoNombre || '-'}</td>
+                        {mostrarEquipo && <td className="px-4 py-3 text-gray-600">{p.equipoNombre || '-'}</td>}
                         <td className="px-4 py-3 whitespace-nowrap">{formatDate(p.fecha)}</td>
                         <td className="px-4 py-3 font-medium text-gray-800">{formatCurrency(p.totalConIva || 0)}</td>
                         <td className="px-4 py-3"><Badge color={ESTADO_BADGE[p.estado] || 'gray'}>{p.estado}</Badge></td>
