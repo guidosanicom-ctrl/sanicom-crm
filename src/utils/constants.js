@@ -83,6 +83,7 @@ export const COLORS_ESTADO_DEMO = {
 export const AREAS_CATALOGO = [
   { id: 'fisio-podologia', label: 'Fisioterapia y Podología' },
   { id: 'servicio-tecnico', label: 'Servicio Técnico' },
+  { id: 'ecografia', label: 'Ecografía' },
   { id: 'equipamiento-medico', label: 'Equipamiento médico' },
 ];
 export const areaLabel = (id) => AREAS_CATALOGO.find(a => a.id === id)?.label || id;
