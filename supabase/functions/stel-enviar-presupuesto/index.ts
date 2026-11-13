@@ -37,6 +37,9 @@ async function stel(apiKey: string, method: string, path: string, body?: unknown
   return data;
 }
 
+// STEL solo acepta fechas como 2026-11-13T00:00:00+0000 (sin milisegundos ni "Z")
+const stelDate = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, '+0000');
+
 const listOf = (d: any) => (Array.isArray(d) ? d : (d?.data ?? []));
 const normCif = (s: unknown) => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
@@ -123,8 +126,9 @@ serve(async (req) => {
       await supabase.from('clientes').update({ data: { ...cliente, stelClientId: accountId } }).eq('id', cliente.id);
     }
 
-    const validez = presupuesto.fecha && presupuesto.validezDias
-      ? new Date(new Date(presupuesto.fecha).getTime() + Number(presupuesto.validezDias) * 86400000).toISOString()
+    const fecha = presupuesto.fecha ? new Date(`${presupuesto.fecha}T00:00:00Z`) : null;
+    const validez = fecha && presupuesto.validezDias
+      ? stelDate(new Date(fecha.getTime() + Number(presupuesto.validezDias) * 86400000))
       : null;
     const comentarios = [
       presupuesto.formaPago && `Forma de pago: ${presupuesto.formaPago}`,
@@ -133,7 +137,7 @@ serve(async (req) => {
 
     const body: Record<string, unknown> = {
       'account-id': accountId,
-      ...(presupuesto.fecha ? { date: new Date(presupuesto.fecha).toISOString() } : {}),
+      ...(fecha && !isNaN(fecha.getTime()) ? { date: stelDate(fecha) } : {}),
       ...(validez ? { 'validity-date': validez } : {}),
       ...(comentarios ? { comments: comentarios.slice(0, 30000) } : {}),
       'private-comments': [
