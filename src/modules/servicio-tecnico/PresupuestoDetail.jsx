@@ -3,6 +3,7 @@ import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import HistorialTimeline from '../../components/shared/HistorialTimeline';
+import { useAuthStore } from '../../store/authStore';
 import { useClientesStore } from '../../store/clientesStore';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { exportPresupuestoPdf } from '../../utils/exportPresupuestoPdf';
@@ -29,6 +30,7 @@ function validoHasta(presupuesto) {
 
 export default function PresupuestoDetail({ open, onClose, presupuesto, onEdit, onDelete }) {
   const { clientes } = useClientesStore();
+  const { user, users } = useAuthStore();
   const [exporting, setExporting] = useState(false);
 
   if (!presupuesto) return null;
@@ -38,7 +40,9 @@ export default function PresupuestoDetail({ open, onClose, presupuesto, onEdit, 
   const handleExportPdf = async () => {
     setExporting(true);
     try {
-      await exportPresupuestoPdf(presupuesto, cliente, logoSrc);
+      // El pie del PDF lleva los datos de quien hizo el presupuesto (o de quien lo descarga, si es antiguo)
+      const autor = users.find(u => u.id === presupuesto.creadoPorId) || user;
+      await exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor);
     } finally {
       setExporting(false);
     }
@@ -92,7 +96,7 @@ export default function PresupuestoDetail({ open, onClose, presupuesto, onEdit, 
             </div>
             {(presupuesto.lineas || []).map((l, i) => (
               <div key={i} className="grid grid-cols-[1fr_60px_90px_80px] gap-2 text-sm">
-                <span className="text-gray-800">{l.concepto}</span>
+                <span className="text-gray-800">{l.concepto}{l.referencia && <span className="block text-xs text-gray-400">{l.referencia}</span>}</span>
                 <span className="text-gray-500">{l.cantidad}</span>
                 <span className="text-gray-500">{formatCurrency(parseFloat(l.precioUnitario) || 0)}</span>
                 <span className="font-medium text-gray-700">{formatCurrency((parseFloat(l.cantidad) || 0) * (parseFloat(l.precioUnitario) || 0))}</span>
@@ -113,6 +117,12 @@ export default function PresupuestoDetail({ open, onClose, presupuesto, onEdit, 
               <span className="text-[#1B4F8A] text-base">{formatCurrency(presupuesto.totalConIva || 0)}</span>
             </div>
           </div>
+          {(presupuesto.formaPago || presupuesto.condiciones) && (
+            <div className="mt-3 pt-2 border-t border-gray-100 text-xs text-gray-600 space-y-0.5">
+              {presupuesto.formaPago && <p><span className="text-gray-400">Forma de pago:</span> {presupuesto.formaPago}</p>}
+              {presupuesto.condiciones && <p className="whitespace-pre-line"><span className="text-gray-400">Condiciones:</span> {presupuesto.condiciones}</p>}
+            </div>
+          )}
           {presupuesto.notas && (
             <p className="mt-2 text-xs text-gray-500 italic">{presupuesto.notas}</p>
           )}

@@ -8,7 +8,7 @@ import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import { useStelCatalogoStore } from '../../store/stelCatalogoStore';
 import { formatCurrency } from '../../utils/formatters';
-import { ESTADOS_PRESUPUESTO } from '../../utils/constants';
+import { ESTADOS_PRESUPUESTO, FORMAS_PAGO, CONDICIONES_DEFAULT } from '../../utils/constants';
 
 const IVA_OPTIONS = [0, 10, 21];
 const emptyLinea = () => ({ concepto: '', cantidad: 1, precioUnitario: 0 });
@@ -17,6 +17,7 @@ const hoy = () => new Date().toISOString().split('T')[0];
 const empty = {
   clienteId: '', equipoNombre: '', fecha: hoy(), validezDias: 30,
   estado: 'Borrador', notas: '',
+  formaPago: FORMAS_PAGO[0], condiciones: CONDICIONES_DEFAULT,
 };
 
 const inp = 'w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20';
@@ -44,6 +45,8 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
         validezDias: initial.validezDias ?? 30,
         estado: initial.estado || 'Borrador',
         notas: initial.notas || '',
+        formaPago: initial.formaPago || '',
+        condiciones: initial.condiciones || '',
       } : empty);
       setLineas(initial?.lineas?.length ? initial.lineas : [emptyLinea()]);
       setIva(initial?.iva ?? 21);
@@ -208,6 +211,23 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
           <div className="flex items-center justify-between pt-1 border-t border-gray-200">
             <p className="text-sm font-bold text-gray-800">Total con IVA</p>
             <p className="text-lg font-bold text-[#1B4F8A]">{formatCurrency(totalConIva)}</p>
+          </div>
+        </div>
+
+        {/* Condiciones */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Forma de pago</label>
+            <input list="formas-pago" value={form.formaPago} onChange={e => set('formaPago', e.target.value)}
+              placeholder="Elegir o escribir…"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+            <datalist id="formas-pago">{FORMAS_PAGO.map(f => <option key={f} value={f} />)}</datalist>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Condiciones</label>
+            <textarea rows={2} value={form.condiciones} onChange={e => set('condiciones', e.target.value)}
+              placeholder="Plazo de entrega, garantía, portes…"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none resize-none" />
           </div>
         </div>
 

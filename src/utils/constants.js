@@ -86,3 +86,8 @@ export const AREAS_CATALOGO = [
   { id: 'equipamiento-medico', label: 'Equipamiento médico' },
 ];
 export const areaLabel = (id) => AREAS_CATALOGO.find(a => a.id === id)?.label || id;
+
+// ── Presupuestos: condiciones ─────────────────────────────────────────────
+export const FORMAS_PAGO = ['Transferencia bancaria', 'Contado', 'Recibo domiciliado', '50% a la aceptación y 50% a la entrega', 'Financiación'];
+// Texto que aparece por defecto en "Condiciones" al crear un presupuesto (editable en cada presupuesto)
+export const CONDICIONES_DEFAULT = 'Plazo de entrega: a confirmar según disponibilidad.';

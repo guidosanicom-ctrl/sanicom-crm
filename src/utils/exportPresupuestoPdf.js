@@ -1,5 +1,10 @@
 import { jsPDF } from 'jspdf';
-import { formatDate, formatCurrency } from './formatters';
+import { formatDate } from './formatters';
+
+// Importes del PDF: siempre 2 decimales y separador de miles (2.679,60 €)
+const eur = (n) => new Intl.NumberFormat('es-ES', {
+  style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always',
+}).format(Number(n) || 0);
 
 const PRIMARY = [27, 79, 138];    // #1B4F8A
 const CYAN    = [58, 189, 213];   // #3ABDD5
@@ -62,7 +67,7 @@ function fechaValidez(presupuesto) {
   return d.toISOString().split('T')[0];
 }
 
-export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc) {
+export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   let y = M;
   let secNum = 1;
@@ -140,10 +145,16 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc) {
     const conceptoLines = doc.splitTextToSize(l.concepto || '', 95);
     doc.text(conceptoLines, colX.concepto, y);
     doc.text(String(cantidad), colX.cantidad, y);
-    doc.text(formatCurrency(precio), colX.precio, y);
+    doc.text(eur(precio), colX.precio, y);
     setFont(doc, 9, DARK, 'bold');
-    doc.text(formatCurrency(subtotal), colX.subtotal, y);
-    y += Math.max(5, conceptoLines.length * 4.5);
+    doc.text(eur(subtotal), colX.subtotal, y);
+    let h = conceptoLines.length * 4.5;
+    if (l.referencia) {
+      setFont(doc, 7.5, MUTED);
+      doc.text(`Ref. ${l.referencia}`, colX.concepto, y + h - 0.5);
+      h += 3.5;
+    }
+    y += Math.max(5, h + 1);
   }
   y += 2;
   hLine(doc, y);
@@ -154,21 +165,32 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc) {
   setFont(doc, 9, MUTED);
   doc.text('Total sin IVA', totalX, y);
   setFont(doc, 9, DARK, 'bold');
-  doc.text(formatCurrency(presupuesto.totalSinIva || 0), PW - M, y, { align: 'right' });
+  doc.text(eur(presupuesto.totalSinIva), PW - M, y, { align: 'right' });
   y += 6;
 
   setFont(doc, 9, MUTED);
   doc.text(`IVA (${presupuesto.iva ?? 21}%)`, totalX, y);
   setFont(doc, 9, DARK, 'bold');
-  doc.text(formatCurrency((presupuesto.totalConIva || 0) - (presupuesto.totalSinIva || 0)), PW - M, y, { align: 'right' });
+  doc.text(eur((presupuesto.totalConIva || 0) - (presupuesto.totalSinIva || 0)), PW - M, y, { align: 'right' });
   y += 7;
 
   doc.setFillColor(...PRIMARY);
   doc.roundedRect(totalX - 5, y - 5, PW - M - totalX + 5, 9, 1.5, 1.5, 'F');
   setFont(doc, 10, [255, 255, 255], 'bold');
   doc.text('TOTAL CON IVA', totalX, y + 1);
-  doc.text(formatCurrency(presupuesto.totalConIva || 0), PW - M - 3, y + 1, { align: 'right' });
+  doc.text(eur(presupuesto.totalConIva), PW - M - 3, y + 1, { align: 'right' });
   y += 14;
+
+  // ── CONDICIONES ─────────────────────────────────────────────────────────
+  if (presupuesto.formaPago || presupuesto.condiciones) {
+    if (y > PH - 70) { doc.addPage(); y = M; }
+    header('CONDICIONES');
+    if (presupuesto.formaPago) {
+      field(doc, 'Forma de pago', presupuesto.formaPago, M, y, PW - M * 2 - 6);
+      y += 12;
+    }
+    if (presupuesto.condiciones) y = textBlock(doc, 'Condiciones', presupuesto.condiciones, y);
+  }
 
   // ── NOTAS ───────────────────────────────────────────────────────────────
   if (presupuesto.notas) {
@@ -186,7 +208,8 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc) {
   setFont(doc, 7.5, MUTED);
   doc.text('CIF B90309147', M, PH - 17);
   doc.text('Av. de Mairena 5 - Local 20 - Mairena del Aljarafe (41927)', M, PH - 13);
-  doc.text('guidorosso@sanicom.es', M, PH - 9);
+  const contacto = [autor?.name, autor?.telefono, autor?.email || 'administracion@sanicom.es'].filter(Boolean).join('  ·  ');
+  doc.text(contacto, M, PH - 9);
   doc.text(`Documento generado el ${formatDate(new Date().toISOString())}`, PW - M, PH - 9, { align: 'right' });
 
   // ── GUARDAR ──────────────────────────────────────────────────────────────
