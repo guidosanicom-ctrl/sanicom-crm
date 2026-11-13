@@ -41,6 +41,7 @@ import AgendaPage from './modules/agenda/AgendaPage';
 import PipelinePage from './modules/pipeline/PipelinePage';
 import DemostracionesPage from './modules/demostraciones/DemostracionesPage';
 import ServicioTecnicoPage from './modules/servicio-tecnico/ServicioTecnicoPage';
+import PresupuestosPage from './modules/presupuestos/PresupuestosPage';
 import EquiposPage from './modules/equipos/EquiposPage';
 import DocumentosPage from './modules/documentos/DocumentosPage';
 import ConfiguracionPage from './modules/configuracion/ConfiguracionPage';
@@ -151,6 +152,7 @@ export default function App() {
           <Route path="/pipeline" element={<ProtectedRoute module="pipeline"><PipelinePage /></ProtectedRoute>} />
           <Route path="/demostraciones" element={<ProtectedRoute module="demostraciones"><DemostracionesPage /></ProtectedRoute>} />
           <Route path="/servicio-tecnico" element={<ProtectedRoute module="servicio-tecnico"><ServicioTecnicoPage /></ProtectedRoute>} />
+          <Route path="/presupuestos" element={<ProtectedRoute module="presupuestos"><PresupuestosPage /></ProtectedRoute>} />
           <Route path="/equipos" element={<ProtectedRoute module="equipos"><EquiposPage /></ProtectedRoute>} />
           <Route path="/cursos" element={<ProtectedRoute module="cursos"><CursosPage /></ProtectedRoute>} />
           <Route path="/documentos" element={<DocumentosPage />} />

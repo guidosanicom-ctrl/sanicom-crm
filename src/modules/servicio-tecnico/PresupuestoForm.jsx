@@ -2,8 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import ClienteSearchInput from '../../components/ui/ClienteSearchInput';
+import ArticuloSearchInput from '../../components/ui/ArticuloSearchInput';
 import { Plus, Trash2 } from 'lucide-react';
 import { useClientesStore } from '../../store/clientesStore';
+import { useAuthStore } from '../../store/authStore';
+import { useStelCatalogoStore } from '../../store/stelCatalogoStore';
 import { formatCurrency } from '../../utils/formatters';
 import { ESTADOS_PRESUPUESTO } from '../../utils/constants';
 
@@ -20,6 +23,11 @@ const inp = 'w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:
 
 export default function PresupuestoForm({ open, onClose, onSave, initial }) {
   const { clientes } = useClientesStore();
+  const { user } = useAuthStore();
+  const { items: stelItems, config: stelConfig, initialize: initStel, itemsParaUsuario } = useStelCatalogoStore();
+  useEffect(() => { if (open) initStel(); }, [open, initStel]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const articulos = useMemo(() => itemsParaUsuario(user), [stelItems, stelConfig, user, itemsParaUsuario]);
   const [form, setForm] = useState(empty);
   const [lineas, setLineas] = useState([emptyLinea()]);
   const [iva, setIva] = useState(21);
@@ -43,6 +51,13 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const setLinea = (i, k, v) => setLineas(ls => ls.map((l, idx) => idx === i ? { ...l, [k]: v } : l));
+  // Texto escrito a mano: la línea deja de estar vinculada a un artículo de STEL
+  const setConceptoLibre = (i, v) => setLineas(ls => ls.map((l, idx) => idx === i
+    ? { concepto: v, cantidad: l.cantidad, precioUnitario: l.precioUnitario }
+    : l));
+  const elegirArticulo = (i, a) => setLineas(ls => ls.map((l, idx) => idx === i
+    ? { ...l, concepto: a.nombre, precioUnitario: a.precio, referencia: a.referencia, stelItemId: a.stelId, stelTipo: a.tipo, ivaPct: a.ivaPct }
+    : l));
   const addLinea = () => setLineas(ls => [...ls, emptyLinea()]);
   const removeLinea = (i) => setLineas(ls => ls.filter((_, idx) => idx !== i));
 
@@ -122,11 +137,12 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
               const sub = (parseFloat(l.cantidad) || 0) * (parseFloat(l.precioUnitario) || 0);
               return (
                 <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_80px_100px_90px_32px] gap-2 items-center bg-gray-50 rounded-lg p-2 sm:bg-transparent sm:p-0">
-                  <input
+                  <ArticuloSearchInput
                     className={inp}
-                    placeholder="Concepto (ej: Mantenimiento anual)"
-                    value={l.concepto}
-                    onChange={e => setLinea(i, 'concepto', e.target.value)}
+                    linea={l}
+                    articulos={articulos}
+                    onSelect={a => elegirArticulo(i, a)}
+                    onTextChange={v => setConceptoLibre(i, v)}
                   />
                   <input
                     className={inp}

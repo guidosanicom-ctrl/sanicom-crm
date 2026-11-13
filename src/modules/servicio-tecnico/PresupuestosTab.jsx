@@ -3,6 +3,7 @@ import { Plus, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { usePresupuestosStore } from '../../store/presupuestosStore';
 import { useClientesStore } from '../../store/clientesStore';
+import { useAuthStore } from '../../store/authStore';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import SearchBar from '../../components/shared/SearchBar';
@@ -19,6 +20,9 @@ const ESTADO_BADGE = { 'Borrador': 'gray', 'Enviado': 'blue', 'Aceptado': 'green
 export default function PresupuestosTab() {
   const { presupuestos, addPresupuesto, updatePresupuesto, deletePresupuesto } = usePresupuestosStore();
   const { clientes } = useClientesStore();
+  const { user } = useAuthStore();
+  // Administración ve todos; el resto, los que creó (y los antiguos sin creador)
+  const verTodos = user?.role === 'Administración';
 
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
@@ -30,11 +34,12 @@ export default function PresupuestosTab() {
   const [delOpen, setDelOpen] = useState(false);
 
   const filtered = useMemo(() => presupuestos.filter(p => {
+    if (!verTodos && p.creadoPorId && p.creadoPorId !== user?.id) return false;
     const client = clientes.find(c => c.id === p.clienteId);
     const q = search.toLowerCase();
     const matchSearch = !q || client?.nombre?.toLowerCase().includes(q) || p.equipoNombre?.toLowerCase().includes(q) || p.numero?.toLowerCase().includes(q);
     return matchSearch && (!filterEstado || p.estado === filterEstado);
-  }), [presupuestos, clientes, search, filterEstado]);
+  }), [presupuestos, clientes, search, filterEstado, verTodos, user?.id]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) => (b.numero || '').localeCompare(a.numero || '')), [filtered]);
   const paginated = sorted.slice((page - 1) * perPage, page * perPage);

@@ -76,3 +76,13 @@ export const COLORS_ESTADO_DEMO = {
   'Reprogramada': '#F97316',
   'Cancelada': '#1F2937',
 };
+
+// ── Catálogo STEL Order ───────────────────────────────────────────────────
+// Áreas de negocio: cada artículo de STEL se asigna a una o varias áreas y
+// cada usuario solo ve en sus presupuestos los artículos de sus áreas.
+export const AREAS_CATALOGO = [
+  { id: 'fisio-podologia', label: 'Fisioterapia y Podología' },
+  { id: 'servicio-tecnico', label: 'Servicio Técnico' },
+  { id: 'equipamiento-medico', label: 'Equipamiento médico' },
+];
+export const areaLabel = (id) => AREAS_CATALOGO.find(a => a.id === id)?.label || id;

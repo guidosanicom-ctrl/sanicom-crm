@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import { ROLES } from '../../utils/constants';
 import { Pencil, Trash2, Plus, Check, X } from 'lucide-react';
 import CopiaSeguridad from './CopiaSeguridad';
+import CatalogoStel from './CatalogoStel';
 import { forceReregisterPushSubscription } from '../../lib/pushSubscription';
 
 const TABS_BASE = ['Usuarios', 'Mi perfil', 'Empresa', 'Pipeline', 'Servicios', 'Especialidades', 'Categorías equipos', 'Tipos de cliente', 'Servicios hospitalarios', 'Enlace Google Drive'];
@@ -36,9 +37,11 @@ export default function ConfiguracionPage() {
   const { items: catalogoItems, addItem: addCatalogoItem, updateItem: updateCatalogoItem, deleteItem: deleteCatalogoItem, categorias: getCatalogoCats, subcategorias: getCatalogoSubs } = useCatalogoEquiposStore();
   const canBackup = EMAILS_BACKUP.includes(user?.email);
   const canCatalogo = EMAILS_CATALOGO.includes(user?.email);
+  const canCatalogoStel = user?.role === 'Administración' || user?.email === 'guidorosso@sanicom.es';
   const TABS = [
     ...TABS_BASE,
     ...(canCatalogo ? ['Catálogo de equipos'] : []),
+    ...(canCatalogoStel ? ['Catálogo STEL'] : []),
     ...(canBackup ? ['Copia de seguridad'] : []),
   ];
   const [activeTab, setActiveTab] = useState(0);
@@ -950,6 +953,7 @@ export default function ConfiguracionPage() {
         </div>
       )}
 
+      {activeTab === TABS.indexOf('Catálogo STEL') && canCatalogoStel && <CatalogoStel />}
       {activeTab === TABS.indexOf('Copia de seguridad') && canBackup && <CopiaSeguridad />}
     </div>
   );

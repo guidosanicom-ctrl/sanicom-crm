@@ -126,3 +126,17 @@ alter table viajes enable row level security;
 drop policy if exists "allow_all_anon" on viajes;
 create policy "allow_all_anon" on viajes
   for all to anon using (true) with check (true);
+
+-- ── Integración STEL Order ────────────────────────────────────────────────
+-- Catálogo de artículos (productos y servicios) sincronizado desde STEL Order.
+-- id = 'product-<idSTEL>' o 'service-<idSTEL>'. La función stel-sync lo rellena.
+create table if not exists stel_items (
+  id text primary key,
+  data jsonb not null default '{}'::jsonb
+);
+
+-- Configuración de la integración (categorías STEL → áreas, última sincronización…)
+create table if not exists stel_config (
+  id text primary key,
+  data jsonb not null default '{}'::jsonb
+);
