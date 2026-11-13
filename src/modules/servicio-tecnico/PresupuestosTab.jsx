@@ -12,7 +12,7 @@ import EmptyState from '../../components/shared/EmptyState';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import PresupuestoForm from './PresupuestoForm';
 import PresupuestoDetail from './PresupuestoDetail';
-import { formatDate, formatCurrency } from '../../utils/formatters';
+import { formatDate, formatCurrency, numeroPresupuesto } from '../../utils/formatters';
 import { ESTADOS_PRESUPUESTO } from '../../utils/constants';
 
 const ESTADO_BADGE = { 'Borrador': 'gray', 'Enviado': 'blue', 'Aceptado': 'green', 'Rechazado': 'red' };
@@ -38,7 +38,7 @@ export default function PresupuestosTab() {
     if (!verTodos && p.creadoPorId && p.creadoPorId !== user?.id) return false;
     const client = clientes.find(c => c.id === p.clienteId);
     const q = search.toLowerCase();
-    const matchSearch = !q || client?.nombre?.toLowerCase().includes(q) || p.equipoNombre?.toLowerCase().includes(q) || p.numero?.toLowerCase().includes(q);
+    const matchSearch = !q || client?.nombre?.toLowerCase().includes(q) || p.equipoNombre?.toLowerCase().includes(q) || p.numero?.toLowerCase().includes(q) || p.stel?.referencia?.toLowerCase().includes(q);
     return matchSearch && (!filterEstado || p.estado === filterEstado);
   }), [presupuestos, clientes, search, filterEstado, verTodos, user?.id]);
 
@@ -88,7 +88,7 @@ export default function PresupuestosTab() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-xs font-semibold text-[#1B4F8A]">{p.numero}</span>
+                          <span className="font-mono text-xs font-semibold text-[#1B4F8A]">{numeroPresupuesto(p)}</span>
                           <Badge color={ESTADO_BADGE[p.estado] || 'gray'}>{p.estado}</Badge>
                         </div>
                         <p className="text-sm font-semibold text-gray-800 mt-1 truncate">{client?.nombre || '-'}</p>
@@ -120,7 +120,7 @@ export default function PresupuestosTab() {
                     return (
                       <tr key={p.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
-                          <button onClick={() => openDetail(p)} className="font-mono text-xs text-[#1B4F8A] hover:underline cursor-pointer">{p.numero}</button>
+                          <button onClick={() => openDetail(p)} className="font-mono text-xs text-[#1B4F8A] hover:underline cursor-pointer">{numeroPresupuesto(p)}</button>
                         </td>
                         <td className="px-4 py-3 font-medium">{client?.nombre || '-'}</td>
                         {mostrarEquipo && <td className="px-4 py-3 text-gray-600">{p.equipoNombre || '-'}</td>}

@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { formatDate } from './formatters';
+import { formatDate, numeroPresupuesto } from './formatters';
 
 // Importes del PDF: siempre 2 decimales y separador de miles (2.679,60 €)
 const eur = (n) => new Intl.NumberFormat('es-ES', {
@@ -85,7 +85,7 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
   setFont(doc, 8, [255, 255, 255]);
   doc.text('PRESUPUESTO', PW - M - 30, y + 5.5, { align: 'center' });
   setFont(doc, 13, [255, 255, 255], 'bold');
-  doc.text(presupuesto.numero || '—', PW - M - 30, y + 13, { align: 'center' });
+  doc.text(numeroPresupuesto(presupuesto) || '—', PW - M - 30, y + 13, { align: 'center' });
 
   y += 22;
   doc.setDrawColor(...CYAN);
@@ -213,5 +213,5 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
   doc.text(`Documento generado el ${formatDate(new Date().toISOString())}`, PW - M, PH - 9, { align: 'right' });
 
   // ── GUARDAR ──────────────────────────────────────────────────────────────
-  doc.save(`Presupuesto_${presupuesto.numero || 'presupuesto'}.pdf`);
+  doc.save(`Presupuesto_${numeroPresupuesto(presupuesto) || 'presupuesto'}.pdf`);
 }

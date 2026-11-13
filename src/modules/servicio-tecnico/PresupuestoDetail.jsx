@@ -8,7 +8,7 @@ import { useClientesStore } from '../../store/clientesStore';
 import { usePresupuestosStore } from '../../store/presupuestosStore';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import toast from 'react-hot-toast';
-import { formatDate, formatCurrency } from '../../utils/formatters';
+import { formatDate, formatCurrency, numeroPresupuesto } from '../../utils/formatters';
 import { exportPresupuestoPdf } from '../../utils/exportPresupuestoPdf';
 import { Edit, Trash2, FileDown, Send, CheckCircle2 } from 'lucide-react';
 import logoSrc from '../../assets/sanicom_logo.png';
@@ -75,7 +75,7 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
     <Modal
       open={open}
       onClose={onClose}
-      title={`Presupuesto ${presupuesto.numero}`}
+      title={`Presupuesto ${numeroPresupuesto(presupuesto)}`}
       size="lg"
       footer={
         <>

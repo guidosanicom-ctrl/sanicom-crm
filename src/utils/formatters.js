@@ -19,6 +19,9 @@ export const formatDateTime = (dateStr) => {
   } catch { return '-'; }
 };
 
+/** Número visible de un presupuesto: el de STEL si ya se envió (PRV…), si no el interno del CRM (PR…). */
+export const numeroPresupuesto = (p) => p?.stel?.referencia || p?.numero || '';
+
 export const formatCurrency = (amount) => {
   if (amount == null) return '-';
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(amount);
