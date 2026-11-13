@@ -42,6 +42,7 @@ export default function CatalogoStel() {
   const [tipo, setTipo] = useState('');
   const [filtroArea, setFiltroArea] = useState('');
   const [page, setPage] = useState(1);
+  const [areaMasiva, setAreaMasiva] = useState(AREAS_CATALOGO[0].id);
 
   useEffect(() => { initialize(); }, [initialize]);
 
@@ -83,6 +84,18 @@ export default function CatalogoStel() {
     const r = await sincronizar();
     if (!r.ok) { toast.error(`No se pudo sincronizar: ${r.error}`); return; }
     toast.success(`Catálogo actualizado: ${r.productos} productos y ${r.servicios} servicios.`);
+  };
+
+  // Asignación masiva: añade o quita un área a todos los artículos del filtro actual
+  const aplicarMasivo = (quitar) => {
+    let n = 0;
+    visibles.forEach(i => {
+      const tiene = (i.areas || []).includes(areaMasiva);
+      if (quitar && tiene) { setItemAreas(i.id, i.areas.filter(a => a !== areaMasiva)); n++; }
+      if (!quitar && !tiene) { setItemAreas(i.id, [...(i.areas || []), areaMasiva]); n++; }
+    });
+    const nombre = AREAS_CATALOGO.find(a => a.id === areaMasiva)?.label;
+    toast.success(quitar ? `Quitado «${nombre}» de ${n} artículos.` : `Asignado «${nombre}» a ${n} artículos.`);
   };
 
   const toggle = (list, id) => list.includes(id) ? list.filter(x => x !== id) : [...list, id];
@@ -172,6 +185,17 @@ export default function CatalogoStel() {
             {AREAS_CATALOGO.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
           </select>
         </div>
+
+        {visibles.length > 0 && (search || tipo || filtroArea) && (
+          <div className="flex flex-wrap items-center gap-2 mb-3 p-2.5 bg-blue-50/60 border border-blue-100 rounded-lg text-sm">
+            <span className="text-gray-600">Los <b>{visibles.length}</b> resultados:</span>
+            <select className="px-2 py-1 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none" value={areaMasiva} onChange={e => setAreaMasiva(e.target.value)}>
+              {AREAS_CATALOGO.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
+            </select>
+            <Button size="sm" onClick={() => aplicarMasivo(false)}>Asignar a todos</Button>
+            <Button size="sm" variant="outline" onClick={() => aplicarMasivo(true)}>Quitar a todos</Button>
+          </div>
+        )}
 
         {items.length === 0 ? (
           <p className="text-sm text-gray-400 py-8 text-center">Pulsa «Sincronizar con STEL» para traer el catálogo.</p>
