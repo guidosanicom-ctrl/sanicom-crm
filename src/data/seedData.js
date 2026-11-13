@@ -1,7 +1,7 @@
 export const USERS = [
   { id: 'u1', telefono: '', name: 'Julieta Govantes', email: 'administracion@sanicom.es', password: 'sanicom2024', role: 'Administración', active: true, avatarBg: '#7C3AED' },
   { id: 'u2', telefono: '', name: 'Javier Govantes', email: 'jgovantes@sanicom.es', password: 'sanicom2024', role: 'Administración', active: true, avatarBg: '#1B4F8A' },
-  { id: 'u3', telefono: '', name: 'Carlos Leal', email: 'carlosleal@sanicom.es', password: 'sanicom2024', role: 'Comercial Restringido', active: true, areasCatalogo: ['fisio-podologia'], avatarBg: '#0F766E' },
+  { id: 'u3', telefono: '687 302 601', name: 'Carlos Leal', email: 'carlosleal@sanicom.es', password: 'sanicom2024', role: 'Comercial Restringido', active: true, areasCatalogo: ['fisio-podologia'], avatarBg: '#0F766E' },
   { id: 'u4', telefono: '', name: 'Guido Rosso', email: 'guidorosso@sanicom.es', password: 'sanicom2024', role: 'Técnico', active: true, areasCatalogo: ['servicio-tecnico'], avatarBg: '#B45309' },
 ];
 
