@@ -149,6 +149,12 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
     setFont(doc, 9, DARK, 'bold');
     doc.text(eur(subtotal), colX.subtotal, y);
     let h = conceptoLines.length * 4.5;
+    if (l.descripcion?.trim()) {
+      setFont(doc, 8, MUTED);
+      const descLines = doc.splitTextToSize(l.descripcion.trim(), 95);
+      doc.text(descLines, colX.concepto, y + h - 0.5);
+      h += descLines.length * 3.6;
+    }
     if (l.referencia) {
       setFont(doc, 7.5, MUTED);
       doc.text(`Ref. ${l.referencia}`, colX.concepto, y + h - 0.5);

@@ -7,7 +7,7 @@ import { formatCurrency } from '../../utils/formatters';
  * Al elegir un artículo se rellenan referencia, precio e IVA; si se escribe a mano
  * la línea queda como texto libre (sin vínculo a STEL).
  */
-export default function ArticuloSearchInput({ linea, articulos = [], onSelect, onTextChange, className = '' }) {
+export default function ArticuloSearchInput({ linea, articulos = [], onSelect, onTextChange, onUnlink, className = '' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const query = linea.concepto || '';
@@ -20,6 +20,7 @@ export default function ArticuloSearchInput({ linea, articulos = [], onSelect, o
 
   const resultados = useMemo(() => {
     const q = query.trim().toLowerCase();
+    // Si la línea ya tiene artículo, al abrir se muestran todos (para poder cambiarlo)
     const base = linea.stelItemId || !q
       ? articulos
       : articulos.filter(a => a.nombre?.toLowerCase().includes(q) || a.referencia?.toLowerCase().includes(q));
@@ -34,10 +35,17 @@ export default function ArticuloSearchInput({ linea, articulos = [], onSelect, o
         value={query}
         autoComplete="off"
         onFocus={() => articulos.length && setOpen(true)}
-        onChange={e => { onTextChange(e.target.value); if (articulos.length) setOpen(true); }}
+        onChange={e => { onTextChange(e.target.value); if (articulos.length && !linea.stelItemId) setOpen(true); }}
       />
       {linea.stelItemId && (
-        <Link2 className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#1B4F8A]" title={`Artículo STEL ${linea.referencia || ''}`} />
+        <button
+          type="button"
+          onClick={onUnlink}
+          title={`Vinculado a STEL (${linea.referencia || ''}). Pulsa para quitar el vínculo`}
+          className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+        >
+          <Link2 className="w-3.5 h-3.5 text-[#1B4F8A] hover:text-red-500" />
+        </button>
       )}
       {open && resultados.length > 0 && (
         <div className="absolute z-50 w-full min-w-[280px] mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto">

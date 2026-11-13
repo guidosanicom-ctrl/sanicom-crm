@@ -129,7 +129,7 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
             </div>
             {(presupuesto.lineas || []).map((l, i) => (
               <div key={i} className="grid grid-cols-[1fr_60px_90px_80px] gap-2 text-sm">
-                <span className="text-gray-800">{l.concepto}{l.referencia && <span className="block text-xs text-gray-400">{l.referencia}</span>}</span>
+                <span className="text-gray-800">{l.concepto}{l.descripcion && <span className="block text-xs text-gray-500 whitespace-pre-line">{l.descripcion}</span>}{l.referencia && <span className="block text-xs text-gray-400">{l.referencia}</span>}</span>
                 <span className="text-gray-500">{l.cantidad}</span>
                 <span className="text-gray-500">{formatCurrency(parseFloat(l.precioUnitario) || 0)}</span>
                 <span className="font-medium text-gray-700">{formatCurrency((parseFloat(l.cantidad) || 0) * (parseFloat(l.precioUnitario) || 0))}</span>

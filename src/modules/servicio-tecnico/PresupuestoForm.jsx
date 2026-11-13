@@ -36,8 +36,10 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
   const [iva, setIva] = useState(21);
   const [errors, setErrors] = useState({});
 
+  const [descAbiertas, setDescAbiertas] = useState(() => new Set());
   useEffect(() => {
     if (open) {
+      setDescAbiertas(new Set());
       setForm(initial ? {
         clienteId: initial.clienteId || '',
         equipoNombre: initial.equipoNombre || '',
@@ -56,10 +58,14 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const setLinea = (i, k, v) => setLineas(ls => ls.map((l, idx) => idx === i ? { ...l, [k]: v } : l));
-  // Texto escrito a mano: la línea deja de estar vinculada a un artículo de STEL
-  const setConceptoLibre = (i, v) => setLineas(ls => ls.map((l, idx) => idx === i
-    ? { concepto: v, cantidad: l.cantidad, precioUnitario: l.precioUnitario }
+  // Cambiar el texto NO quita el vínculo con STEL: así se puede retocar el nombre
+  // ("Ecógrafo X con sonda C5-2") y seguir enviándolo a STEL con su artículo.
+  const setConceptoTexto = (i, v) => setLinea(i, 'concepto', v);
+  // Quitar el vínculo a propósito (la línea pasa a ser texto libre)
+  const desvincular = (i) => setLineas(ls => ls.map((l, idx) => idx === i
+    ? { concepto: l.concepto, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario }
     : l));
+  const abrirDesc = (i) => setDescAbiertas(s => new Set(s).add(i));
   const elegirArticulo = (i, a) => setLineas(ls => ls.map((l, idx) => idx === i
     ? { ...l, concepto: a.nombre, precioUnitario: a.precio, referencia: a.referencia, stelItemId: a.stelId, stelTipo: a.tipo, ivaPct: a.ivaPct }
     : l));
@@ -141,14 +147,32 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
             {lineas.map((l, i) => {
               const sub = (parseFloat(l.cantidad) || 0) * (parseFloat(l.precioUnitario) || 0);
               return (
-                <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_80px_100px_90px_32px] gap-2 items-center bg-gray-50 rounded-lg p-2 sm:bg-transparent sm:p-0">
-                  <ArticuloSearchInput
-                    className={inp}
-                    linea={l}
-                    articulos={articulos}
-                    onSelect={a => elegirArticulo(i, a)}
-                    onTextChange={v => setConceptoLibre(i, v)}
-                  />
+                <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_80px_100px_90px_32px] gap-2 items-start bg-gray-50 rounded-lg p-2 sm:bg-transparent sm:p-0">
+                  <div className="space-y-1">
+                    <ArticuloSearchInput
+                      className={inp}
+                      linea={l}
+                      articulos={articulos}
+                      onSelect={a => elegirArticulo(i, a)}
+                      onTextChange={v => setConceptoTexto(i, v)}
+                      onUnlink={() => desvincular(i)}
+                    />
+                    {(l.descripcion || descAbiertas.has(i)) ? (
+                      <textarea
+                        rows={2}
+                        className={`${inp} resize-y text-xs`}
+                        placeholder="Descripción (opcional): incluye sonda convex, carro, formación…"
+                        value={l.descripcion || ''}
+                        onChange={e => setLinea(i, 'descripcion', e.target.value)}
+                        autoFocus={!l.descripcion}
+                      />
+                    ) : (
+                      <button type="button" onClick={() => abrirDesc(i)}
+                        className="text-[11px] text-gray-400 hover:text-[#1B4F8A] cursor-pointer">
+                        + Añadir descripción
+                      </button>
+                    )}
+                  </div>
                   <input
                     className={inp}
                     type="number" min={0} step="0.5"
