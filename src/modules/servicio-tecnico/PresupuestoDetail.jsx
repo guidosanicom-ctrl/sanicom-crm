@@ -8,7 +8,7 @@ import { useClientesStore } from '../../store/clientesStore';
 import { usePresupuestosStore } from '../../store/presupuestosStore';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import toast from 'react-hot-toast';
-import { formatDate, formatCurrency, numeroPresupuesto } from '../../utils/formatters';
+import { formatDate, formatCurrency, numeroPresupuesto, subtotalLinea, dtoLinea } from '../../utils/formatters';
 import { exportPresupuestoPdf } from '../../utils/exportPresupuestoPdf';
 import { Edit, Trash2, FileDown, Send, CheckCircle2 } from 'lucide-react';
 import logoSrc from '../../assets/sanicom_logo.png';
@@ -132,7 +132,10 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
                 <span className="text-gray-800">{l.concepto}{l.descripcion && <span className="block text-xs text-gray-500 whitespace-pre-line">{l.descripcion}</span>}{l.referencia && <span className="block text-xs text-gray-400">{l.referencia}</span>}</span>
                 <span className="text-gray-500">{l.cantidad}</span>
                 <span className="text-gray-500">{formatCurrency(parseFloat(l.precioUnitario) || 0)}</span>
-                <span className="font-medium text-gray-700">{formatCurrency((parseFloat(l.cantidad) || 0) * (parseFloat(l.precioUnitario) || 0))}</span>
+                <span className="font-medium text-gray-700">
+                  {formatCurrency(subtotalLinea(l))}
+                  {dtoLinea(l) > 0 && <span className="block text-xs font-normal text-green-600">-{dtoLinea(l)}% dto.</span>}
+                </span>
               </div>
             ))}
           </div>

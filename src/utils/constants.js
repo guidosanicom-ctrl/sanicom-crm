@@ -89,6 +89,8 @@ export const AREAS_CATALOGO = [
 export const areaLabel = (id) => AREAS_CATALOGO.find(a => a.id === id)?.label || id;
 
 // ── Presupuestos: condiciones ─────────────────────────────────────────────
+// Cuenta para cobros por transferencia (sale en el PDF cuando la forma de pago es transferencia)
+export const CUENTA_BANCARIA = { iban: 'ES52 2100 5789 1202 0014 9239', bic: 'CAIXESBBXXX' };
 export const FORMAS_PAGO = ['Transferencia bancaria', 'Contado', 'Recibo domiciliado', '50% a la aceptación y 50% a la entrega', 'Financiación'];
 // Texto que aparece por defecto en "Condiciones" al crear un presupuesto (editable en cada presupuesto)
 export const CONDICIONES_DEFAULT = 'Plazo de entrega: a confirmar según disponibilidad.';

@@ -20,6 +20,12 @@ export const formatDateTime = (dateStr) => {
 };
 
 /** Número visible de un presupuesto: el de STEL si ya se envió (PRV…), si no el interno del CRM (PR…). */
+/** Descuento de una línea en % (0–100). */
+export const dtoLinea = (l) => Math.min(100, Math.max(0, parseFloat(l?.descuento) || 0));
+/** Subtotal de una línea de presupuesto: cantidad × precio, menos el descuento. */
+export const subtotalLinea = (l) =>
+  (parseFloat(l?.cantidad) || 0) * (parseFloat(l?.precioUnitario) || 0) * (1 - dtoLinea(l) / 100);
+
 export const numeroPresupuesto = (p) => p?.stel?.referencia || p?.numero || '';
 
 export const formatCurrency = (amount) => {

@@ -7,7 +7,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useClientesStore } from '../../store/clientesStore';
 import { useAuthStore } from '../../store/authStore';
 import { useStelCatalogoStore } from '../../store/stelCatalogoStore';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, subtotalLinea } from '../../utils/formatters';
 import { ESTADOS_PRESUPUESTO, FORMAS_PAGO, CONDICIONES_DEFAULT } from '../../utils/constants';
 
 const IVA_OPTIONS = [0, 10, 21];
@@ -63,7 +63,7 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
   const setConceptoTexto = (i, v) => setLinea(i, 'concepto', v);
   // Quitar el vínculo a propósito (la línea pasa a ser texto libre)
   const desvincular = (i) => setLineas(ls => ls.map((l, idx) => idx === i
-    ? { concepto: l.concepto, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario }
+    ? { concepto: l.concepto, descripcion: l.descripcion, cantidad: l.cantidad, precioUnitario: l.precioUnitario, descuento: l.descuento }
     : l));
   const abrirDesc = (i) => setDescAbiertas(s => new Set(s).add(i));
   const elegirArticulo = (i, a) => setLineas(ls => ls.map((l, idx) => idx === i
@@ -73,7 +73,7 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
   const removeLinea = (i) => setLineas(ls => ls.filter((_, idx) => idx !== i));
 
   const totalSinIva = useMemo(() =>
-    lineas.reduce((s, l) => s + (parseFloat(l.cantidad) || 0) * (parseFloat(l.precioUnitario) || 0), 0),
+    lineas.reduce((s, l) => s + subtotalLinea(l), 0),
     [lineas]);
   const totalConIva = totalSinIva * (1 + iva / 100);
 
@@ -138,16 +138,16 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
 
         {/* Líneas */}
         <div>
-          <div className="hidden sm:grid grid-cols-[1fr_80px_100px_90px_32px] gap-2 mb-1 px-1">
-            {['Concepto', 'Cant.', 'Precio unit.', 'Subtotal', ''].map(h => (
+          <div className="hidden sm:grid grid-cols-[1fr_70px_100px_70px_90px_32px] gap-2 mb-1 px-1">
+            {['Concepto', 'Cant.', 'Precio unit.', 'Dto. %', 'Subtotal', ''].map(h => (
               <p key={h} className="text-xs font-medium text-gray-500">{h}</p>
             ))}
           </div>
           <div className="space-y-2">
             {lineas.map((l, i) => {
-              const sub = (parseFloat(l.cantidad) || 0) * (parseFloat(l.precioUnitario) || 0);
+              const sub = subtotalLinea(l);
               return (
-                <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_80px_100px_90px_32px] gap-2 items-start bg-gray-50 rounded-lg p-2 sm:bg-transparent sm:p-0">
+                <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_70px_100px_70px_90px_32px] gap-2 items-start bg-gray-50 rounded-lg p-2 sm:bg-transparent sm:p-0">
                   <div className="space-y-1">
                     <ArticuloSearchInput
                       className={inp}
@@ -188,6 +188,14 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
                       onChange={e => setLinea(i, 'precioUnitario', e.target.value)}
                     />
                   </div>
+                  <input
+                    className={inp}
+                    type="number" min={0} max={100} step="1"
+                    placeholder="0"
+                    title="Descuento en % (100 = regalo)"
+                    value={l.descuento ?? ''}
+                    onChange={e => setLinea(i, 'descuento', e.target.value)}
+                  />
                   <p className="text-sm font-semibold text-gray-800 text-right sm:text-left">
                     {formatCurrency(sub)}
                   </p>

@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
-import { formatDate, numeroPresupuesto } from './formatters';
+import { formatDate, numeroPresupuesto, subtotalLinea, dtoLinea } from './formatters';
+import { CUENTA_BANCARIA } from './constants';
 
 // Importes del PDF: siempre 2 decimales y separador de miles (2.679,60 €)
 const eur = (n) => new Intl.NumberFormat('es-ES', {
@@ -118,7 +119,12 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
   y += 12;
   field(doc, 'Teléfono', cliente?.telefono, M, y);
   field(doc, 'Email', cliente?.email, M + 92, y);
-  y += 14;
+  y += 12;
+  if (cliente?.cif) {
+    field(doc, 'CIF / NIF', cliente.cif, M, y);
+    y += 12;
+  }
+  y += 2;
 
   // ── EQUIPO ──────────────────────────────────────────────────────────────
   if (presupuesto.equipoNombre) {
@@ -130,11 +136,17 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
   // ── LÍNEAS ──────────────────────────────────────────────────────────────
   header('CONCEPTOS');
   const lineas = presupuesto.lineas || [];
-  const colX = { concepto: M, cantidad: M + 100, precio: M + 125, subtotal: M + 155 };
+  // La columna de descuento solo aparece si alguna línea lo tiene
+  const hayDto = lineas.some(l => dtoLinea(l) > 0);
+  const colX = hayDto
+    ? { concepto: M, cantidad: M + 92, precio: M + 106, dto: M + 133, subtotal: M + 152 }
+    : { concepto: M, cantidad: M + 100, precio: M + 125, subtotal: M + 155 };
+  const anchoConcepto = hayDto ? 88 : 95;
   setFont(doc, 7.5, MUTED, 'bold');
   doc.text('CONCEPTO', colX.concepto, y);
   doc.text('CANT.', colX.cantidad, y);
   doc.text('PRECIO', colX.precio, y);
+  if (hayDto) doc.text('DTO.', colX.dto, y);
   doc.text('SUBTOTAL', colX.subtotal, y);
   y += 3;
   hLine(doc, y);
@@ -144,18 +156,20 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
     if (y > PH - 60) { doc.addPage(); y = M; }
     const cantidad = parseFloat(l.cantidad) || 0;
     const precio = parseFloat(l.precioUnitario) || 0;
-    const subtotal = cantidad * precio;
+    const subtotal = subtotalLinea(l);
+    const dto = dtoLinea(l);
     setFont(doc, 9, DARK);
-    const conceptoLines = doc.splitTextToSize(l.concepto || '', 95);
+    const conceptoLines = doc.splitTextToSize(l.concepto || '', anchoConcepto);
     doc.text(conceptoLines, colX.concepto, y);
     doc.text(String(cantidad), colX.cantidad, y);
     doc.text(eur(precio), colX.precio, y);
+    if (hayDto && dto > 0) doc.text(`${dto.toLocaleString('es-ES')} %`, colX.dto, y);
     setFont(doc, 9, DARK, 'bold');
     doc.text(eur(subtotal), colX.subtotal, y);
     let h = conceptoLines.length * 4.5;
     if (l.descripcion?.trim()) {
       setFont(doc, 8, MUTED);
-      const descLines = doc.splitTextToSize(l.descripcion.trim(), 95);
+      const descLines = doc.splitTextToSize(l.descripcion.trim(), anchoConcepto);
       doc.text(descLines, colX.concepto, y + h - 0.5);
       h += descLines.length * 3.6;
     }
@@ -196,7 +210,10 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
     if (y > PH - 70) { doc.addPage(); y = M; }
     header('CONDICIONES');
     if (presupuesto.formaPago) {
-      field(doc, 'Forma de pago', presupuesto.formaPago, M, y, PW - M * 2 - 6);
+      field(doc, 'Forma de pago', presupuesto.formaPago, M, y, 85);
+      if (/transferencia/i.test(presupuesto.formaPago)) {
+        field(doc, 'Cuenta (IBAN · BIC)', `${CUENTA_BANCARIA.iban} · ${CUENTA_BANCARIA.bic}`, M + 92, y, 85);
+      }
       y += 12;
     }
     if (presupuesto.condiciones) y = textBlock(doc, 'Condiciones', presupuesto.condiciones, y);

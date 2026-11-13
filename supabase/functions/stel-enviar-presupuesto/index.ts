@@ -158,6 +158,7 @@ serve(async (req) => {
         'item-id': Number(l.stelItemId),
         units: Number(l.cantidad) || 1,
         'item-base-price': Math.max(0, Number(l.precioUnitario) || 0),
+        'discount-percentage': Math.min(100, Math.max(0, Number(l.descuento) || 0)),
         // Nombre y descripción tal como los escribió el comercial (no cambia el artículo en STEL)
         'item-name': String(l.concepto).trim().slice(0, 128),
         ...(String(l.descripcion || '').trim() ? { 'item-description': String(l.descripcion).trim().slice(0, 2048) } : {}),
