@@ -97,7 +97,22 @@ export const useStelCatalogoStore = create((set, get) => ({
     });
   },
 
-  /** Artículos que puede usar un usuario en sus presupuestos. */
+  /** Crea un artículo en STEL (función stel-crear-articulo) y lo añade al catálogo local. */
+  crearArticulo: async (datos, usuario) => {
+    const { data, error } = await supabase.functions.invoke('stel-crear-articulo', {
+      body: { ...datos, usuario: usuario || null },
+    });
+    let msg = data?.error;
+    if (error) {
+      msg = error.message;
+      try { msg = (await error.context?.json())?.error || msg; } catch { /* sin cuerpo */ }
+    }
+    if (msg) return { ok: false, error: msg };
+    set(s => ({ items: [...s.items.filter(i => i.id !== data.item.id), data.item] }));
+    return { ok: true, item: data.item };
+  },
+
+    /** Artículos que puede usar un usuario en sus presupuestos. */
   itemsParaUsuario: (user) => {
     const { items, config } = get();
     const activos = items.filter(i => !i.inactivo && !i.eliminado);

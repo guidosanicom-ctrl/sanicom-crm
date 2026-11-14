@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Loader2, Package, Wrench } from 'lucide-react';
+import { RefreshCw, Loader2, Package, Wrench, Plus } from 'lucide-react';
+import NuevoArticuloStel from './NuevoArticuloStel';
 import toast from 'react-hot-toast';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -38,6 +39,7 @@ function AreaChips({ value = [], heredadas = [], onToggle }) {
 export default function CatalogoStel() {
   const { items, config, syncing, initialize, sincronizar, setItemAreas, setCategoriaAreas, setPrefijoAreas } = useStelCatalogoStore();
   const [buscaMarca, setBuscaMarca] = useState('');
+  const [nuevoOpen, setNuevoOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [tipo, setTipo] = useState('');
   const [filtroArea, setFiltroArea] = useState('');
@@ -119,9 +121,14 @@ export default function CatalogoStel() {
               {items.length > 0 && ` · ${items.filter(i => !i.eliminado).length} artículos · ${sinArea} sin área`}
             </p>
           </div>
+          <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setNuevoOpen(true)}>
+            <Plus className="w-4 h-4" />Nuevo artículo
+          </Button>
           <Button size="sm" onClick={handleSync} disabled={syncing}>
             {syncing ? <><Loader2 className="w-4 h-4 animate-spin" />Sincronizando…</> : <><RefreshCw className="w-4 h-4" />Sincronizar con STEL</>}
           </Button>
+          </div>
         </div>
       </Card>
 
@@ -236,6 +243,7 @@ export default function CatalogoStel() {
           </>
         )}
       </Card>
+      {nuevoOpen && <NuevoArticuloStel open onClose={() => setNuevoOpen(false)} />}
     </div>
   );
 }
