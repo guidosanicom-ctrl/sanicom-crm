@@ -75,9 +75,13 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
   const header = (text) => { y = sectionHeader(doc, `${secNum}. ${text}`, y); secNum++; };
 
   // ── CABECERA ────────────────────────────────────────────────────────────
+  // Logo con su proporción real (la imagen es 500×228 px); antes se dibujaba aplastado.
+  const LOGO_W = 52;
+  const LOGO_H = 52 * 228 / 500; // ≈ 23,7 mm
+  const CAB_H = Math.max(LOGO_H, 18);
   if (logoSrc) {
     try {
-      doc.addImage(logoSrc, 'PNG', M, y, 48, 18, undefined, 'FAST');
+      doc.addImage(logoSrc, 'PNG', M, y + (CAB_H - LOGO_H) / 2, LOGO_W, LOGO_H, undefined, 'SLOW');
     } catch (_) { /* si falla el logo, continuar sin él */ }
   }
 
@@ -86,13 +90,14 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
   const esBorrador = !presupuesto.stel?.referencia;
 
   doc.setFillColor(...(esBorrador ? MUTED : PRIMARY));
-  doc.roundedRect(PW - M - 60, y, 60, 18, 2, 2, 'F');
+  const boxY = y + (CAB_H - 18) / 2; // recuadro centrado respecto al logo
+  doc.roundedRect(PW - M - 60, boxY, 60, 18, 2, 2, 'F');
   setFont(doc, 8, [255, 255, 255]);
-  doc.text('PRESUPUESTO', PW - M - 30, y + 5.5, { align: 'center' });
+  doc.text('PRESUPUESTO', PW - M - 30, boxY + 5.5, { align: 'center' });
   setFont(doc, 13, [255, 255, 255], 'bold');
-  doc.text(esBorrador ? 'BORRADOR' : numeroPresupuesto(presupuesto), PW - M - 30, y + 13, { align: 'center' });
+  doc.text(esBorrador ? 'BORRADOR' : numeroPresupuesto(presupuesto), PW - M - 30, boxY + 13, { align: 'center' });
 
-  y += 22;
+  y += CAB_H + 4;
   doc.setDrawColor(...CYAN);
   doc.setLineWidth(0.8);
   doc.line(M, y, PW - M, y);

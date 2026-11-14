@@ -18,7 +18,7 @@ import { ESTADOS_PRESUPUESTO } from '../../utils/constants';
 const ESTADO_BADGE = { 'Borrador': 'gray', 'Enviado': 'blue', 'Aceptado': 'green', 'Rechazado': 'red' };
 
 export default function PresupuestosTab() {
-  const { presupuestos, addPresupuesto, updatePresupuesto, deletePresupuesto } = usePresupuestosStore();
+  const { presupuestos, addPresupuesto, updatePresupuesto, deletePresupuesto, actualizarEnStel } = usePresupuestosStore();
   const { clientes } = useClientesStore();
   const { user } = useAuthStore();
   // Administración ve todos; el resto, los que creó (y los antiguos sin creador)
@@ -185,7 +185,17 @@ export default function PresupuestosTab() {
         onSave={(data) => {
           if (selected) {
             updatePresupuesto(selected.id, data);
-            toast.success('Presupuesto actualizado.');
+            if (selected.stel?.id) {
+              // Ya está en STEL: mandar también los cambios allí para que no se desincronice
+              const t = toast.loading('Actualizando en STEL…');
+              actualizarEnStel(selected.id).then(r => {
+                toast.dismiss(t);
+                if (r.ok) toast.success(`Presupuesto actualizado también en STEL (${selected.stel.referencia || ''}).`);
+                else toast.error(r.error, { duration: 10000 });
+              });
+            } else {
+              toast.success('Presupuesto actualizado.');
+            }
           } else {
             addPresupuesto(data);
             toast.success('Presupuesto creado.');

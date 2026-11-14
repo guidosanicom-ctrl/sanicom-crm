@@ -1,9 +1,10 @@
-// Crea un artículo (producto o servicio) en STEL Order desde el CRM y lo añade
-// al catálogo del CRM (tabla stel_items) ya asignado a sus áreas.
+// Crea o modifica un artículo (producto o servicio) en STEL Order desde el CRM y lo
+// guarda en el catálogo del CRM (tabla stel_items) con sus áreas.
 //
 // Entrada (POST JSON):
-//   { tipo: 'product' | 'service', referencia?, nombre, descripcion?, precio, ivaPct,
+//   { id?, tipo: 'product' | 'service', referencia?, nombre, descripcion?, precio, ivaPct,
 //     categoriaId?, areas: string[], usuario? }
+//   id = 'product-123' / 'service-45' → modificar ese artículo (PUT); sin id → crear (POST)
 // Secreto necesario: STEL_API_KEY (el mismo que usan las otras funciones).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -24,16 +25,16 @@ class UserError extends Error {}
 const toAsciiJson = (v: unknown) =>
   JSON.stringify(v).replace(/[\u007f-￿]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
 
-async function stelPost(apiKey: string, path: string, body: unknown) {
+async function stelPost(apiKey: string, path: string, body: unknown, method = 'POST') {
   const res = await fetch(`${STEL_BASE}/${path}`, {
-    method: 'POST',
+    method,
     headers: { APIKEY: apiKey, Accept: 'application/json', 'Content-Type': 'application/json; charset=UTF-8' },
     body: toAsciiJson(body),
   });
   const text = await res.text();
   let data: any = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
-  if (!res.ok) throw new Error(`STEL POST ${path} → ${res.status}: ${String(text).slice(0, 400)}`);
+  if (!res.ok) throw new Error(`STEL ${method} ${path} → ${res.status}: ${String(text).slice(0, 400)}`);
   return Array.isArray(data) ? data[0] : data;
 }
 
@@ -51,7 +52,8 @@ serve(async (req) => {
 
   try {
     const b = await req.json().catch(() => ({}));
-    const tipo = b.tipo === 'service' ? 'service' : 'product';
+    const editId = typeof b.id === 'string' && /^(product|service)-\d+$/.test(b.id) ? b.id : null;
+    const tipo = editId ? (editId.split('-')[0] as 'product' | 'service') : (b.tipo === 'service' ? 'service' : 'product');
     const nombre = String(b.nombre || '').trim();
     const referencia = String(b.referencia || '').trim().toUpperCase();
     const descripcion = String(b.descripcion || '').trim();
@@ -70,7 +72,7 @@ serve(async (req) => {
       const { data: dup } = await supabase.from('stel_items').select('id, data')
         .eq('data->>referencia', referencia).limit(1);
       const d = dup?.[0]?.data;
-      if (d && !d.eliminado) throw new UserError(`Ya existe un artículo con la referencia ${referencia}: «${d.nombre}»`);
+      if (d && !d.eliminado && dup?.[0]?.id !== editId) throw new UserError(`Ya existe un artículo con la referencia ${referencia}: «${d.nombre}»`);
     }
 
     const body: Record<string, unknown> = {
@@ -79,12 +81,25 @@ serve(async (req) => {
       'sales-price': precio,
       'primary-tax-percentage': ivaPct,
       ...(tipo === 'product' && b.categoriaId ? { 'product-category-id': Number(b.categoriaId) } : {}),
-      'private-comments': `Creado desde el CRM${b.usuario ? ` por ${b.usuario}` : ''}.`,
+      ...(editId ? {} : { 'private-comments': `Creado desde el CRM${b.usuario ? ` por ${b.usuario}` : ''}.` }),
     };
 
     const recurso = tipo === 'product' ? 'products' : 'services';
     let creado: any;
-    if (referencia) {
+    if (editId) {
+      const stelId = editId.split('-')[1];
+      const { data: prevRow } = await supabase.from('stel_items').select('data').eq('id', editId).maybeSingle();
+      const prev = prevRow?.data || {};
+      // La referencia solo se manda si cambia (si no, STEL podría quejarse de duplicado consigo mismo)
+      const cambiaRef = referencia && referencia !== String(prev.referencia || '').toUpperCase();
+      const put = { ...body, ...(cambiaRef ? { reference: referencia } : {}), ...(tipo === 'product' && !b.categoriaId ? { 'product-category-id': null } : {}) };
+      try {
+        creado = await stelPost(apiKey, `${recurso}/${stelId}`, put, 'PUT');
+      } catch (e) {
+        throw new UserError(`STEL no ha permitido modificar el artículo: ${String((e as Error).message).slice(0, 250)}`);
+      }
+      if (!creado?.id) creado = { ...prev, id: Number(stelId) };
+    } else if (referencia) {
       // Referencia manual: STEL pide la serie MANUAL (-2); si no la acepta, se prueba sin indicar serie
       try {
         creado = await stelPost(apiKey, recurso, { ...body, reference: referencia, 'serial-number-id': -2 });

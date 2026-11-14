@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Loader2, Package, Wrench, Plus } from 'lucide-react';
+import { RefreshCw, Loader2, Package, Wrench, Plus, Pencil } from 'lucide-react';
 import NuevoArticuloStel from './NuevoArticuloStel';
 import toast from 'react-hot-toast';
 import Card from '../../components/ui/Card';
@@ -40,6 +40,7 @@ export default function CatalogoStel() {
   const { items, config, syncing, initialize, sincronizar, setItemAreas, setCategoriaAreas, setPrefijoAreas } = useStelCatalogoStore();
   const [buscaMarca, setBuscaMarca] = useState('');
   const [nuevoOpen, setNuevoOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
   const [search, setSearch] = useState('');
   const [tipo, setTipo] = useState('');
   const [filtroArea, setFiltroArea] = useState('');
@@ -225,7 +226,13 @@ export default function CatalogoStel() {
                         </p>
                       </div>
                     </div>
-                    <AreaChips value={i.areas || []} heredadas={heredadas} onToggle={a => setItemAreas(i.id, toggle(i.areas || [], a))} />
+                    <div className="flex items-center gap-2">
+                      <AreaChips value={i.areas || []} heredadas={heredadas} onToggle={a => setItemAreas(i.id, toggle(i.areas || [], a))} />
+                      <button type="button" onClick={() => setEditItem(i)} title="Editar en STEL"
+                        className="p-1 rounded text-gray-400 hover:text-[#1B4F8A] hover:bg-blue-50 cursor-pointer">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -244,6 +251,7 @@ export default function CatalogoStel() {
         )}
       </Card>
       {nuevoOpen && <NuevoArticuloStel open onClose={() => setNuevoOpen(false)} />}
+      {editItem && <NuevoArticuloStel open item={editItem} onClose={() => setEditItem(null)} />}
     </div>
   );
 }

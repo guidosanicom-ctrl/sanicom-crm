@@ -12,10 +12,14 @@ const vacio = { tipo: 'product', referencia: '', nombre: '', descripcion: '', pr
  * Alta de un artículo nuevo: se crea en STEL y queda en el catálogo del CRM con sus áreas.
  * Se monta solo mientras está abierto, así el formulario empieza vacío cada vez.
  */
-export default function NuevoArticuloStel({ open, onClose }) {
+export default function NuevoArticuloStel({ open, onClose, item = null }) {
+  const editando = !!item;
   const { items, config, crearArticulo } = useStelCatalogoStore();
   const { user } = useAuthStore();
-  const [form, setForm] = useState(vacio);
+  const [form, setForm] = useState(() => item ? {
+    tipo: item.tipo, referencia: item.referencia || '', nombre: item.nombre || '', descripcion: item.descripcion || '',
+    precio: item.precio ?? '', ivaPct: item.ivaPct ?? 21, categoriaId: item.categoriaId ?? '', areas: item.areas || [],
+  } : vacio);
   const [guardando, setGuardando] = useState(false);
 
 
@@ -23,7 +27,7 @@ export default function NuevoArticuloStel({ open, onClose }) {
   const toggleArea = (a) => set('areas', form.areas.includes(a) ? form.areas.filter(x => x !== a) : [...form.areas, a]);
 
   const refNorm = form.referencia.trim().toUpperCase();
-  const duplicado = refNorm && items.find(i => !i.eliminado && i.referencia?.toUpperCase() === refNorm);
+  const duplicado = refNorm && items.find(i => !i.eliminado && i.id !== item?.id && i.referencia?.toUpperCase() === refNorm);
   // Si la marca de la referencia ya tiene áreas, el artículo las heredará igualmente
   const marca = prefijoReferencia(refNorm);
   const areasMarca = marca ? (config.prefijoAreas?.[marca] || []) : [];
@@ -34,9 +38,9 @@ export default function NuevoArticuloStel({ open, onClose }) {
     if (!form.areas.length && !areasMarca.length) { toast.error('Elige al menos un área para que alguien pueda usarlo'); return; }
     setGuardando(true);
     try {
-      const r = await crearArticulo({ ...form, referencia: refNorm }, user?.name);
+      const r = await crearArticulo({ ...form, referencia: refNorm, ...(editando ? { id: item.id } : {}) }, user?.name);
       if (!r.ok) { toast.error(r.error, { duration: 8000 }); return; }
-      toast.success(`Creado en STEL: ${r.item.referencia || r.item.nombre}`);
+      toast.success(editando ? 'Artículo actualizado en STEL.' : `Creado en STEL: ${r.item.referencia || r.item.nombre}`);
       onClose();
     } finally {
       setGuardando(false);
@@ -50,17 +54,18 @@ export default function NuevoArticuloStel({ open, onClose }) {
     <Modal
       open={open}
       onClose={onClose}
-      title="Nuevo artículo en STEL"
+      title={editando ? `Editar artículo · ${item.referencia || item.nombre}` : "Nuevo artículo en STEL"}
       size="md"
       footer={<>
         <Button variant="outline" onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSave} loading={guardando}>{guardando ? 'Creando…' : 'Crear en STEL'}</Button>
+        <Button onClick={handleSave} loading={guardando}>{guardando ? 'Guardando…' : editando ? 'Guardar en STEL' : 'Crear en STEL'}</Button>
       </>}
     >
       <div className="space-y-4">
+        {editando && <p className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">Los cambios se guardan en STEL y se verán en los presupuestos nuevos. Los ya enviados no cambian.</p>}
         <div className="flex gap-2">
           {[['product', 'Producto'], ['service', 'Servicio']].map(([v, l]) => (
-            <button key={v} type="button" onClick={() => set('tipo', v)}
+            <button key={v} type="button" disabled={editando} onClick={() => set('tipo', v)}
               className={`px-3 py-1.5 rounded-lg text-sm border cursor-pointer ${form.tipo === v ? 'bg-[#1B4F8A] text-white border-[#1B4F8A]' : 'border-gray-200 text-gray-600'}`}>
               {l}
             </button>

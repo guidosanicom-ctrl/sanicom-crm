@@ -79,5 +79,28 @@ export const usePresupuestosStore = create((set, get) => ({
     return { ok: true, ...data };
   },
 
+  /** Si el presupuesto ya está en STEL, manda allí los cambios (mismo número PRV). */
+  actualizarEnStel: async (id) => {
+    const user = useAuthStore.getState().user;
+    const { data, error } = await supabase.functions.invoke('stel-enviar-presupuesto', {
+      body: { presupuestoId: id, usuario: user?.name || null, modo: 'actualizar' },
+    });
+    let msg = data?.error;
+    if (error) {
+      msg = error.message;
+      try { msg = (await error.context?.json())?.error || msg; } catch { /* sin cuerpo */ }
+    }
+    if (msg) return { ok: false, error: msg };
+    if (data?.noEnviado) return { ok: true, noEnviado: true };
+    set(s => ({ presupuestos: s.presupuestos.map(p => p.id === id ? { ...p, stel: data.stel } : p) }));
+    const prev = get().presupuestos.find(p => p.id === id);
+    if (prev && user) {
+      const updated = { ...prev, historial: [...(prev.historial || []), createEntry(`actualizó el presupuesto en STEL (${data.stel.referencia || data.stel.id})`, user)] };
+      set(s => ({ presupuestos: s.presupuestos.map(p => p.id === id ? updated : p) }));
+      supabase.from(TABLE).update({ data: updated }).eq('id', id).then(({ error: e }) => { if (e) console.error(e); });
+    }
+    return { ok: true, ...data };
+  },
+
   getPresupuesto: (id) => get().presupuestos.find(p => p.id === id),
 }));

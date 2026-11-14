@@ -1,6 +1,8 @@
 // Crea en STEL Order el presupuesto de un presupuesto del CRM.
 //
-// Entrada (POST JSON): { presupuestoId, usuario }   usuario = nombre de quien lo envía (solo informativo)
+// Entrada (POST JSON): { presupuestoId, usuario, modo? }
+//   usuario = nombre de quien lo envía (solo informativo)
+//   modo = 'actualizar' → si el presupuesto ya está en STEL, lo modifica allí (mismo número PRV)
 // Lee el presupuesto y el cliente directamente de la base de datos (no se fía de lo que mande el navegador).
 //
 // 1. Si el presupuesto ya se envió (data.stel.id), no hace nada: evita duplicados.
@@ -107,7 +109,8 @@ serve(async (req) => {
   if (!apiKey) return json({ error: 'Falta el secreto STEL_API_KEY en Supabase' }, 500);
 
   try {
-    const { presupuestoId, usuario } = await req.json().catch(() => ({}));
+    const { presupuestoId, usuario, modo } = await req.json().catch(() => ({}));
+    const actualizar = modo === 'actualizar';
     if (!presupuestoId) throw new UserError('Falta el presupuesto');
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -116,7 +119,8 @@ serve(async (req) => {
     if (pErr) throw pErr;
     const presupuesto = pRow?.data;
     if (!presupuesto) throw new UserError('No se encontró el presupuesto');
-    if (presupuesto.stel?.id) return json({ ok: true, yaEnviado: true, stel: presupuesto.stel });
+    if (presupuesto.stel?.id && !actualizar) return json({ ok: true, yaEnviado: true, stel: presupuesto.stel });
+    if (!presupuesto.stel?.id && actualizar) return json({ ok: true, noEnviado: true });
 
     const lineas = (presupuesto.lineas || []).filter((l: any) => String(l.concepto || '').trim());
     const libres = lineas.filter((l: any) => !l.stelItemId);
@@ -165,20 +169,33 @@ serve(async (req) => {
       })),
     };
 
-    const creado = await stel(apiKey, 'POST', 'salesEstimates', body);
-    const est = creado?.id ? creado : listOf(creado)[0];
-    if (!est?.id) throw new Error('STEL no devolvió el presupuesto creado');
+    let est: any;
+    if (actualizar) {
+      try {
+        const mod = await stel(apiKey, 'PUT', `salesEstimates/${presupuesto.stel.id}`, body);
+        est = mod?.id ? mod : listOf(mod)[0];
+      } catch (e) {
+        // STEL no deja tocar presupuestos aceptados/facturados: avisar en claro
+        throw new UserError(`STEL no ha permitido actualizar el ${presupuesto.stel.referencia || 'presupuesto'} (puede estar ya aceptado o facturado). El CRM se ha guardado, pero en STEL sigue la versión anterior. Detalle: ${String((e as Error).message).slice(0, 200)}`);
+      }
+    } else {
+      const creado = await stel(apiKey, 'POST', 'salesEstimates', body);
+      est = creado?.id ? creado : listOf(creado)[0];
+    }
+    if (!est?.id) throw new Error('STEL no devolvió el presupuesto');
 
     const info = {
+      ...(actualizar ? presupuesto.stel : {}),
       id: est.id,
-      referencia: est['full-reference'] || est.reference || '',
+      referencia: est['full-reference'] || est.reference || presupuesto.stel?.referencia || '',
       total: est['total-amount'] ?? null,
-      enviadoEn: new Date().toISOString(),
-      enviadoPor: usuario || null,
+      ...(actualizar
+        ? { actualizadoEn: new Date().toISOString(), actualizadoPor: usuario || null }
+        : { enviadoEn: new Date().toISOString(), enviadoPor: usuario || null }),
     };
     await supabase.from('presupuestos').update({ data: { ...presupuesto, stel: info } }).eq('id', presupuestoId);
 
-    return json({ ok: true, stel: info, stelClientId: accountId });
+    return json({ ok: true, actualizado: actualizar, stel: info, stelClientId: accountId });
   } catch (e) {
     const msg = String((e as Error)?.message ?? e);
     console.error('[stel-enviar-presupuesto]', msg);

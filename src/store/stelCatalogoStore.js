@@ -97,7 +97,7 @@ export const useStelCatalogoStore = create((set, get) => ({
     });
   },
 
-  /** Crea un artículo en STEL (función stel-crear-articulo) y lo añade al catálogo local. */
+  /** Crea (sin id) o modifica (con id) un artículo en STEL y lo guarda en el catálogo local. */
   crearArticulo: async (datos, usuario) => {
     const { data, error } = await supabase.functions.invoke('stel-crear-articulo', {
       body: { ...datos, usuario: usuario || null },
