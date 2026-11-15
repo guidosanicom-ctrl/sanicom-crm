@@ -128,8 +128,12 @@ export default function PresupuestosTab() {
                         <td className="px-4 py-3 font-medium text-gray-800">{formatCurrency(p.totalConIva || 0)}</td>
                         <td className="px-4 py-3"><Badge color={ESTADO_BADGE[p.estado] || 'gray'}>{p.estado}</Badge></td>
                         <td className="px-4 py-3">
-                          <button onClick={() => openEdit(p)} className="text-blue-600 hover:underline text-xs cursor-pointer mr-2">Editar</button>
-                          <button onClick={() => { setSelected(p); setDelOpen(true); }} className="text-red-500 hover:underline text-xs cursor-pointer">Eliminar</button>
+                          {(p.stel?.pedido?.id && !verTodos) ? (
+                            <span className="text-xs text-gray-400" title="Con pedido de venta: se modifica en STEL">Con pedido</span>
+                          ) : (<>
+                            <button onClick={() => openEdit(p)} className="text-blue-600 hover:underline text-xs cursor-pointer mr-2">Editar</button>
+                            <button onClick={() => { setSelected(p); setDelOpen(true); }} className="text-red-500 hover:underline text-xs cursor-pointer">Eliminar</button>
+                          </>)}
                         </td>
                       </tr>
                     );

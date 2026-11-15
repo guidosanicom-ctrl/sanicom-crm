@@ -48,6 +48,10 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
   if (!presupuesto) return null;
 
   const lineasLibres = (presupuesto.lineas || []).filter(l => l.concepto?.trim() && !l.stelItemId);
+  // Con pedido de venta creado, el presupuesto queda cerrado: los cambios se hacen en STEL.
+  // Administración puede seguir editando por si hay que corregir algo.
+  const tienePedido = !!presupuesto.stel?.pedido?.id;
+  const bloqueado = tienePedido && user?.role !== 'Administración';
 
   const handleCrearPedido = async () => {
     setCreandoPedido(true);
@@ -107,12 +111,12 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
               <Send className="w-4 h-4" />{enviando ? 'Enviando…' : 'Enviar a STEL'}
             </Button>
           )}
-          {onDelete && (
+          {onDelete && !bloqueado && (
             <Button variant="danger" onClick={onDelete}>
               <Trash2 className="w-4 h-4" />Eliminar
             </Button>
           )}
-          {onEdit && (
+          {onEdit && !bloqueado && (
             <Button onClick={onEdit}>
               <Edit className="w-4 h-4" />Editar
             </Button>
@@ -135,6 +139,12 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
               </span>
             )}
           </div>
+          {tienePedido && (
+            <p className="mb-4 text-xs text-gray-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Este presupuesto ya tiene pedido de venta{presupuesto.stel.pedido.referencia ? ` (${presupuesto.stel.pedido.referencia})` : ''}.
+              {bloqueado ? ' Ya no se puede modificar: cualquier cambio se hace en STEL.' : ' Los cambios que hagas aquí no se pasan al pedido de STEL.'}
+            </p>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <Row label="Cliente" value={cliente?.nombre} />
             {presupuesto.equipoNombre && <Row label="Equipo" value={presupuesto.equipoNombre} />}
