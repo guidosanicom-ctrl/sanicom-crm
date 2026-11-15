@@ -102,5 +102,29 @@ export const usePresupuestosStore = create((set, get) => ({
     return { ok: true, ...data };
   },
 
+  /** El cliente ha aceptado: crea en STEL el pedido de venta a partir del presupuesto. */
+  crearPedidoStel: async (id) => {
+    const user = useAuthStore.getState().user;
+    const { data, error } = await supabase.functions.invoke('stel-enviar-presupuesto', {
+      body: { presupuestoId: id, usuario: user?.name || null, modo: 'pedido' },
+    });
+    let msg = data?.error;
+    if (error) {
+      msg = error.message;
+      try { msg = (await error.context?.json())?.error || msg; } catch { /* sin cuerpo */ }
+    }
+    if (msg) return { ok: false, error: msg };
+    const prev = get().presupuestos.find(p => p.id === id);
+    if (prev) {
+      const entries = user && !data.yaPedido
+        ? [createEntry(`creó el pedido de venta en STEL (${data.pedido?.referencia || data.pedido?.id})`, user)]
+        : [];
+      const updated = { ...prev, stel: data.stel, estado: 'Aceptado', historial: [...(prev.historial || []), ...entries] };
+      set(s => ({ presupuestos: s.presupuestos.map(p => p.id === id ? updated : p) }));
+      if (entries.length) supabase.from(TABLE).update({ data: updated }).eq('id', id).then(({ error: e }) => { if (e) console.error(e); });
+    }
+    return { ok: true, ...data };
+  },
+
   getPresupuesto: (id) => get().presupuestos.find(p => p.id === id),
 }));

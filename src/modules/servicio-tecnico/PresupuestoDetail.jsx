@@ -10,7 +10,7 @@ import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import toast from 'react-hot-toast';
 import { formatDate, formatCurrency, numeroPresupuesto, subtotalLinea, dtoLinea } from '../../utils/formatters';
 import { exportPresupuestoPdf } from '../../utils/exportPresupuestoPdf';
-import { Edit, Trash2, FileDown, Send, CheckCircle2 } from 'lucide-react';
+import { Edit, Trash2, FileDown, Send, CheckCircle2, ShoppingCart } from 'lucide-react';
 import logoSrc from '../../assets/sanicom_logo.png';
 
 const ESTADO_COLOR = { 'Borrador': 'gray', 'Enviado': 'blue', 'Aceptado': 'green', 'Rechazado': 'red' };
@@ -35,16 +35,30 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
   const { clientes } = useClientesStore();
   const { user, users } = useAuthStore();
   const enviarAStel = usePresupuestosStore(s => s.enviarAStel);
+  const crearPedidoStel = usePresupuestosStore(s => s.crearPedidoStel);
   // Versión viva del store (para ver al momento que se ha enviado a STEL)
   const presupuestoLive = usePresupuestosStore(s => s.presupuestos.find(p => p.id === presupuestoProp?.id));
   const presupuesto = presupuestoLive || presupuestoProp;
   const [exporting, setExporting] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [confirmStel, setConfirmStel] = useState(false);
+  const [confirmPedido, setConfirmPedido] = useState(false);
+  const [creandoPedido, setCreandoPedido] = useState(false);
 
   if (!presupuesto) return null;
 
   const lineasLibres = (presupuesto.lineas || []).filter(l => l.concepto?.trim() && !l.stelItemId);
+
+  const handleCrearPedido = async () => {
+    setCreandoPedido(true);
+    try {
+      const r = await crearPedidoStel(presupuesto.id);
+      if (!r.ok) { toast.error(r.error, { duration: 8000 }); return; }
+      toast.success(r.yaPedido ? 'Este presupuesto ya tenía pedido en STEL.' : `Pedido de venta creado en STEL: ${r.pedido.referencia || r.pedido.id}`);
+    } finally {
+      setCreandoPedido(false);
+    }
+  };
 
   const handleEnviarStel = async () => {
     setEnviando(true);
@@ -83,6 +97,11 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
           <Button variant="outline" onClick={handleExportPdf} loading={exporting}>
             <FileDown className="w-4 h-4" />{exporting ? 'Generando...' : 'Exportar PDF'}
           </Button>
+          {presupuesto.stel?.id && !presupuesto.stel?.pedido?.id && presupuesto.estado !== 'Rechazado' && (
+            <Button variant="outline" onClick={() => setConfirmPedido(true)} loading={creandoPedido}>
+              <ShoppingCart className="w-4 h-4" />{creandoPedido ? 'Creando…' : 'Cliente acepta: crear pedido'}
+            </Button>
+          )}
           {!presupuesto.stel?.id && (
             <Button variant="outline" onClick={() => setConfirmStel(true)} loading={enviando}>
               <Send className="w-4 h-4" />{enviando ? 'Enviando…' : 'Enviar a STEL'}
@@ -108,6 +127,11 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
             {presupuesto.stel?.id && (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
                 <CheckCircle2 className="w-3.5 h-3.5" />En STEL{presupuesto.stel.referencia ? `: ${presupuesto.stel.referencia}` : ''}
+              </span>
+            )}
+            {presupuesto.stel?.pedido?.id && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                <ShoppingCart className="w-3.5 h-3.5" />Pedido{presupuesto.stel.pedido.referencia ? `: ${presupuesto.stel.pedido.referencia}` : ''}
               </span>
             )}
           </div>
@@ -177,6 +201,15 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
         </div>
       </div>
     </Modal>
+      <ConfirmDialog
+        open={confirmPedido}
+        onClose={() => setConfirmPedido(false)}
+        onConfirm={handleCrearPedido}
+        title="Crear pedido de venta en STEL"
+        variant="primary"
+        confirmText="Crear pedido"
+        message={`Se marcará el presupuesto como Aceptado y se creará en STEL un pedido de venta con estas líneas, vinculado al ${presupuesto.stel?.referencia || 'presupuesto'}. Administración lo verá en STEL para servirlo y facturarlo.`}
+      />
       <ConfirmDialog
         open={confirmStel}
         onClose={() => setConfirmStel(false)}

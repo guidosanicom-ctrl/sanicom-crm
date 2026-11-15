@@ -3,6 +3,8 @@
 // Entrada (POST JSON): { presupuestoId, usuario, modo? }
 //   usuario = nombre de quien lo envía (solo informativo)
 //   modo = 'actualizar' → si el presupuesto ya está en STEL, lo modifica allí (mismo número PRV)
+//   modo = 'pedido'     → el cliente ha aceptado: crea en STEL un pedido de venta con las mismas
+//                         líneas, colgado del presupuesto (parent-document-id)
 // Lee el presupuesto y el cliente directamente de la base de datos (no se fía de lo que mande el navegador).
 //
 // 1. Si el presupuesto ya se envió (data.stel.id), no hace nada: evita duplicados.
@@ -111,6 +113,7 @@ serve(async (req) => {
   try {
     const { presupuestoId, usuario, modo } = await req.json().catch(() => ({}));
     const actualizar = modo === 'actualizar';
+    const pedido = modo === 'pedido';
     if (!presupuestoId) throw new UserError('Falta el presupuesto');
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -119,8 +122,13 @@ serve(async (req) => {
     if (pErr) throw pErr;
     const presupuesto = pRow?.data;
     if (!presupuesto) throw new UserError('No se encontró el presupuesto');
-    if (presupuesto.stel?.id && !actualizar) return json({ ok: true, yaEnviado: true, stel: presupuesto.stel });
-    if (!presupuesto.stel?.id && actualizar) return json({ ok: true, noEnviado: true });
+    if (pedido) {
+      if (!presupuesto.stel?.id) throw new UserError('Primero hay que enviar el presupuesto a STEL.');
+      if (presupuesto.stel?.pedido?.id) return json({ ok: true, yaPedido: true, stel: presupuesto.stel });
+    } else {
+      if (presupuesto.stel?.id && !actualizar) return json({ ok: true, yaEnviado: true, stel: presupuesto.stel });
+      if (!presupuesto.stel?.id && actualizar) return json({ ok: true, noEnviado: true });
+    }
 
     const lineas = (presupuesto.lineas || []).filter((l: any) => String(l.concepto || '').trim());
     const libres = lineas.filter((l: any) => !l.stelItemId);
@@ -168,6 +176,38 @@ serve(async (req) => {
         ...(String(l.descripcion || '').trim() ? { 'item-description': String(l.descripcion).trim().slice(0, 2048) } : {}),
       })),
     };
+
+    if (pedido) {
+      const bodyPedido = {
+        ...body,
+        date: stelDate(new Date()),
+        'parent-document-id': presupuesto.stel.id,
+        'private-comments': `Pedido creado desde el CRM a partir del presupuesto ${presupuesto.stel.referencia || presupuesto.stel.id}${usuario ? ` por ${usuario}` : ''}.`,
+      };
+      delete (bodyPedido as any)['validity-date'];
+      let ped: any;
+      try {
+        const r = await stel(apiKey, 'POST', 'salesOrders', bodyPedido);
+        ped = r?.id ? r : listOf(r)[0];
+      } catch (e) {
+        // Si STEL no acepta el vínculo con el presupuesto, crear el pedido suelto
+        console.warn('[stel-enviar-presupuesto] pedido sin parent-document-id:', e);
+        const { 'parent-document-id': _p, ...suelto } = bodyPedido as any;
+        const r = await stel(apiKey, 'POST', 'salesOrders', suelto);
+        ped = r?.id ? r : listOf(r)[0];
+      }
+      if (!ped?.id) throw new Error('STEL no devolvió el pedido creado');
+      const infoPedido = {
+        id: ped.id,
+        referencia: ped['full-reference'] || ped.reference || '',
+        total: ped['total-amount'] ?? null,
+        creadoEn: new Date().toISOString(),
+        creadoPor: usuario || null,
+      };
+      const stelInfo = { ...presupuesto.stel, pedido: infoPedido };
+      await supabase.from('presupuestos').update({ data: { ...presupuesto, stel: stelInfo, estado: 'Aceptado' } }).eq('id', presupuestoId);
+      return json({ ok: true, pedido: infoPedido, stel: stelInfo });
+    }
 
     let est: any;
     if (actualizar) {
