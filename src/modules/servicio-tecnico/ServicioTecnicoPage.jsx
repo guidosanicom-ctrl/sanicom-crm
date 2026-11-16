@@ -19,6 +19,9 @@ import ServicioForm from './ServicioForm';
 import ServicioDetail from './ServicioDetail';
 import FacturacionModal from './FacturacionModal';
 import PresupuestosTab from './PresupuestosTab';
+import PresupuestoForm from './PresupuestoForm';
+import PresupuestoDetail from './PresupuestoDetail';
+import { usePresupuestosStore } from '../../store/presupuestosStore';
 import ViajesTab from './ViajesTab';
 import { useViajesStore, calcularViaje } from '../../store/viajesStore';
 import Modal from '../../components/ui/Modal';
@@ -318,6 +321,12 @@ export default function ServicioTecnicoPage() {
   const [selected, setSelected] = useState(null);
   const [delOpen, setDelOpen] = useState(false);
   const [facturacionOT, setFacturacionOT] = useState(null);
+  // Presupuesto vinculado a una OT
+  const { presupuestos, addPresupuesto, updatePresupuesto } = usePresupuestosStore();
+  const presupuestoDeOT = (o) => o ? presupuestos.find(p => p.ordenId === o.id) : null;
+  const [presuFormOT, setPresuFormOT] = useState(null);      // OT para la que se crea un presupuesto
+  const [vincularOT, setVincularOT] = useState(null);        // OT a la que vincular uno existente
+  const [presuDetalle, setPresuDetalle] = useState(null);    // presupuesto abierto desde la OT
   const [pendingFormData, setPendingFormData] = useState(null);
   const [perPage, setPerPage] = useState(25);
 
@@ -574,6 +583,7 @@ export default function ServicioTecnicoPage() {
         open={!!facturacionOT}
         onClose={() => { setFacturacionOT(null); setPendingFormData(null); }}
         ordenNumero={facturacionOT?.numero}
+        desdePresupuesto={presupuestoDeOT(facturacionOT)}
         onConfirm={(resultado) => {
           const base = pendingFormData || { estado: 'Completada' };
           const sinFactura = resultado.facturacionRequerida === false;
@@ -604,6 +614,52 @@ export default function ServicioTecnicoPage() {
         onEdit={readOnly ? null : () => openEdit(selected)}
         onDelete={readOnly ? null : () => { setDetailOpen(false); setDelOpen(true); }}
         onFacturar={readOnly ? null : (o) => { setDetailOpen(false); setFacturacionOT(o); }}
+        presupuesto={presupuestoDeOT(selected)}
+        onCrearPresupuesto={readOnly ? null : (o) => setPresuFormOT(o)}
+        onVincularPresupuesto={readOnly ? null : (o) => setVincularOT(o)}
+        onVerPresupuesto={(p) => setPresuDetalle(p)}
+      />
+
+      {/* Presupuesto nuevo a partir de una OT: cliente y equipo ya rellenos */}
+      <PresupuestoForm
+        open={!!presuFormOT}
+        onClose={() => setPresuFormOT(null)}
+        initial={presuFormOT ? {
+          clienteId: presuFormOT.clienteId, equipoNombre: presuFormOT.equipoNombre || '',
+          notas: presuFormOT.descripcion ? `OT ${presuFormOT.numero}: ${presuFormOT.descripcion}` : `OT ${presuFormOT.numero}`,
+          ordenId: presuFormOT.id,
+        } : null}
+        onSave={(data) => {
+          addPresupuesto({ ...data, ordenId: presuFormOT.id });
+          toast.success(`Presupuesto creado y vinculado a la OT ${presuFormOT.numero}.`);
+          setPresuFormOT(null);
+        }}
+      />
+
+      {/* Vincular un presupuesto existente del mismo cliente */}
+      <Modal open={!!vincularOT} onClose={() => setVincularOT(null)} title={`Vincular presupuesto a la OT ${vincularOT?.numero || ''}`} size="sm">
+        {(() => {
+          const candidatos = presupuestos.filter(p => p.clienteId === vincularOT?.clienteId && !p.ordenId);
+          if (!candidatos.length) return <p className="text-sm text-gray-500">Este cliente no tiene presupuestos sin vincular.</p>;
+          return (
+            <div className="divide-y divide-gray-100">
+              {candidatos.map(p => (
+                <button key={p.id} type="button"
+                  onClick={() => { updatePresupuesto(p.id, { ordenId: vincularOT.id }); toast.success('Presupuesto vinculado.'); setVincularOT(null); }}
+                  className="w-full text-left py-2.5 flex items-center justify-between hover:bg-blue-50 px-2 rounded cursor-pointer">
+                  <span className="text-sm text-gray-800">{p.stel?.referencia || p.numero}<span className="text-xs text-gray-400 ml-2">{formatDate(p.fecha)} · {p.estado}</span></span>
+                  <span className="text-sm font-medium">{formatCurrency(p.totalConIva || 0)}</span>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+      </Modal>
+
+      <PresupuestoDetail
+        open={!!presuDetalle}
+        onClose={() => setPresuDetalle(null)}
+        presupuesto={presuDetalle}
       />
 
       <ServicioForm

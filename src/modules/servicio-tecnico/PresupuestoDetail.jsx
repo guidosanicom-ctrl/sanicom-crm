@@ -6,6 +6,7 @@ import HistorialTimeline from '../../components/shared/HistorialTimeline';
 import { useAuthStore } from '../../store/authStore';
 import { useClientesStore } from '../../store/clientesStore';
 import { usePresupuestosStore } from '../../store/presupuestosStore';
+import { useServicioStore } from '../../store/servicioStore';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import toast from 'react-hot-toast';
 import { formatDate, formatCurrency, numeroPresupuesto, subtotalLinea, dtoLinea } from '../../utils/formatters';
@@ -44,6 +45,8 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
   const [confirmStel, setConfirmStel] = useState(false);
   const [confirmPedido, setConfirmPedido] = useState(false);
   const [creandoPedido, setCreandoPedido] = useState(false);
+
+  const ordenVinculada = useServicioStore(s => s.servicios.find(o => o.id === presupuesto?.ordenId));
 
   if (!presupuesto) return null;
 
@@ -148,6 +151,7 @@ export default function PresupuestoDetail({ open, onClose, presupuesto: presupue
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <Row label="Cliente" value={cliente?.nombre} />
             {presupuesto.equipoNombre && <Row label="Equipo" value={presupuesto.equipoNombre} />}
+            {presupuesto.ordenId && <Row label="Orden de trabajo" value={ordenVinculada?.numero || '—'} />}
             <Row label="Fecha" value={formatDate(presupuesto.fecha)} />
             <Row label="Válido hasta" value={validoHasta(presupuesto) ? formatDate(validoHasta(presupuesto)) : '-'} />
           </div>

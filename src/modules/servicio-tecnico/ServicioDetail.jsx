@@ -25,7 +25,7 @@ function Row({ label, value }) {
   );
 }
 
-export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete, onFacturar }) {
+export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete, onFacturar, presupuesto = null, onCrearPresupuesto, onVincularPresupuesto, onVerPresupuesto }) {
   const { clientes } = useClientesStore();
   const { equipos } = useEquiposStore();
   const { users, isCarlos, user } = useAuthStore();
@@ -106,6 +106,21 @@ export default function ServicioDetail({ open, onClose, orden, onEdit, onDelete,
             <Badge color={PRIORIDAD_COLOR[orden.prioridad] || 'gray'}>{orden.prioridad}</Badge>
             <span className="text-sm text-gray-500">{orden.tipo}</span>
           </div>
+          {!isCarlos() && (
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-xs bg-blue-50/60 border border-blue-100 rounded-lg px-3 py-2">
+              <span className="text-gray-500 font-medium">Presupuesto:</span>
+              {presupuesto ? (<>
+                <button type="button" onClick={() => onVerPresupuesto?.(presupuesto)} className="text-[#1B4F8A] font-semibold hover:underline cursor-pointer">
+                  {presupuesto.stel?.referencia || presupuesto.numero}
+                </button>
+                <span className="text-gray-500">· {presupuesto.estado}{presupuesto.stel?.id ? ' · en STEL' : ''}{presupuesto.stel?.pedido?.referencia ? ` · pedido ${presupuesto.stel.pedido.referencia}` : ''} · {formatCurrency(presupuesto.totalConIva || 0)}</span>
+              </>) : (<>
+                <span className="text-gray-400">sin presupuesto</span>
+                {onCrearPresupuesto && <button type="button" onClick={() => onCrearPresupuesto(orden)} className="text-[#1B4F8A] hover:underline cursor-pointer">Crear desde esta OT</button>}
+                {onVincularPresupuesto && <button type="button" onClick={() => onVincularPresupuesto(orden)} className="text-[#1B4F8A] hover:underline cursor-pointer">Vincular uno existente</button>}
+              </>)}
+            </div>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <Row label="Cliente" value={cliente?.nombre} />
             <Row label="Equipo" value={equipo?.nombre} />

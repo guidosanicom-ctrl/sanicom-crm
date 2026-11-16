@@ -8,7 +8,7 @@ const IVA_OPTIONS = [0, 10, 21];
 
 const emptyLinea = () => ({ concepto: '', cantidad: 1, precioUnitario: 0 });
 
-export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero }) {
+export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero, desdePresupuesto = null }) {
   const [requiereFactura, setRequiereFactura] = useState(true);
   const [lineas, setLineas] = useState([emptyLinea()]);
   const [iva, setIva] = useState(21);
@@ -17,10 +17,14 @@ export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero
   useEffect(() => {
     if (open) {
       setRequiereFactura(true);
-      setLineas([emptyLinea()]);
-      setIva(21);
-      setNotas('');
+      // Si la OT tiene presupuesto vinculado, el detalle se rellena con sus líneas
+      setLineas(desdePresupuesto?.lineas?.length
+        ? desdePresupuesto.lineas.map(l => ({ ...l, concepto: l.concepto || '', cantidad: l.cantidad ?? 1, precioUnitario: l.precioUnitario ?? 0 }))
+        : [emptyLinea()]);
+      setIva(desdePresupuesto?.iva ?? 21);
+      setNotas(desdePresupuesto ? `Según presupuesto ${desdePresupuesto.stel?.referencia || desdePresupuesto.numero || ''}`.trim() : '');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const setLinea = (i, k, v) => {
@@ -30,7 +34,7 @@ export default function FacturacionModal({ open, onClose, onConfirm, ordenNumero
   const removeLinea = (i) => setLineas(ls => ls.filter((_, idx) => idx !== i));
 
   const totalSinIva = useMemo(() =>
-    lineas.reduce((s, l) => s + (parseFloat(l.cantidad) || 0) * (parseFloat(l.precioUnitario) || 0), 0),
+    lineas.reduce((s, l) => s + (parseFloat(l.cantidad) || 0) * (parseFloat(l.precioUnitario) || 0) * (1 - (Math.min(100, Math.max(0, parseFloat(l.descuento) || 0))) / 100), 0),
     [lineas]);
   const totalConIva = totalSinIva * (1 + iva / 100);
 

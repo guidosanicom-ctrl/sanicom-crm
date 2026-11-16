@@ -49,6 +49,7 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
         notas: initial.notas || '',
         formaPago: initial.formaPago || '',
         condiciones: initial.condiciones || '',
+        ordenId: initial.ordenId || null,
       } : empty);
       setLineas(initial?.lineas?.length ? initial.lineas : [emptyLinea()]);
       setIva(initial?.iva ?? 21);
@@ -95,9 +96,9 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
     <Modal
       open={open}
       onClose={onClose}
-      title={initial ? `Editar presupuesto ${initial.numero || ''}` : 'Nuevo presupuesto'}
+      title={initial?.id ? `Editar presupuesto ${initial.numero || ''}` : 'Nuevo presupuesto'}
       size="lg"
-      footer={<><Button variant="outline" onClick={onClose}>Cancelar</Button><Button onClick={handleSave}>{initial ? 'Guardar' : 'Crear'}</Button></>}
+      footer={<><Button variant="outline" onClick={onClose}>Cancelar</Button><Button onClick={handleSave}>{initial?.id ? 'Guardar' : 'Crear'}</Button></>}
     >
       <div className="space-y-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
