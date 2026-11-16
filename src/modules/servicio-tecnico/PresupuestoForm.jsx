@@ -253,7 +253,9 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
             <input list="formas-pago" value={form.formaPago} onChange={e => set('formaPago', e.target.value)}
               placeholder="Elegir o escribir…"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
-            <datalist id="formas-pago">{FORMAS_PAGO.map(f => <option key={f} value={f} />)}</datalist>
+            <datalist id="formas-pago">
+              {(stelConfig?.formasPago?.length ? stelConfig.formasPago.map(f => f.nombre) : FORMAS_PAGO).map(f => <option key={f} value={f} />)}
+            </datalist>
           </div>
           <div className="md:col-span-2">
             <label className="block text-xs font-medium text-gray-600 mb-1">Condiciones</label>

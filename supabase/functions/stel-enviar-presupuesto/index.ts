@@ -103,6 +103,40 @@ async function obtenerClienteStel(apiKey: string, cliente: any): Promise<number>
   return id;
 }
 
+const normTxt = (s: unknown) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+/** Mantiene la ficha del cliente en STEL al día con los datos del CRM (nombre, teléfono, email). */
+async function actualizarClienteStel(apiKey: string, stelId: number, cliente: any) {
+  const datos: Record<string, unknown> = {
+    'legal-name': (cliente.nombre || '').slice(0, 128),
+    'name': (cliente.nombre || '').slice(0, 128),
+    ...(cliente.telefono ? { phone: String(cliente.telefono).slice(0, 32) } : {}),
+    ...(cliente.email ? { email: String(cliente.email).trim() } : {}),
+  };
+  try {
+    await stel(apiKey, 'PUT', `clients/${stelId}`, datos);
+  } catch (e) {
+    // No es grave: el presupuesto se crea igual con el cliente tal como esté en STEL
+    console.warn('[stel-enviar-presupuesto] no se pudo actualizar el cliente en STEL:', e);
+  }
+}
+
+/** Busca en STEL la forma de pago cuyo nombre coincide con la del CRM. */
+async function formaPagoId(apiKey: string, formaPago: string): Promise<number | null> {
+  if (!formaPago) return null;
+  try {
+    const opciones = listOf(await stel(apiKey, 'GET', 'paymentOptions?limit=100')).filter((o: any) => !o.deleted);
+    const q = normTxt(formaPago);
+    const exacta = opciones.find((o: any) => normTxt(o.name) === q);
+    if (exacta) return exacta.id;
+    const parcial = opciones.find((o: any) => q.includes(normTxt(o.name)) || normTxt(o.name).includes(q));
+    return parcial?.id ?? null;
+  } catch (e) {
+    console.warn('[stel-enviar-presupuesto] formas de pago:', e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405);
@@ -142,10 +176,15 @@ serve(async (req) => {
     const cliente = cRow?.data;
     if (!cliente) throw new UserError('No se encontró el cliente del presupuesto');
 
+    const yaVinculado = !!cliente.stelClientId;
     const accountId = await obtenerClienteStel(apiKey, cliente);
     if (cliente.stelClientId !== accountId) {
       await supabase.from('clientes').update({ data: { ...cliente, stelClientId: accountId } }).eq('id', cliente.id);
     }
+    // Si el cliente ya existía en STEL, poner su ficha al día con los datos del CRM
+    if (yaVinculado) await actualizarClienteStel(apiKey, accountId, cliente);
+
+    const pagoId = await formaPagoId(apiKey, presupuesto.formaPago);
 
     const fecha = presupuesto.fecha ? new Date(`${presupuesto.fecha}T00:00:00Z`) : null;
     const validez = fecha && presupuesto.validezDias
@@ -163,6 +202,7 @@ serve(async (req) => {
     const body: Record<string, unknown> = {
       'account-id': accountId,
       'primary-tax-enabled': true,
+      ...(pagoId != null ? { 'payment-option-id': pagoId } : {}),
       ...(fecha && !isNaN(fecha.getTime()) ? { date: stelDate(fecha) } : {}),
       ...(validez ? { 'validity-date': validez } : {}),
       ...(comentarios ? { comments: comentarios.slice(0, 30000) } : {}),

@@ -75,10 +75,11 @@ serve(async (req) => {
   try {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-    const [rawCats, rawProducts, rawServices] = await Promise.all([
+    const [rawCats, rawProducts, rawServices, rawPagos] = await Promise.all([
       stelList('productCategories', apiKey),
       stelList('products', apiKey),
       stelList('services', apiKey),
+      stelList('paymentOptions', apiKey).catch(() => [] as any[]),
     ]);
 
     const categorias = new Map<number, string>(rawCats.map((c: any) => [c.id, c.name || `Categoría ${c.id}`]));
@@ -113,6 +114,8 @@ serve(async (req) => {
     const cfg = {
       ...(cfgRow?.data ?? {}),
       categorias: [...categorias].map(([id, nombre]) => ({ id, nombre })),
+      // Formas de pago de STEL: el CRM las usa en los presupuestos y las manda en payment-option-id
+      formasPago: rawPagos.filter((p: any) => !p.deleted).map((p: any) => ({ id: p.id, nombre: p.name || '', porDefecto: !!p.default })),
       ultimaSync: syncedAt,
     };
     const { error: cfgErr } = await supabase.from('stel_config').upsert({ id: 'main', data: cfg });
