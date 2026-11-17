@@ -10,6 +10,16 @@ import { formatDate } from '../../utils/formatters';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+// Importes escritos a mano: acepta coma o punto decimal ("12,50", "12.50", "1.234,56")
+const parseImporte = (v) => {
+  let t = String(v ?? '').trim().replace(/\s|€/g, '');
+  if (!t) return 0;
+  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); // formato español
+  const n = parseFloat(t);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
+};
+const soloImporte = (v) => v.replace(/[^0-9.,]/g, '');
+
 const fmt = (n) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 
 function ViajeForm({ open, onClose, initial, onSave }) {
@@ -18,12 +28,12 @@ function ViajeForm({ open, onClose, initial, onSave }) {
     fecha: initial?.fecha || hoy,
     destino: initial?.destino || '',
     noches: initial?.noches ?? 1,
-    hotel: initial?.hotel ?? '',
-    cena: initial?.cena ?? '',
+    hotel: initial?.hotel ? String(initial.hotel).replace('.', ',') : '',
+    cena: initial?.cena ? String(initial.cena).replace('.', ',') : '',
     notas: initial?.notas || '',
   }));
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const { dieta, gastos, sobrante } = calcularViaje({ ...form, dietaPorNoche: initial?.dietaPorNoche });
+  const { dieta, gastos, sobrante } = calcularViaje({ ...form, hotel: parseImporte(form.hotel), cena: parseImporte(form.cena), dietaPorNoche: initial?.dietaPorNoche });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -33,8 +43,8 @@ function ViajeForm({ open, onClose, initial, onSave }) {
       fecha: form.fecha,
       destino: form.destino.trim(),
       noches: Number(form.noches),
-      hotel: Number(form.hotel) || 0,
-      cena: Number(form.cena) || 0,
+      hotel: parseImporte(form.hotel),
+      cena: parseImporte(form.cena),
       notas: form.notas.trim(),
     });
   };
@@ -66,11 +76,11 @@ function ViajeForm({ open, onClose, initial, onSave }) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={label}>Hotel (€)</label>
-            <input type="number" min="0" step="0.01" inputMode="decimal" className={input} value={form.hotel} onChange={e => set('hotel', e.target.value)} placeholder="0,00" />
+            <input type="text" inputMode="decimal" className={input} value={form.hotel} onChange={e => set('hotel', soloImporte(e.target.value))} placeholder="0,00" />
           </div>
           <div>
             <label className={label}>Cena (€)</label>
-            <input type="number" min="0" step="0.01" inputMode="decimal" className={input} value={form.cena} onChange={e => set('cena', e.target.value)} placeholder="0,00" />
+            <input type="text" inputMode="decimal" className={input} value={form.cena} onChange={e => set('cena', soloImporte(e.target.value))} placeholder="0,00" />
           </div>
         </div>
         <div>
