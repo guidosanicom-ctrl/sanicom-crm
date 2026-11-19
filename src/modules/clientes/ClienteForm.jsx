@@ -15,7 +15,7 @@ import { geocodificar } from '../../utils/geocode';
 import { Loader2 } from 'lucide-react';
 
 const empty = {
-  nombre: '', contactoPrincipal: '', tipo: 'Clínica', especialidad: 'Medicina general', subespecialidad: '', cif: '',
+  nombre: '', contactoPrincipal: '', tipo: 'Clínica', especialidad: 'Medicina general', subespecialidad: '', cif: '', razonSocial: '',
   direccion: '', ciudad: '', provincia: '', pais: 'España', cp: '',
   telefono: '', email: '', website: '', estado: 'Activo', notas: '',
   // Campos exclusivos de Hospital público
@@ -235,6 +235,10 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">CIF / NIF</label>
               <input {...inp('cif')} placeholder="B12345678" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Razón social (nombre de facturación)</label>
+              <input {...inp('razonSocial')} placeholder="Ej.: Fisiomotion Sevilla S.L. — vacío si coincide con el nombre" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>

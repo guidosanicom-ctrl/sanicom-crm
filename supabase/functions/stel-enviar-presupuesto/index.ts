@@ -72,7 +72,8 @@ async function obtenerClienteStel(apiKey: string, cliente: any): Promise<number>
 
   // No existe: crearlo
   const base: Record<string, unknown> = {
-    'legal-name': (cliente.nombre || '').slice(0, 128),
+    // Razón social para facturar; el nombre de la clínica queda como nombre comercial
+    'legal-name': (cliente.razonSocial?.trim() || cliente.nombre || '').slice(0, 128),
     'name': (cliente.nombre || '').slice(0, 128),
     'tax-identification-number': String(cliente.cif).trim().slice(0, 30),
     ...(cliente.telefono ? { phone: String(cliente.telefono).slice(0, 32) } : {}),
@@ -108,7 +109,8 @@ const normTxt = (s: unknown) => String(s ?? '').toLowerCase().normalize('NFD').r
 /** Mantiene la ficha del cliente en STEL al día con los datos del CRM (nombre, teléfono, email). */
 async function actualizarClienteStel(apiKey: string, stelId: number, cliente: any) {
   const datos: Record<string, unknown> = {
-    'legal-name': (cliente.nombre || '').slice(0, 128),
+    // Razón social para facturar; el nombre de la clínica queda como nombre comercial
+    'legal-name': (cliente.razonSocial?.trim() || cliente.nombre || '').slice(0, 128),
     'name': (cliente.nombre || '').slice(0, 128),
     ...(cliente.telefono ? { phone: String(cliente.telefono).slice(0, 32) } : {}),
     ...(cliente.email ? { email: String(cliente.email).trim() } : {}),

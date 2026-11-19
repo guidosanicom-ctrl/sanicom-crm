@@ -125,8 +125,10 @@ export async function exportPresupuestoPdf(presupuesto, cliente, logoSrc, autor)
   field(doc, 'Teléfono', cliente?.telefono, M, y);
   field(doc, 'Email', cliente?.email, M + 92, y);
   y += 12;
-  if (cliente?.cif) {
-    field(doc, 'CIF / NIF', cliente.cif, M, y);
+  const razon = cliente?.razonSocial?.trim();
+  if (cliente?.cif || (razon && razon !== cliente?.nombre)) {
+    if (razon && razon !== cliente?.nombre) field(doc, 'Razón social', razon, M, y);
+    if (cliente?.cif) field(doc, 'CIF / NIF', cliente.cif, razon && razon !== cliente?.nombre ? M + 92 : M, y);
     y += 12;
   }
   y += 2;

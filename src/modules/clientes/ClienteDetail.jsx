@@ -862,6 +862,7 @@ export default function ClienteDetail() {
               <div className="grid grid-cols-2 gap-y-3 text-sm">
                 <div className="text-gray-500">Contacto principal</div><div className="font-medium">{cliente.contactoPrincipal || '-'}</div>
                 <div className="text-gray-500">CIF/NIF</div><div className="font-medium">{cliente.cif || '-'}</div>
+                <div className="text-gray-500">Razón social</div><div className="font-medium">{cliente.razonSocial || '-'}</div>
                 <div className="text-gray-500">Tipo</div><div className="font-medium">{cliente.tipo}</div>
                 <div className="text-gray-500">Especialidad</div><div className="font-medium">{cliente.especialidad || '-'}</div>
                 {cliente.subespecialidad && (
