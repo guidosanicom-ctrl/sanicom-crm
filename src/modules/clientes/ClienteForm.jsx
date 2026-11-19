@@ -51,8 +51,15 @@ export default function ClienteForm({ open, onClose, onSave, initial }) {
 
   const esHospitalPublico = form.tipo === 'Hospital público';
 
+  // Rellenar el formulario solo al abrirlo (o si cambia de cliente). El CRM refresca los datos
+  // en segundo plano y eso crea un objeto "initial" nuevo: si se reiniciara cada vez, se
+  // perdería lo que se está escribiendo.
+  const cargadoRef = useRef({ open: false, id: undefined });
   useEffect(() => {
-    if (open) {
+    const prev = cargadoRef.current;
+    const mismoFormulario = prev.open && open && prev.id === initial?.id;
+    cargadoRef.current = { open, id: initial?.id };
+    if (open && !mismoFormulario) {
       const base = initial || { ...empty, especialidad: espOptions[0], servicio: serviciosHospital[0] || '' };
       setForm(base);
       setErrors({});

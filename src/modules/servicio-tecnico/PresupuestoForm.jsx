@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import ClienteSearchInput from '../../components/ui/ClienteSearchInput';
@@ -37,8 +37,15 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
   const [errors, setErrors] = useState({});
 
   const [descAbiertas, setDescAbiertas] = useState(() => new Set());
+  // Rellenar solo al abrir (o si cambia de presupuesto): los refrescos en segundo plano
+  // crean un "initial" nuevo y no deben borrar lo que se está escribiendo.
+  const cargadoRef = useRef({ open: false, key: undefined });
   useEffect(() => {
-    if (open) {
+    const key = initial?.id ?? initial?.ordenId ?? null;
+    const prev = cargadoRef.current;
+    const mismoFormulario = prev.open && open && prev.key === key;
+    cargadoRef.current = { open, key };
+    if (open && !mismoFormulario) {
       setDescAbiertas(new Set());
       // Sin id = presupuesto nuevo (p. ej. desde una OT): parte de los valores por defecto
       const base = initial?.id ? {} : empty;
