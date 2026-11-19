@@ -40,15 +40,18 @@ export default function PresupuestoForm({ open, onClose, onSave, initial }) {
   useEffect(() => {
     if (open) {
       setDescAbiertas(new Set());
+      // Sin id = presupuesto nuevo (p. ej. desde una OT): parte de los valores por defecto
+      const base = initial?.id ? {} : empty;
       setForm(initial ? {
+        ...base,
         clienteId: initial.clienteId || '',
         equipoNombre: initial.equipoNombre || '',
         fecha: initial.fecha || hoy(),
         validezDias: initial.validezDias ?? 30,
         estado: initial.estado || 'Borrador',
         notas: initial.notas || '',
-        formaPago: initial.formaPago || '',
-        condiciones: initial.condiciones || '',
+        formaPago: initial.formaPago || base.formaPago || '',
+        condiciones: initial.condiciones || base.condiciones || '',
         ordenId: initial.ordenId || null,
       } : empty);
       setLineas(initial?.lineas?.length ? initial.lineas : [emptyLinea()]);

@@ -327,6 +327,13 @@ export default function ServicioTecnicoPage() {
   const [presuFormOT, setPresuFormOT] = useState(null);      // OT para la que se crea un presupuesto
   const [vincularOT, setVincularOT] = useState(null);        // OT a la que vincular uno existente
   const [presuDetalle, setPresuDetalle] = useState(null);    // presupuesto abierto desde la OT
+  // Datos iniciales del presupuesto creado desde una OT. Memorizado: si se creara un objeto
+  // nuevo en cada render, el formulario se reiniciaría con cada tecla.
+  const presuInicialOT = useMemo(() => presuFormOT ? {
+    clienteId: presuFormOT.clienteId, equipoNombre: presuFormOT.equipoNombre || '',
+    notas: presuFormOT.descripcion ? `OT ${presuFormOT.numero}: ${presuFormOT.descripcion}` : `OT ${presuFormOT.numero}`,
+    ordenId: presuFormOT.id,
+  } : null, [presuFormOT]);
   const [pendingFormData, setPendingFormData] = useState(null);
   const [perPage, setPerPage] = useState(25);
 
@@ -624,11 +631,7 @@ export default function ServicioTecnicoPage() {
       <PresupuestoForm
         open={!!presuFormOT}
         onClose={() => setPresuFormOT(null)}
-        initial={presuFormOT ? {
-          clienteId: presuFormOT.clienteId, equipoNombre: presuFormOT.equipoNombre || '',
-          notas: presuFormOT.descripcion ? `OT ${presuFormOT.numero}: ${presuFormOT.descripcion}` : `OT ${presuFormOT.numero}`,
-          ordenId: presuFormOT.id,
-        } : null}
+        initial={presuInicialOT}
         onSave={(data) => {
           addPresupuesto({ ...data, ordenId: presuFormOT.id });
           toast.success(`Presupuesto creado y vinculado a la OT ${presuFormOT.numero}.`);
